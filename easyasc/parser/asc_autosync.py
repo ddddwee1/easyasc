@@ -1,7 +1,11 @@
 from typing import Dict, List, Optional, Set, Tuple
+import os
+import re
+from functools import lru_cache
 
 from .asc_utils import build_expr_state, should_skip_inst
 from ..utils.events import DEvent, SEvent
+from .asc_handlers import build_handlers
 from ..utils.Tensor import Tensor
 from ..utils.instruction import Instruction
 from ..utils.pipe import Pipe
@@ -21,6 +25,41 @@ _EVENT_OPS = {
     "event_setall",
     "event_release",
 }
+
+_VEC_INSTRUCTION_RE = re.compile(r"Instruction\(\s*['\"]([A-Za-z0-9_]+)['\"]")
+
+
+def _collect_opnames_from_file(path: str) -> Set[str]:
+    try:
+        with open(path, "r") as f:
+            text = f.read()
+    except OSError:
+        return set()
+    return set(_VEC_INSTRUCTION_RE.findall(text))
+
+
+def _collect_opnames_from_dir(path: str) -> Set[str]:
+    names: Set[str] = set()
+    for root, _, files in os.walk(path):
+        for filename in files:
+            if filename.endswith(".py"):
+                names |= _collect_opnames_from_file(os.path.join(root, filename))
+    return names
+
+
+@lru_cache(maxsize=1)
+def _get_v_ops() -> Set[str]:
+    base_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
+    vec_dir = os.path.join(base_dir, "stub_functions", "vec")
+    ops = _collect_opnames_from_dir(vec_dir)
+    handler_map = build_handlers()
+    for opname, handler in handler_map.items():
+        module = getattr(handler, "__module__", "")
+        if ".vec_" in module:
+            ops.add(opname)
+    ops.discard("GM2UBPAD")
+    ops.discard("UB2GMPAD")
+    return ops
 
 
 def _compute_in_segment(instructions: List[Instruction]) -> List[bool]:
@@ -53,27 +92,9 @@ def _collect_event_names(instructions: List[Instruction]) -> Set[str]:
 
 
 def _sevent_needed_for_consumer(inst: Instruction) -> bool:
-    tensors: List[Tensor] = []
-    if inst.opname == "l1_to_l0":
-        src = inst.kwargs.get("src", None)
-        dst = inst.kwargs.get("dst", None)
-        if isinstance(src, Tensor):
-            tensors.append(src)
-        if isinstance(dst, Tensor):
-            tensors.append(dst)
-    elif inst.opname == "mmad":
-        dst = inst.kwargs.get("dst", None)
-        src_a = inst.kwargs.get("src_a", None)
-        src_b = inst.kwargs.get("src_b", None)
-        for val in (dst, src_a, src_b):
-            if isinstance(val, Tensor):
-                tensors.append(val)
-    elif inst.opname == "l0c_to_gm_nz2nd":
-        src = inst.kwargs.get("src", None)
-        if isinstance(src, Tensor):
-            tensors.append(src)
-
-    for tensor in tensors:
+    for tensor in inst.kwargs.values():
+        if not isinstance(tensor, Tensor):
+            continue
         source_buf = getattr(tensor, "source_buf", None)
         if source_buf is None or isinstance(source_buf, Tensor):
             return True
@@ -381,6 +402,7 @@ def _insert_auto_sync_for_pipe(
             loop_stack.pop()
 
     min_consumer_depth: Dict[Tuple[int, int], int] = {}
+    last_consumer_idx: Dict[Tuple[int, int], int] = {}
     for idx, inst in enumerate(insts):
         if not in_segment[idx] or inst.opname not in consumer_ops:
             continue
@@ -391,6 +413,7 @@ def _insert_auto_sync_for_pipe(
         prev = min_consumer_depth.get(key)
         if prev is None or depth < prev:
             min_consumer_depth[key] = depth
+        last_consumer_idx[key] = idx
 
     insert_before: Dict[int, List[Instruction]] = {}
     insert_after: Dict[int, List[Instruction]] = {}
@@ -532,18 +555,24 @@ def _insert_auto_sync_for_pipe(
             eligible_pairs = [
                 pid for pid, desired in enumerate(desired_depths) if desired <= consumer_depth
             ]
-        elif name_level == "l1":
+        elif name_level in ("l1", "ubin"):
             eligible_pairs = [pid for pid, depth in enumerate(depths) if depth <= consumer_depth]
+            if name_level == "ubin" and not eligible_pairs:
+                eligible_pairs = [pair_id_per_index[idx]]
         else:
             eligible_pairs = [pair_id_per_index[idx]]
 
         for pair_id in eligible_pairs:
+            if name_level == "ubin":
+                last_idx = last_consumer_idx.get((seg_id, pair_id))
+                if last_idx is None or last_idx != idx:
+                    continue
             if name_level == "fix":
                 pair_depth = desired_depths[pair_id] if pair_id < len(desired_depths) else 0
             else:
                 pair_depth = depths[pair_id] if pair_id < len(depths) else 0
             consumer_pairs.add((seg_id, pair_id))
-            if name_level in ("l1", "fix"):
+            if name_level in ("l1", "fix", "ubin"):
                 if consumer_depth > pair_depth:
                     if len(loop_stack) > pair_depth:
                         start_at_depth = loop_stack[pair_depth]
@@ -576,7 +605,7 @@ def _insert_auto_sync_for_pipe(
                     and insts[next_idx].opname in consumer_ops
                     and depth_per_index[next_idx] >= pair_depth
                 )
-            elif name_level == "l1":
+            elif name_level in ("l1", "ubin"):
                 same_pair_next = (
                     next_idx != -1
                     and insts[next_idx].opname in consumer_ops
@@ -657,6 +686,15 @@ def insert_auto_sync(instructions: List[Instruction]) -> List[Instruction]:
         Pipe.MTE1,
         "_tmp_event",
         "l1",
+    )
+    insts = _insert_auto_sync_for_pipe(
+        insts,
+        _MTE2_OPS,
+        _get_v_ops(),
+        Pipe.MTE2,
+        Pipe.V,
+        "_tmp_event",
+        "ubin",
     )
     insts = _insert_auto_sync_for_pipe(
         insts,
