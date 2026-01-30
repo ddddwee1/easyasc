@@ -1,0 +1,57 @@
+DBuff<float, TPosition::VECCALC> xub;
+DEvent<PIPE_MTE2, PIPE_V> ubin_ready;
+DEvent<PIPE_V, PIPE_MTE2> ubin_valid;
+int cnt = 0;
+int cnt1 = 0;
+int cnt2 = 0;
+float val = 1.0;
+int m_per_core = CeilDiv(M, GetBlockNum());
+int m1 = m_per_core*get_block_idx();
+int m2 = Min(m1 + m_per_core, M);
+for (int m = 0; m < m2; m += 128) {
+    cnt = cnt + 1;
+}
+for (int m = 0; m < m2; m += 128) {
+    WAIT_CUBE(0, PIPE_S);
+    ubin_valid.wait();
+    ubin_ready.set();
+    Add<float, false>(xub.get(cnt), xub.get(cnt1), xub.get(cnt2), MASK_PLACEHOLDER, CeilDiv(128*K, 64), {(uint8_t)1, (uint8_t)1, (uint8_t)1, (uint8_t)8, (uint8_t)8, (uint8_t)8});
+    Sub<float, false>(xub.get(cnt), xub.get(cnt1), xub.get(cnt2), MASK_PLACEHOLDER, CeilDiv(128*K, 64), {(uint8_t)1, (uint8_t)1, (uint8_t)1, (uint8_t)8, (uint8_t)8, (uint8_t)8});
+    Mul<float, false>(xub.get(cnt), xub.get(cnt1), xub.get(cnt2), MASK_PLACEHOLDER, CeilDiv(128*K, 64), {(uint8_t)1, (uint8_t)1, (uint8_t)1, (uint8_t)8, (uint8_t)8, (uint8_t)8});
+    Div<float, false>(xub.get(cnt), xub.get(cnt1), xub.get(cnt2), MASK_PLACEHOLDER, CeilDiv(128*K, 64), {(uint8_t)1, (uint8_t)1, (uint8_t)1, (uint8_t)8, (uint8_t)8, (uint8_t)8});
+    Adds<float, false>(xub.get(cnt), xub.get(cnt1), (float)1.0, MASK_PLACEHOLDER, CeilDiv(128*K, 64), {(uint16_t)1, (uint16_t)1, (uint8_t)8, (uint8_t)8});
+    Adds<float, false>(xub.get(cnt), xub.get(cnt1), (float)-1.0, MASK_PLACEHOLDER, CeilDiv(128*K, 64), {(uint16_t)1, (uint16_t)1, (uint8_t)8, (uint8_t)8});
+    Muls<float, false>(xub.get(cnt), xub.get(cnt1), (float)1.0, MASK_PLACEHOLDER, CeilDiv(128*K, 64), {(uint16_t)1, (uint16_t)1, (uint8_t)8, (uint8_t)8});
+    Exp<float, false>(xub.get(cnt), xub.get(cnt1), MASK_PLACEHOLDER, CeilDiv(128*K, 64), {(uint16_t)1, (uint16_t)1, (uint8_t)8, (uint8_t)8});
+    Ln<float, false>(xub.get(cnt), xub.get(cnt1), MASK_PLACEHOLDER, CeilDiv(128*K, 64), {(uint16_t)1, (uint16_t)1, (uint8_t)8, (uint8_t)8});
+    Abs<float, false>(xub.get(cnt), xub.get(cnt1), MASK_PLACEHOLDER, CeilDiv(128*K, 64), {(uint16_t)1, (uint16_t)1, (uint8_t)8, (uint8_t)8});
+    Reciprocal<float, false>(xub.get(cnt), xub.get(cnt1), MASK_PLACEHOLDER, CeilDiv(128*K, 64), {(uint16_t)1, (uint16_t)1, (uint8_t)8, (uint8_t)8});
+    Sqrt<float, false>(xub.get(cnt), xub.get(cnt1), MASK_PLACEHOLDER, CeilDiv(128*K, 64), {(uint16_t)1, (uint16_t)1, (uint8_t)8, (uint8_t)8});
+    Rsqrt<float, false>(xub.get(cnt), xub.get(cnt1), MASK_PLACEHOLDER, CeilDiv(128*K, 64), {(uint16_t)1, (uint16_t)1, (uint8_t)8, (uint8_t)8});
+    LocalTensor<int> _tmp_tensor_108 = xub.get(cnt1).ReinterpretCast<int>();
+    LocalTensor<int> _tmp_tensor_109 = xub.get(cnt).ReinterpretCast<int>();
+    Not<int, false>(_tmp_tensor_109, _tmp_tensor_108, MASK_PLACEHOLDER, CeilDiv(128*K, 64), {(uint16_t)1, (uint16_t)1, (uint8_t)8, (uint8_t)8});
+    Relu<float, false>(xub.get(cnt), xub.get(cnt1), MASK_PLACEHOLDER, CeilDiv(128*K, 64), {(uint16_t)1, (uint16_t)1, (uint8_t)8, (uint8_t)8});
+    WholeReduceMax<float, false>(xub.get(cnt), xub.get(cnt1), MASK_PLACEHOLDER, CeilDiv(128*K, 64), 1, 1, 8, ReduceOrder::ORDER_ONLY_VALUE);
+    BlockReduceMax<float, false>(xub.get(cnt), xub.get(cnt1), CeilDiv(128*K, 64), MASK_PLACEHOLDER, 1, 1, 8);
+    WholeReduceMin<float, false>(xub.get(cnt), xub.get(cnt1), MASK_PLACEHOLDER, CeilDiv(128*K, 64), 1, 1, 8, ReduceOrder::ORDER_ONLY_VALUE);
+    BlockReduceMin<float, false>(xub.get(cnt), xub.get(cnt1), CeilDiv(128*K, 64), MASK_PLACEHOLDER, 1, 1, 8);
+    WholeReduceSum<float, false>(xub.get(cnt), xub.get(cnt1), MASK_PLACEHOLDER, CeilDiv(128*K, 64), 1, 1, 8);
+    BlockReduceSum<float, false>(xub.get(cnt), xub.get(cnt1), CeilDiv(128*K, 64), MASK_PLACEHOLDER, 1, 1, 8);
+    PairReduceSum<float, false>(xub.get(cnt), xub.get(cnt1), CeilDiv(128*K, 64), MASK_PLACEHOLDER, 1, 1, 8);
+    Cast<float, float, false>(xub.get(cnt), xub.get(cnt1), RoundMode::CAST_ROUND, MASK_PLACEHOLDER, 2*K, {(uint16_t)1, (uint16_t)1, (uint16_t)8, (uint16_t)8});
+    LocalTensor<int> _tmp_tensor_151 = xub.get(cnt1).ReinterpretCast<int>();
+    LocalTensor<int> _tmp_tensor_152 = xub.get(cnt2).ReinterpretCast<int>();
+    LocalTensor<int> _tmp_tensor_153 = xub.get(cnt).ReinterpretCast<int>();
+    And<int, false>(_tmp_tensor_153, _tmp_tensor_151, _tmp_tensor_152, MASK_PLACEHOLDER, CeilDiv(128*K, 64), {(uint8_t)1, (uint8_t)1, (uint8_t)1, (uint8_t)8, (uint8_t)8, (uint8_t)8});
+    LocalTensor<int> _tmp_tensor_159 = xub.get(cnt1).ReinterpretCast<int>();
+    LocalTensor<int> _tmp_tensor_160 = xub.get(cnt2).ReinterpretCast<int>();
+    LocalTensor<int> _tmp_tensor_161 = xub.get(cnt).ReinterpretCast<int>();
+    Or<int, false>(_tmp_tensor_161, _tmp_tensor_159, _tmp_tensor_160, MASK_PLACEHOLDER, CeilDiv(128*K, 64), {(uint8_t)1, (uint8_t)1, (uint8_t)1, (uint8_t)8, (uint8_t)8, (uint8_t)8});
+    Max<float, false>(xub.get(cnt), xub.get(cnt1), xub.get(cnt2), MASK_PLACEHOLDER, CeilDiv(128*K, 64), {(uint8_t)1, (uint8_t)1, (uint8_t)1, (uint8_t)8, (uint8_t)8, (uint8_t)8});
+    Min<float, false>(xub.get(cnt), xub.get(cnt1), xub.get(cnt2), MASK_PLACEHOLDER, CeilDiv(128*K, 64), {(uint8_t)1, (uint8_t)1, (uint8_t)1, (uint8_t)8, (uint8_t)8, (uint8_t)8});
+    Maxs<float, false>(xub.get(cnt), xub.get(cnt1), (float)1.0, MASK_PLACEHOLDER, CeilDiv(128*K, 64), {(uint16_t)1, (uint16_t)1, (uint8_t)8, (uint8_t)8});
+    Mins<float, false>(xub.get(cnt), xub.get(cnt1), (float)1.0, MASK_PLACEHOLDER, CeilDiv(128*K, 64), {(uint16_t)1, (uint16_t)1, (uint8_t)8, (uint8_t)8});
+    Maxs<float, false>(xub.get(cnt), xub.get(cnt1), (float)val, MASK_PLACEHOLDER, CeilDiv(128*K, 64), {(uint16_t)1, (uint16_t)1, (uint8_t)8, (uint8_t)8});
+    Mins<float, false>(xub.get(cnt), xub.get(cnt1), (float)val, MASK_PLACEHOLDER, CeilDiv(128*K, 64), {(uint16_t)1, (uint16_t)1, (uint8_t)8, (uint8_t)8});
+}

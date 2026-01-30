@@ -1,0 +1,2 @@
+# 校验DBuff / Tensor / GMTensor / DEvent / SEvent 不能在loop/if内
+# 写自动同步机制
