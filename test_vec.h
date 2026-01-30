@@ -11,6 +11,39 @@ for (int m = 0; m < m2; m += 128) {
     // end auto sync
 }
 for (int m = 0; m < m2; m += 128) {
+    // start auto sync
+    cnt = cnt + 1;
+    // end auto sync
+}
+for (int m = 0; m < m2; m += 128) {
+    // start auto sync
+    cnt = cnt + 1;
+    // end auto sync
+}
+for (int m = 0; m < m2; m += 128) {
+    // start auto sync
+    cnt = cnt + 1;
+    // end auto sync
+}
+// start auto sync
+// end auto sync
+// start auto sync
+// end auto sync
+// start auto sync
+// end auto sync
+// start auto sync
+// end auto sync
+// start auto sync
+// end auto sync
+for (int m = 0; m < m2; m += 128) {
+    // start auto sync
+    // end auto sync
+}
+for (int m = 0; m < m2; m += 128) {
+    // start auto sync
+    // end auto sync
+}
+for (int m = 0; m < m2; m += 128) {
     WAIT_CUBE(0, PIPE_S);
     Add<float, false>(xub.get(cnt), xub.get(cnt1), xub.get(cnt2), MASK_PLACEHOLDER, CeilDiv(128*K, 64), {(uint8_t)1, (uint8_t)1, (uint8_t)1, (uint8_t)8, (uint8_t)8, (uint8_t)8});
     // start auto sync

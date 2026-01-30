@@ -26,7 +26,7 @@ from .flow import (
     handle_start_else,
     handle_end_if,
 )
-from .cube import handle_gm_to_l1_nd2nz, handle_l1_to_l0, handle_mmad, handle_l0c_to_gm_nd2nz
+from .cube import handle_gm_to_l1_nd2nz, handle_l1_to_l0, handle_mmad, handle_l0c_to_gm_nz2nd
 from .events import (
     handle_create_devent,
     handle_create_sevent,
@@ -128,7 +128,7 @@ def build_handlers() -> dict[str, Handler]:
         "end_if": handle_end_if,
         "gm_to_l1_nd2nz": handle_gm_to_l1_nd2nz,
         "mmad": handle_mmad,
-        "l0c_to_gm_nd2nz": handle_l0c_to_gm_nd2nz,
+        "l0c_to_gm_nz2nd": handle_l0c_to_gm_nz2nd,
         "create_devent": handle_create_devent,
         "create_sevent": handle_create_sevent,
         "event_set": handle_event_set,

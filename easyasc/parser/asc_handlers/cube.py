@@ -61,13 +61,13 @@ def handle_mmad(inst, helper, expr_map) -> None:
     helper(f"MMAD({dst_expr}, {src_a_expr}, {src_b_expr}, {m}, {k}, {n}, {is_init});")
 
 
-def handle_l0c_to_gm_nd2nz(inst, helper, expr_map) -> None:
+def handle_l0c_to_gm_nz2nd(inst, helper, expr_map) -> None:
     dst = inst.kwargs.get("dst", None)
     if not isinstance(dst, GMTensor):
-        raise TypeError(f"l0c_to_gm_nd2nz需要GMTensor类型，当前类型: {type(dst)}")
+        raise TypeError(f"l0c_to_gm_nz2nd需要GMTensor类型，当前类型: {type(dst)}")
     src = inst.kwargs.get("src", None)
     if not isinstance(src, Tensor):
-        raise TypeError(f"l0c_to_gm_nd2nz需要Tensor类型，当前类型: {type(src)}")
+        raise TypeError(f"l0c_to_gm_nz2nd需要Tensor类型，当前类型: {type(src)}")
     dst_expr = value_to_cpp(dst, expr_map)
     src_expr = value_to_cpp(src, expr_map)
     m = value_to_cpp(inst.kwargs.get("M", None), expr_map)

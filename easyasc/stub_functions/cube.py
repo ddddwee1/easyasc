@@ -148,7 +148,7 @@ def mmad(dst: Tensor, src_a: Tensor, src_b: Tensor, M: Union[int, Var, None]=Non
         )
 
 
-def l0c_to_gm_nd2nz(dst: GMTensor, src: Tensor, M: Union[int, Var, None]=None, N: Union[int, Var, None]=None, N_dst: Union[int, Var, None]=None, M_src: Union[int, Var, None]=None):
+def l0c_to_gm_nz2nd(dst: GMTensor, src: Tensor, M: Union[int, Var, None]=None, N: Union[int, Var, None]=None, N_dst: Union[int, Var, None]=None, M_src: Union[int, Var, None]=None):
     if not isinstance(dst, GMTensor):
         raise TypeError(f"dst必须是GMTensor类型，当前类型: {type(dst)}")
     if not isinstance(src, Tensor):
@@ -189,7 +189,7 @@ def l0c_to_gm_nd2nz(dst: GMTensor, src: Tensor, M: Union[int, Var, None]=None, N
             globvars.atomic_type = dst.dtype
         globvars.active_kernel.instructions.append(
             Instruction(
-                "l0c_to_gm_nd2nz",
+                "l0c_to_gm_nz2nd",
                 dst=dst,
                 src=src,
                 M=M,

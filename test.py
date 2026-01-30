@@ -15,13 +15,13 @@ def subset_vec(xub: DBuff, cnt: Var, cnt1: Var, cnt2: Var):
 
 @kernel()
 def cubefunc(x: GMTensor, y: GMTensor, z: GMTensor, M: Var, N: Var, K: Var):
-    # should create  _tmp_event_l1_valid = DEvent(Pipe.MTE2, Pipe.MTE1)
     l1q = DBuff(DT.half, [BLK, K], Position.L1)
     l1k = DBuff(DT.half, [BLK, K], Position.L1)
     l1v = Tensor(DT.half, [BLK, K], Position.L1)
     l0a = DBuff(DT.half, [BLK, K], Position.L0A)
     l0b = DBuff(DT.half, [BLK, K], Position.L0B)
     l0c = DBuff(DT.float, [BLK, K], Position.L0C)
+    l0c2 = Tensor(DT.float, [BLK, K], Position.L0C)
     xub = DBuff(DT.float, [BLK, K], Position.UB)
 
     cnt = Var(0)
@@ -34,48 +34,160 @@ def cubefunc(x: GMTensor, y: GMTensor, z: GMTensor, M: Var, N: Var, K: Var):
     m1 = Var(m_per_core * GetCubeIdx())
     m2 = Min(m1 + m_per_core, M)
 
+    # test case 1
     for m in range(m1, m2, BLK):
         with auto_sync():
-            # insert _tmp_event1_l1_valid.wait() here 
             l1q[cnt] <<= x[m:m + BLK, 0:K]
-            # insert _tmp_event1_l1_ready.set() here
-            # insert _tmp_event1_l1_ready.wait() here 
             l0a[cnt] <<= l1q[cnt][BLK//2:BLK, 0:K]
             l0b[cnt] <<= l1k[cnt][0:BLK//2, 0:K]
-            # insert _tmp_event1_l1_valid.set() here
 
             mmad(l0c[cnt], l0a[cnt], l0b[cnt])
 
+            y[:1, :] <<= l0c[cnt]
+
             cnt += 1 
 
+    # test case 2
     for m in range(m1, m2, BLK):
         with auto_sync():
-            # insert _tmp_event1_l1_valid.wait() here 
             l1q[cnt] <<= x[m:m + BLK, 0:K]
-            # insert _tmp_event1_l1_ready.set() here
-            # insert _tmp_event1_l1_ready.wait() here 
             for j in range(10):
                 l0a[cnt] <<= l1q[cnt][BLK//2:BLK, 0:K]
                 l0b[cnt] <<= l1k[cnt][0:BLK//2, 0:K]
                 mmad(l0c[cnt], l0a[cnt], l0b[cnt])
-            # insert _tmp_event1_l1_valid.set() here
+            y[:1, :] <<= l0c[cnt]
 
             cnt += 1 
 
+    # test case 3
     for m in range(m1, m2, BLK):
         with auto_sync():
-            # insert _tmp_event1_l1_valid.wait() here 
             l1q[cnt] <<= x[m:m + BLK, 0:K]
             l1k[cnt] <<= x[m:m + BLK, 0:K]
-            # insert _tmp_event1_l1_ready.set() here
-            # insert _tmp_event1_l1_ready.wait() here 
             for j in range(10):
                 l0a[cnt] <<= l1q[cnt][BLK//2:BLK, 0:K]
                 l0b[cnt] <<= l1k[cnt][0:BLK//2, 0:K]
-            # insert _tmp_event1_l1_valid.set() here
             mmad(l0c[cnt], l0a[cnt], l0b[cnt])
+            y[:1, :] <<= l0c[cnt]
             
             cnt += 1 
+
+    # test case 4
+    for m in range(m1, m2, BLK):
+        with auto_sync():
+            l1q[cnt] <<= x[m:m + BLK, 0:K]
+
+            for j in range(10):
+                l1k[cnt] <<= x[m:m + BLK, 0:K]
+                l0a[cnt] <<= l1q[cnt][BLK//2:BLK, 0:K]
+                l0b[cnt] <<= l1k[cnt][0:BLK//2, 0:K]
+
+            mmad(l0c[cnt], l0a[cnt], l0b[cnt])
+            y[:1, :] <<= l0c[cnt]
+            
+            cnt += 1 
+
+    # test case 5
+    with auto_sync():
+        l1q[cnt] <<= x[m:m + BLK, 0:K]
+        for m in range(m1, m2, BLK):
+            l1q[cnt] <<= x[m:m + BLK, 0:K]
+            for j in range(10):
+                l1q[cnt] <<= x[m:m + BLK, 0:K]
+                for k in range(20):
+                    l0a[cnt] <<= l1q[cnt][BLK//2:BLK, 0:K]
+                    l0b[cnt] <<= l1k[cnt][0:BLK//2, 0:K]
+                    mmad(l0c[cnt], l0a[cnt], l0b[cnt])
+                y[:1, :] <<= l0c[cnt]
+        
+    # test case 6
+    with auto_sync():
+        for m in range(m1, m2, BLK):
+            l1q[cnt] <<= x[m:m + BLK, 0:K]
+            for j in range(10):
+                if m==0:
+                    l1q[cnt] <<= x[m:m + BLK, 0:K]
+                for k in range(20):
+                    l0a[cnt] <<= l1q[cnt][BLK//2:BLK, 0:K]
+                    l0b[cnt] <<= l1k[cnt][0:BLK//2, 0:K]
+                    if cnt==0:
+                        mmad(l0c[cnt], l0a[cnt], l0b[cnt], is_init=True)
+                    else:
+                        mmad(l0c[cnt], l0a[cnt], l0b[cnt], is_init=False)
+                    if k==1:
+                        y[:1, :] <<= l0c[cnt]
+
+    # test case 7
+    with auto_sync():
+        for m in range(m1, m2, BLK):
+            l1q[cnt] <<= x[m:m + BLK, 0:K]
+            for j in range(10):
+                if m==0:
+                    l1q[cnt] <<= x[m:m + BLK, 0:K]
+                for k in range(20):
+                    l0a[cnt] <<= l1q[cnt][BLK//2:BLK, 0:K]
+                    l0b[cnt] <<= l1k[cnt][0:BLK//2, 0:K]
+                    mmad(l0c[cnt], l0a[cnt], l0b[cnt])
+                    l0a[cnt] <<= l1q[cnt][BLK//2:BLK, 0:K]
+                    l0b[cnt] <<= l1k[cnt][0:BLK//2, 0:K]
+                    mmad(l0c[cnt], l0a[cnt], l0b[cnt])
+
+    # test case 8
+    with auto_sync():
+        for m in range(m1, m2, BLK):
+            l1q[cnt] <<= x[m:m + BLK, 0:K]
+            for j in range(10):
+                if m==0:
+                    l1q[cnt] <<= x[m:m + BLK, 0:K]
+                for k in range(20):
+                    l0a[cnt] <<= l1q[cnt][BLK//2:BLK, 0:K]
+                    l0b[cnt] <<= l1k[cnt][0:BLK//2, 0:K]
+                    mmad(l0c[cnt], l0a[cnt], l0b[cnt])
+                    y[:1, :] <<= l0c[cnt]
+                    l0a[cnt] <<= l1q[cnt][BLK//2:BLK, 0:K]
+                    l0b[cnt] <<= l1k[cnt][0:BLK//2, 0:K]
+                    mmad(l0c[cnt], l0a[cnt], l0b[cnt])
+                    y[:1, :] <<= l0c[cnt]
+
+    # test case 9
+    with auto_sync():
+        for m in range(m1, m2, BLK):
+            l1q[cnt] <<= x[m:m + BLK, 0:K]
+            for j in range(10):
+                if m==0:
+                    l1q[cnt] <<= x[m:m + BLK, 0:K]
+                for k in range(20):
+                    l0a[cnt] <<= l1q[cnt][BLK//2:BLK, 0:K]
+                    l0b[cnt] <<= l1k[cnt][0:BLK//2, 0:K]
+                    mmad(l0c[cnt], l0a[cnt], l0b[cnt])
+                    l0a[cnt] <<= l1q[cnt][BLK//2:BLK, 0:K]
+                    l0b[cnt] <<= l1k[cnt][0:BLK//2, 0:K]
+                    mmad(l0c[cnt], l0a[cnt], l0b[cnt])
+                    y[:1, :] <<= l0c[cnt]
+
+    # test case 10
+    for m in range(m1, m2, BLK):
+        with auto_sync():
+            l1q[cnt] <<= x[m:m + BLK, 0:K]
+            l1k[cnt] <<= x[m:m + BLK, 0:K]
+            l1v <<= x[m:m + BLK, 0:K]
+            for j in range(10):
+                l0a[cnt] <<= l1q[cnt][BLK//2:BLK, 0:K]
+                l0b[cnt] <<= l1k[cnt][0:BLK//2, 0:K]
+            mmad(l0c[cnt], l0a[cnt], l0b[cnt])
+            y[:1, :] <<= l0c[cnt]
+
+    # test case 11
+    for m in range(m1, m2, BLK):
+        with auto_sync():
+            l1q[cnt] <<= x[m:m + BLK, 0:K]
+            l1k[cnt] <<= x[m:m + BLK, 0:K]
+            l1v <<= x[m:m + BLK, 0:K]
+            for j in range(10):
+                l0a[cnt] <<= l1q[cnt][BLK//2:BLK, 0:K]
+                l0b[cnt] <<= l1k[cnt][0:BLK//2, 0:K]
+            mmad(l0c[cnt], l0a[cnt], l0b[cnt])
+            y[:1, :] <<= l0c2
 
 
     for m in range(m1, m2, BLK):

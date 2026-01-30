@@ -446,8 +446,8 @@ class GMTensor:
                 ub_to_gm_pad(self, other)
                 return self
             if other.position is Position.L0C:
-                from ..stub_functions.cube import l0c_to_gm_nd2nz
-                l0c_to_gm_nd2nz(self, other)
+                from ..stub_functions.cube import l0c_to_gm_nz2nd
+                l0c_to_gm_nz2nd(self, other)
                 return self
             raise ValueError(f"Tensor位置必须为L0C或UB，当前位置: {other.position}")
         raise TypeError(f"other必须是Tensor类型，当前类型: {type(other)}")
@@ -527,8 +527,8 @@ class GMTensor:
             if value.position is not Position.L0C:
                 raise ValueError(f"Tensor位置必须为L0C，当前位置: {value.position}")
             dst = self.__getitem__(index)
-            from ..stub_functions.cube import l0c_to_gm_nd2nz
-            l0c_to_gm_nd2nz(dst, value)
+            from ..stub_functions.cube import l0c_to_gm_nz2nd
+            l0c_to_gm_nz2nd(dst, value)
             return
         if isinstance(value, GMTensor):
             return

@@ -1,5 +1,5 @@
 from .var_op import CeilDiv, GetCubeNum, GetCubeIdx, var_mul, var_add, var_sub, var_div, Min, Max
-from .cube import gm_to_l1_nd2nz, l1_to_l0, mmad, l0c_to_gm_nd2nz
+from .cube import gm_to_l1_nd2nz, l1_to_l0, mmad, l0c_to_gm_nz2nd
 from .barrier import bar_m, bar_v, bar_mte3, bar_mte2, bar_mte1, bar_fix, bar_all
 from .atomic import atomic_add, atomic_max, atomic_min
 from .misc import reinterpret

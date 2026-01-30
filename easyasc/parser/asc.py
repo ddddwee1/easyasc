@@ -15,6 +15,7 @@ from .asc_utils import (
     value_to_cpp,
 )
 from .asc_pruning import prune_empty_blocks, prune_unused_decls, prune_unused_vars
+from .asc_autosync import insert_auto_sync
 from .helper import CodeHelper
 from ..utils.instruction import Instruction
 from ..utils.var import Var
@@ -283,4 +284,5 @@ def translate(instructions: Iterable[Instruction]) -> str:
 
 def translate_split(instructions: Iterable[Instruction]) -> Tuple[str, str]:
     cube_insts, vec_insts = split_instructions(instructions)
+    cube_insts = insert_auto_sync(cube_insts)
     return translate(cube_insts), translate(vec_insts)
