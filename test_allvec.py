@@ -5,7 +5,7 @@ from easyasc import *
 BLK = 128
 
 
-@ea.kernel
+@ea.kernel()
 def cubefunc(x: GMTensor, y: GMTensor, z: GMTensor, M: Var, N: Var, K: Var):
     l1q = DBuff(DT.half, [BLK, K], Position.L1)
     l1k = DBuff(DT.half, [BLK, K], Position.L1)

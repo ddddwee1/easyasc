@@ -1,7 +1,7 @@
 from .utils.datatype import Datatype as DT
 from .utils.Tensor import Tensor, DBuff, GMTensor
 from .utils.var import Var
-from .decorators import kernel, func
+from .decorators import kernel, func, auto_sync
 from .utils.positions import Position, PositionType
 from .utils.roundmode import RoundMode, RoundModeType
 from .utils.vecop import maximum, minimum

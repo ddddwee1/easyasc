@@ -213,10 +213,12 @@ def _has_name_kw(node: ast.Call) -> bool:
 
 
 def _is_kernel_decorator(node: ast.AST) -> bool:
+    if isinstance(node, ast.Call):
+        node = node.func
     if isinstance(node, ast.Name):
-        return node.id in {"kernel", "func"}
+        return node.id in {"kernel", "func", "auto_sync"}
     if isinstance(node, ast.Attribute):
-        return node.attr in {"kernel", "func"}
+        return node.attr in {"kernel", "func", "auto_sync"}
     return False
 
 

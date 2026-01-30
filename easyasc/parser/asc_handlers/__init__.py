@@ -1,4 +1,4 @@
-from .common import Handler
+from .common import Handler, handle_start_auto_sync, handle_end_auto_sync
 from .core import (
     handle_create_var,
     handle_create_dbuf,
@@ -197,4 +197,6 @@ def build_handlers() -> dict[str, Handler]:
         "SELECT": handle_vec_select,
         "SETCMPMASK": handle_vec_set_cmpmask,
         "REINTERPRET": handle_reinterpret,
+        "start_auto_sync": handle_start_auto_sync,
+        "end_auto_sync": handle_end_auto_sync,
     }

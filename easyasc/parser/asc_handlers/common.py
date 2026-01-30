@@ -22,3 +22,11 @@ Handler = Callable[[Instruction, CodeHelper, Dict[str, str]], None]
 
 def _pipe_name(pipe) -> str:
     return f"PIPE_{pipe}"
+
+
+def handle_start_auto_sync(inst: Instruction, helper: CodeHelper, expr_map: Dict[str, str]) -> None:
+    helper("// start auto sync")
+
+
+def handle_end_auto_sync(inst: Instruction, helper: CodeHelper, expr_map: Dict[str, str]) -> None:
+    helper("// end auto sync")
