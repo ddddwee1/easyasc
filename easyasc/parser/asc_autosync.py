@@ -17,6 +17,7 @@ _MTE2_OPS = {"gm_to_l1_nd2nz", "GM2UBPAD", "gm_to_ub_pad"}
 _MTE1_OPS = {"l1_to_l0"}
 _M_OPS = {"mmad"}
 _FIX_OPS = {"l0c_to_gm_nz2nd"}
+_MTE3_OPS = {"UB2GMPAD", "ub_to_gm_pad"}
 _EVENT_OPS = {
     "create_sevent",
     "create_devent",
@@ -98,6 +99,14 @@ def _sevent_needed_for_consumer(inst: Instruction) -> bool:
         source_buf = getattr(tensor, "source_buf", None)
         if source_buf is None or isinstance(source_buf, Tensor):
             return True
+    return False
+
+
+def _sevent_needed_for_consumer_src_only(inst: Instruction) -> bool:
+    src = inst.kwargs.get("src", None)
+    if isinstance(src, Tensor):
+        source_buf = getattr(src, "source_buf", None)
+        return source_buf is None or isinstance(source_buf, Tensor)
     return False
 
 
@@ -196,6 +205,7 @@ def _insert_auto_sync_for_pipe(
     consumer_pipe: Pipe,
     name_prefix: str,
     name_level: str,
+    consumer_sevent_predicate=_sevent_needed_for_consumer,
 ) -> List[Instruction]:
     if not insts:
         return insts
@@ -229,6 +239,7 @@ def _insert_auto_sync_for_pipe(
             continue
         depth = 0
         depths_with_producer: Set[int] = set()
+        depths_with_consumer: Set[int] = set()
         for idx in range(start, end + 1):
             seg_id_per_index[idx] = seg_id
             if insts[idx].opname == "start_loop":
@@ -236,9 +247,14 @@ def _insert_auto_sync_for_pipe(
             depth_per_index[idx] = depth
             if insts[idx].opname in producer_ops:
                 depths_with_producer.add(depth)
+            if insts[idx].opname in consumer_ops:
+                depths_with_consumer.add(depth)
             if insts[idx].opname == "end_loop" and depth > 0:
                 depth -= 1
-        sorted_depths = sorted(depths_with_producer)
+        if name_level == "ubout":
+            sorted_depths = sorted(depths_with_consumer) or sorted(depths_with_producer)
+        else:
+            sorted_depths = sorted(depths_with_producer)
         segment_depths[seg_id] = sorted_depths
         if len(sorted_depths) > max_pairs:
             max_pairs = len(sorted_depths)
@@ -306,7 +322,7 @@ def _insert_auto_sync_for_pipe(
             continue
         seg_id = seg_id_per_index[idx]
         pair_id = pair_id_per_index[idx]
-        if inst.opname in consumer_ops and _sevent_needed_for_consumer(inst):
+        if inst.opname in consumer_ops and consumer_sevent_predicate(inst):
             use_sevent_for_seg_pair[(seg_id, pair_id)] = True
         if name_level == "l1" and _sevent_needed_for_gm_to_l1(inst):
             use_sevent_for_seg_pair[(seg_id, pair_id)] = True
@@ -415,14 +431,34 @@ def _insert_auto_sync_for_pipe(
             min_consumer_depth[key] = depth
         last_consumer_idx[key] = idx
 
+    first_producer_idx: Dict[Tuple[int, int], int] = {}
+    last_producer_idx: Dict[Tuple[int, int], int] = {}
+    last_shallow_producer_idx: Dict[Tuple[int, int], int] = {}
+    min_producer_depth: Dict[Tuple[int, int], int] = {}
+    for idx, inst in enumerate(insts):
+        if not in_segment[idx] or seg_id_per_index[idx] == -1 or inst.opname not in producer_ops:
+            continue
+        seg_id = seg_id_per_index[idx]
+        pair_id = pair_id_per_index[idx]
+        seg_pair = (seg_id, pair_id)
+        first_producer_idx.setdefault(seg_pair, idx)
+        last_producer_idx[seg_pair] = idx
+        prod_depth = depth_per_index[idx]
+        prev_min = min_producer_depth.get(seg_pair)
+        if prev_min is None or prod_depth < prev_min:
+            min_producer_depth[seg_pair] = prod_depth
+        depths = segment_depths.get(seg_id, [])
+        pair_depth = depths[pair_id] if pair_id < len(depths) else 0
+        if prod_depth <= pair_depth:
+            last_shallow_producer_idx[seg_pair] = idx
+
     insert_before: Dict[int, List[Instruction]] = {}
     insert_after: Dict[int, List[Instruction]] = {}
     seen_wait: Set[Tuple[int, int]] = set()
+    seen_pre_valid: Set[Tuple[int, int]] = set()
     seen_ready: Set[Tuple[int, int]] = set()
     seen_ready_pairs: Set[Tuple[int, int]] = set()
     block_start_for_pair: Dict[int, int] = {}
-    last_producer_idx: Dict[Tuple[int, int], int] = {}
-    first_producer_idx: Dict[Tuple[int, int], int] = {}
     loop_stack = []
     for idx, inst in enumerate(insts):
         if inst.opname == "start_loop" and in_segment[idx] and seg_id_per_index[idx] != -1:
@@ -434,12 +470,10 @@ def _insert_auto_sync_for_pipe(
         pair_id = pair_id_per_index[idx]
         seg_id = seg_id_per_index[idx]
         seg_pair = (seg_id, pair_id)
-        last_producer_idx[seg_pair] = idx
-        first_producer_idx.setdefault(seg_pair, idx)
         depths = segment_depths.get(seg_id, [])
         pair_depth = depths[pair_id] if pair_id < len(depths) else 0
         target_depth: Optional[int] = None
-        if name_level in ("l0", "fix"):
+        if name_level in ("l0", "fix", "ubout"):
             consumer_depth = min_consumer_depth.get((seg_id, pair_id))
             if consumer_depth is not None and consumer_depth < pair_depth:
                 target_depth = consumer_depth
@@ -473,6 +507,8 @@ def _insert_auto_sync_for_pipe(
                 chain = chain_for_index[start_idx] or chain_for_index[end_idx]
                 if chain is not None:
                     wait_idx, ready_idx = chain
+            if name_level == "ubout":
+                continue
             wait_key = (pair_id, wait_idx)
             if wait_key not in seen_wait:
                 seen_wait.add(wait_key)
@@ -525,6 +561,55 @@ def _insert_auto_sync_for_pipe(
                     Instruction("event_wait", event=_event_for(seg_id, pair_id, 1))
                 )
 
+    if name_level == "ubout":
+        for idx, inst in enumerate(insts):
+            if not in_segment[idx] or seg_id_per_index[idx] == -1 or inst.opname not in consumer_ops:
+                continue
+            seg_id = seg_id_per_index[idx]
+            pair_id = pair_id_per_index[idx]
+            seg_pair = (seg_id, pair_id)
+            depths = segment_depths.get(seg_id, [])
+            pair_depth = depths[pair_id] if pair_id < len(depths) else 0
+            # Insert pre-valid before the first producer in the consumer's scope.
+            scope_start = segments[seg_id][0]
+            if pair_depth > 0:
+                stack = loop_stack_per_index[idx]
+                if len(stack) >= pair_depth:
+                    scope_start = stack[pair_depth - 1]
+            search_start = scope_start + 1
+            first_prod_idx = None
+            for j in range(search_start, idx):
+                if not in_segment[j] or seg_id_per_index[j] != seg_id:
+                    continue
+                if insts[j].opname in producer_ops:
+                    first_prod_idx = j
+                    break
+            if first_prod_idx is not None:
+                pre_valid_idx = first_prod_idx
+                if depth_per_index[first_prod_idx] > pair_depth:
+                    stack = loop_stack_per_index[first_prod_idx]
+                    if len(stack) > pair_depth:
+                        pre_valid_idx = stack[pair_depth]
+                if pre_valid_idx == first_prod_idx:
+                    chain = chain_for_index[first_prod_idx]
+                    if chain is not None:
+                        pre_valid_idx = chain[0]
+                pre_key = (pair_id, pre_valid_idx)
+                if pre_key not in seen_pre_valid:
+                    seen_pre_valid.add(pre_key)
+                    insert_before.setdefault(pre_valid_idx, []).append(
+                        Instruction("event_set", event=_event_for(seg_id, pair_id, 0))
+                    )
+            ready_key = (pair_id, idx)
+            if ready_key not in seen_ready:
+                seen_ready.add(ready_key)
+                insert_before.setdefault(idx, []).append(
+                    Instruction("event_set", event=_event_for(seg_id, pair_id, 1))
+                )
+                insert_before.setdefault(idx, []).append(
+                    Instruction("event_wait", event=_event_for(seg_id, pair_id, 1))
+                )
+
     insert_valid_after: Dict[int, List[Instruction]] = {}
     seen_valid: Set[Tuple[int, int]] = set()
     seen_valid_pairs: Set[Tuple[int, int]] = set()
@@ -555,9 +640,9 @@ def _insert_auto_sync_for_pipe(
             eligible_pairs = [
                 pid for pid, desired in enumerate(desired_depths) if desired <= consumer_depth
             ]
-        elif name_level in ("l1", "ubin"):
+        elif name_level in ("l1", "ubin", "ubout"):
             eligible_pairs = [pid for pid, depth in enumerate(depths) if depth <= consumer_depth]
-            if name_level == "ubin" and not eligible_pairs:
+            if name_level in ("ubin", "ubout") and not eligible_pairs:
                 eligible_pairs = [pair_id_per_index[idx]]
         else:
             eligible_pairs = [pair_id_per_index[idx]]
@@ -572,7 +657,7 @@ def _insert_auto_sync_for_pipe(
             else:
                 pair_depth = depths[pair_id] if pair_id < len(depths) else 0
             consumer_pairs.add((seg_id, pair_id))
-            if name_level in ("l1", "fix", "ubin"):
+            if name_level in ("l1", "fix", "ubin", "ubout"):
                 if consumer_depth > pair_depth:
                     if len(loop_stack) > pair_depth:
                         start_at_depth = loop_stack[pair_depth]
@@ -605,7 +690,7 @@ def _insert_auto_sync_for_pipe(
                     and insts[next_idx].opname in consumer_ops
                     and depth_per_index[next_idx] >= pair_depth
                 )
-            elif name_level in ("l1", "ubin"):
+            elif name_level in ("l1", "ubin", "ubout"):
                 same_pair_next = (
                     next_idx != -1
                     and insts[next_idx].opname in consumer_ops
@@ -695,6 +780,16 @@ def insert_auto_sync(instructions: List[Instruction]) -> List[Instruction]:
         Pipe.V,
         "_tmp_event",
         "ubin",
+    )
+    insts = _insert_auto_sync_for_pipe(
+        insts,
+        _get_v_ops(),
+        _MTE3_OPS,
+        Pipe.V,
+        Pipe.MTE3,
+        "_tmp_event",
+        "ubout",
+        consumer_sevent_predicate=_sevent_needed_for_consumer_src_only,
     )
     insts = _insert_auto_sync_for_pipe(
         insts,

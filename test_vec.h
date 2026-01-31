@@ -1,3 +1,5 @@
+DEvent<PIPE_MTE3, PIPE_V> _tmp_event1_ubout_valid;
+DEvent<PIPE_V, PIPE_MTE3> _tmp_event1_ubout_ready;
 DEvent<PIPE_V, PIPE_MTE2> _tmp_event1_ubin_valid;
 DEvent<PIPE_MTE2, PIPE_V> _tmp_event1_ubin_ready;
 DEvent<PIPE_V, PIPE_MTE2> _tmp_event2_ubin_valid;
@@ -25,12 +27,16 @@ for (int m = 0; m < m2; m += 128) {
     GM2UBPAD(xub.get(cnt), x[K*m], 128, 2*K, 2*M - 256, CeilDiv(0, 16));
     _tmp_event1_ubin_ready.set();
     _tmp_event1_ubin_ready.wait();
+    _tmp_event1_ubout_valid.set();
     Add<half, false>(xub.get(cnt), xub.get(cnt1), xub.get(cnt2), MASK_PLACEHOLDER, CeilDiv(128*K, 128), {(uint8_t)1, (uint8_t)1, (uint8_t)1, (uint8_t)8, (uint8_t)8, (uint8_t)8});
     Sub<half, false>(xub.get(cnt), xub.get(cnt1), xub.get(cnt2), MASK_PLACEHOLDER, CeilDiv(128*K, 128), {(uint8_t)1, (uint8_t)1, (uint8_t)1, (uint8_t)8, (uint8_t)8, (uint8_t)8});
     Mul<half, false>(xub.get(cnt), xub.get(cnt1), xub.get(cnt2), MASK_PLACEHOLDER, CeilDiv(128*K, 128), {(uint8_t)1, (uint8_t)1, (uint8_t)1, (uint8_t)8, (uint8_t)8, (uint8_t)8});
     Div<half, false>(xub.get(cnt), xub.get(cnt1), xub.get(cnt2), MASK_PLACEHOLDER, CeilDiv(128*K, 128), {(uint8_t)1, (uint8_t)1, (uint8_t)1, (uint8_t)8, (uint8_t)8, (uint8_t)8});
     _tmp_event1_ubin_valid.set();
+    _tmp_event1_ubout_ready.set();
+    _tmp_event1_ubout_ready.wait();
     UB2GMPAD(z[N*m], xub.get(cnt), 128, 2*K, CeilDiv(0, 16), 2*M - 256);
+    _tmp_event1_ubout_valid.set();
 }
 // end auto sync
 // start auto sync
@@ -39,14 +45,19 @@ for (int m = 0; m < m2; m += 128) {
     GM2UBPAD(xub.get(cnt), x[K*m], 128, 2*K, 2*M - 256, CeilDiv(0, 16));
     _tmp_event1_ubin_ready.set();
     _tmp_event1_ubin_ready.wait();
-    for (int i = 0; i < 10; i += 1) {
+    int i = 0;
+    _tmp_event1_ubout_valid.set();
+    for (; i < 10; i += 1) {
         Add<half, false>(xub.get(cnt), xub.get(cnt1), xub.get(cnt2), MASK_PLACEHOLDER, CeilDiv(128*K, 128), {(uint8_t)1, (uint8_t)1, (uint8_t)1, (uint8_t)8, (uint8_t)8, (uint8_t)8});
     }
     Sub<half, false>(xub.get(cnt), xub.get(cnt1), xub.get(cnt2), MASK_PLACEHOLDER, CeilDiv(128*K, 128), {(uint8_t)1, (uint8_t)1, (uint8_t)1, (uint8_t)8, (uint8_t)8, (uint8_t)8});
     Mul<half, false>(xub.get(cnt), xub.get(cnt1), xub.get(cnt2), MASK_PLACEHOLDER, CeilDiv(128*K, 128), {(uint8_t)1, (uint8_t)1, (uint8_t)1, (uint8_t)8, (uint8_t)8, (uint8_t)8});
     Div<half, false>(xub.get(cnt), xub.get(cnt1), xub.get(cnt2), MASK_PLACEHOLDER, CeilDiv(128*K, 128), {(uint8_t)1, (uint8_t)1, (uint8_t)1, (uint8_t)8, (uint8_t)8, (uint8_t)8});
     _tmp_event1_ubin_valid.set();
+    _tmp_event1_ubout_ready.set();
+    _tmp_event1_ubout_ready.wait();
     UB2GMPAD(z[N*m], xub.get(cnt), 128, 2*K, CeilDiv(0, 16), 2*M - 256);
+    _tmp_event1_ubout_valid.set();
 }
 // end auto sync
 // start auto sync
@@ -56,18 +67,24 @@ for (int m = 0; m < m2; m += 128) {
     _tmp_event1_ubin_ready.set();
     _tmp_event1_ubin_ready.wait();
     for (int i = 0; i < 10; i += 1) {
+        _tmp_event1_ubout_valid.set();
         Add<half, false>(xub.get(cnt), xub.get(cnt1), xub.get(cnt2), MASK_PLACEHOLDER, CeilDiv(128*K, 128), {(uint8_t)1, (uint8_t)1, (uint8_t)1, (uint8_t)8, (uint8_t)8, (uint8_t)8});
         Sub<half, false>(xub.get(cnt), xub.get(cnt1), xub.get(cnt2), MASK_PLACEHOLDER, CeilDiv(128*K, 128), {(uint8_t)1, (uint8_t)1, (uint8_t)1, (uint8_t)8, (uint8_t)8, (uint8_t)8});
         Mul<half, false>(xub.get(cnt), xub.get(cnt1), xub.get(cnt2), MASK_PLACEHOLDER, CeilDiv(128*K, 128), {(uint8_t)1, (uint8_t)1, (uint8_t)1, (uint8_t)8, (uint8_t)8, (uint8_t)8});
         Div<half, false>(xub.get(cnt), xub.get(cnt1), xub.get(cnt2), MASK_PLACEHOLDER, CeilDiv(128*K, 128), {(uint8_t)1, (uint8_t)1, (uint8_t)1, (uint8_t)8, (uint8_t)8, (uint8_t)8});
+        _tmp_event1_ubout_ready.set();
+        _tmp_event1_ubout_ready.wait();
         UB2GMPAD(z[N*m], xub.get(cnt), 128, 2*K, CeilDiv(0, 16), 2*M - 256);
+        _tmp_event1_ubout_valid.set();
     }
     _tmp_event1_ubin_valid.set();
 }
 // end auto sync
 // start auto sync
 for (int m = 0; m < m2; m += 128) {
-    for (int i = 0; i < 10; i += 1) {
+    int i = 0;
+    _tmp_event1_ubout_valid.set();
+    for (; i < 10; i += 1) {
         _tmp_event1_ubin_valid.wait();
         GM2UBPAD(xub.get(cnt), x[K*m], 128, 2*K, 2*M - 256, CeilDiv(0, 16));
         _tmp_event1_ubin_ready.set();
@@ -78,12 +95,17 @@ for (int m = 0; m < m2; m += 128) {
         Div<half, false>(xub.get(cnt), xub.get(cnt1), xub.get(cnt2), MASK_PLACEHOLDER, CeilDiv(128*K, 128), {(uint8_t)1, (uint8_t)1, (uint8_t)1, (uint8_t)8, (uint8_t)8, (uint8_t)8});
         _tmp_event1_ubin_valid.set();
     }
+    _tmp_event1_ubout_ready.set();
+    _tmp_event1_ubout_ready.wait();
     UB2GMPAD(z[N*m], xub.get(cnt), 128, 2*K, CeilDiv(0, 16), 2*M - 256);
+    _tmp_event1_ubout_valid.set();
 }
 // end auto sync
 // start auto sync
 for (int m = 0; m < m2; m += 128) {
-    for (int i = 0; i < 10; i += 1) {
+    int i = 0;
+    _tmp_event1_ubout_valid.set();
+    for (; i < 10; i += 1) {
         _tmp_event1_ubin_valid.wait();
         GM2UBPAD(xub.get(cnt), x[K*m], 128, 2*K, 2*M - 256, CeilDiv(0, 16));
         _tmp_event1_ubin_ready.set();
@@ -94,7 +116,10 @@ for (int m = 0; m < m2; m += 128) {
     Mul<half, false>(xub.get(cnt), xub.get(cnt1), xub.get(cnt2), MASK_PLACEHOLDER, CeilDiv(128*K, 128), {(uint8_t)1, (uint8_t)1, (uint8_t)1, (uint8_t)8, (uint8_t)8, (uint8_t)8});
     Div<half, false>(xub.get(cnt), xub.get(cnt1), xub.get(cnt2), MASK_PLACEHOLDER, CeilDiv(128*K, 128), {(uint8_t)1, (uint8_t)1, (uint8_t)1, (uint8_t)8, (uint8_t)8, (uint8_t)8});
     _tmp_event1_ubin_valid.set();
+    _tmp_event1_ubout_ready.set();
+    _tmp_event1_ubout_ready.wait();
     UB2GMPAD(z[N*m], xub.get(cnt), 128, 2*K, CeilDiv(0, 16), 2*M - 256);
+    _tmp_event1_ubout_valid.set();
 }
 // end auto sync
 // start auto sync
@@ -103,7 +128,9 @@ for (int m = 0; m < m2; m += 128) {
     GM2UBPAD(xub.get(cnt), x[K*m], 128, 2*K, 2*M - 256, CeilDiv(0, 16));
     _tmp_event1_ubin_ready.set();
     _tmp_event1_ubin_ready.wait();
-    for (int i = 0; i < 10; i += 1) {
+    int i = 0;
+    _tmp_event1_ubout_valid.set();
+    for (; i < 10; i += 1) {
         _tmp_event2_ubin_valid.wait();
         GM2UBPAD(xub.get(cnt), x[K*m], 128, 2*K, 2*M - 256, CeilDiv(0, 16));
         _tmp_event2_ubin_ready.set();
@@ -115,7 +142,10 @@ for (int m = 0; m < m2; m += 128) {
     Mul<half, false>(xub.get(cnt), xub.get(cnt1), xub.get(cnt2), MASK_PLACEHOLDER, CeilDiv(128*K, 128), {(uint8_t)1, (uint8_t)1, (uint8_t)1, (uint8_t)8, (uint8_t)8, (uint8_t)8});
     Div<half, false>(xub.get(cnt), xub.get(cnt1), xub.get(cnt2), MASK_PLACEHOLDER, CeilDiv(128*K, 128), {(uint8_t)1, (uint8_t)1, (uint8_t)1, (uint8_t)8, (uint8_t)8, (uint8_t)8});
     _tmp_event1_ubin_valid.set();
+    _tmp_event1_ubout_ready.set();
+    _tmp_event1_ubout_ready.wait();
     UB2GMPAD(z[N*m], xub.get(cnt), 128, 2*K, CeilDiv(0, 16), 2*M - 256);
+    _tmp_event1_ubout_valid.set();
 }
 // end auto sync
 // start auto sync
@@ -124,7 +154,9 @@ for (int m = 0; m < m2; m += 128) {
     GM2UBPAD(xub.get(cnt), x[K*m], 128, 2*K, 2*M - 256, CeilDiv(0, 16));
     _tmp_event1_ubin_ready.set();
     _tmp_event1_ubin_ready.wait();
-    for (int i = 0; i < 10; i += 1) {
+    int i = 0;
+    _tmp_event1_ubout_valid.set();
+    for (; i < 10; i += 1) {
         _tmp_event2_ubin_valid.wait();
         GM2UBPAD(xub.get(cnt), x[K*m], 128, 2*K, 2*M - 256, CeilDiv(0, 16));
         _tmp_event2_ubin_ready.set();
@@ -136,7 +168,10 @@ for (int m = 0; m < m2; m += 128) {
     Mul<half, false>(xub.get(cnt), xub.get(cnt1), xub.get(cnt2), MASK_PLACEHOLDER, CeilDiv(128*K, 128), {(uint8_t)1, (uint8_t)1, (uint8_t)1, (uint8_t)8, (uint8_t)8, (uint8_t)8});
     Div<half, false>(xub.get(cnt), xub.get(cnt1), xub.get(cnt2), MASK_PLACEHOLDER, CeilDiv(128*K, 128), {(uint8_t)1, (uint8_t)1, (uint8_t)1, (uint8_t)8, (uint8_t)8, (uint8_t)8});
     _tmp_event1_ubin_valid.set();
+    _tmp_event1_ubout_ready.set();
+    _tmp_event1_ubout_ready.wait();
     UB2GMPAD(z[N*m], xub.get(cnt), 128, 2*K, CeilDiv(0, 16), 2*M - 256);
+    _tmp_event1_ubout_valid.set();
 }
 // end auto sync
 // start auto sync
@@ -145,7 +180,9 @@ for (int m = 0; m < m2; m += 128) {
     GM2UBPAD(xubs, x[K*m], 128, 2*K, 2*M - 256, CeilDiv(0, 16));
     _tmp_event1_ubin_ready.set();
     _tmp_event1_ubin_ready.wait();
-    for (int i = 0; i < 10; i += 1) {
+    int i = 0;
+    _tmp_event1_ubout_valid.set();
+    for (; i < 10; i += 1) {
         _tmp_event2_ubin_valid.wait();
         GM2UBPAD(xub.get(cnt), x[K*m], 128, 2*K, 2*M - 256, CeilDiv(0, 16));
         _tmp_event2_ubin_ready.set();
@@ -157,7 +194,10 @@ for (int m = 0; m < m2; m += 128) {
     Mul<half, false>(xub.get(cnt), xub.get(cnt1), xub.get(cnt2), MASK_PLACEHOLDER, CeilDiv(128*K, 128), {(uint8_t)1, (uint8_t)1, (uint8_t)1, (uint8_t)8, (uint8_t)8, (uint8_t)8});
     Div<half, false>(xub.get(cnt), xub.get(cnt1), xub.get(cnt2), MASK_PLACEHOLDER, CeilDiv(128*K, 128), {(uint8_t)1, (uint8_t)1, (uint8_t)1, (uint8_t)8, (uint8_t)8, (uint8_t)8});
     _tmp_event1_ubin_valid.set();
+    _tmp_event1_ubout_ready.set();
+    _tmp_event1_ubout_ready.wait();
     UB2GMPAD(z[N*m], xub.get(cnt), 128, 2*K, CeilDiv(0, 16), 2*M - 256);
+    _tmp_event1_ubout_valid.set();
 }
 // end auto sync
 // start auto sync
@@ -166,7 +206,9 @@ for (int m = 0; m < m2; m += 128) {
     GM2UBPAD(xub.get(cnt), x[K*m], 128, 2*K, 2*M - 256, CeilDiv(0, 16));
     _tmp_event1_ubin_ready.set();
     _tmp_event1_ubin_ready.wait();
-    for (int i = 0; i < 10; i += 1) {
+    int i = 0;
+    _tmp_event1_ubout_valid.set();
+    for (; i < 10; i += 1) {
         _tmp_event2_ubin_valid.wait();
         GM2UBPAD(xubs, x[K*m], 128, 2*K, 2*M - 256, CeilDiv(0, 16));
         _tmp_event2_ubin_ready.set();
@@ -178,6 +220,9 @@ for (int m = 0; m < m2; m += 128) {
     Mul<half, false>(xub.get(cnt), xub.get(cnt1), xub.get(cnt2), MASK_PLACEHOLDER, CeilDiv(128*K, 128), {(uint8_t)1, (uint8_t)1, (uint8_t)1, (uint8_t)8, (uint8_t)8, (uint8_t)8});
     Div<half, false>(xub.get(cnt), xub.get(cnt1), xub.get(cnt2), MASK_PLACEHOLDER, CeilDiv(128*K, 128), {(uint8_t)1, (uint8_t)1, (uint8_t)1, (uint8_t)8, (uint8_t)8, (uint8_t)8});
     _tmp_event1_ubin_valid.set();
+    _tmp_event1_ubout_ready.set();
+    _tmp_event1_ubout_ready.wait();
     UB2GMPAD(z[N*m], xub.get(cnt), 128, 2*K, CeilDiv(0, 16), 2*M - 256);
+    _tmp_event1_ubout_valid.set();
 }
 // end auto sync

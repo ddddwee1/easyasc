@@ -141,3 +141,4 @@ if __name__ == "__main__":
     cubefunc(x, y, z, M, N, K)
     # cubefunc.print_instructions()
     cubefunc.dump_asc("test")
+
