@@ -178,14 +178,15 @@ def build_offset_expr_nz(shape, offset, dtype, expr_map: Dict[str, str]) -> str:
 
 
 _ASSIGNMENT_OPS = {
-    "get_cube_num",
-    "get_cube_idx",
-    "ceil_div",
-    "min",
-    "mul",
-    "div",
-    "add",
-    "sub",
+    "GetCubeNum",
+    "GetCubeIdx",
+    "CeilDiv",
+    "Min",
+    "Max",
+    "var_mul",
+    "var_div",
+    "var_add",
+    "var_sub",
 }
 
 
@@ -194,9 +195,9 @@ def is_assignment_op(opname: str) -> bool:
 
 
 def uses_var_in_operands(inst: Instruction, name: str) -> bool:
-    if inst.opname in ("get_cube_num", "get_cube_idx"):
+    if inst.opname in ("GetCubeNum", "GetCubeIdx"):
         return False
-    if inst.opname in ("ceil_div", "min", "mul", "div", "add", "sub"):
+    if inst.opname in ("CeilDiv", "Min", "Max", "var_mul", "var_div", "var_add", "var_sub"):
         for key in ("a", "b"):
             val = inst.kwargs.get(key, None)
             if isinstance(val, Var) and val.name == name:
@@ -206,31 +207,35 @@ def uses_var_in_operands(inst: Instruction, name: str) -> bool:
 
 def assignment_expr(inst: Instruction, expr_map: Dict[str, str]) -> str:
     opname = inst.opname
-    if opname == "get_cube_num":
+    if opname == "GetCubeNum":
         return "GetBlockNum()"
-    if opname == "get_cube_idx":
+    if opname == "GetCubeIdx":
         return "get_block_idx()"
-    if opname == "ceil_div":
+    if opname == "CeilDiv":
         a = value_to_cpp(inst.kwargs.get("a", None), expr_map)
         b = value_to_cpp(inst.kwargs.get("b", None), expr_map)
         return f"CeilDiv({a}, {b})"
-    if opname == "min":
+    if opname == "Min":
         a = value_to_cpp(inst.kwargs.get("a", None), expr_map)
         b = value_to_cpp(inst.kwargs.get("b", None), expr_map)
         return f"Min({a}, {b})"
-    if opname == "mul":
+    if opname == "Max":
+        a = value_to_cpp(inst.kwargs.get("a", None), expr_map)
+        b = value_to_cpp(inst.kwargs.get("b", None), expr_map)
+        return f"Max({a}, {b})"
+    if opname == "var_mul":
         a = value_to_cpp(inst.kwargs.get("a", None), expr_map)
         b = value_to_cpp(inst.kwargs.get("b", None), expr_map)
         return simplify_expr(format_binop("*", a, b))
-    if opname == "div":
+    if opname == "var_div":
         a = value_to_cpp(inst.kwargs.get("a", None), expr_map)
         b = value_to_cpp(inst.kwargs.get("b", None), expr_map)
         return simplify_expr(format_binop("/", a, b))
-    if opname == "add":
+    if opname == "var_add":
         a = value_to_cpp(inst.kwargs.get("a", None), expr_map)
         b = value_to_cpp(inst.kwargs.get("b", None), expr_map)
         return simplify_expr(format_binop("+", a, b))
-    if opname == "sub":
+    if opname == "var_sub":
         a = value_to_cpp(inst.kwargs.get("a", None), expr_map)
         b = value_to_cpp(inst.kwargs.get("b", None), expr_map)
         return simplify_expr(format_binop("-", a, b))
@@ -244,19 +249,19 @@ def build_expr_state(
     tmp_var_names: Set[str] = set()
     for inst in instructions:
         opname = inst.opname
-        if opname == "get_cube_num":
+        if opname == "GetCubeNum":
             out = inst.kwargs.get("out", None)
             if isinstance(out, Var) and is_tmp_var(out):
                 expr_map[out.name] = "GetBlockNum()"
                 tmp_var_names.add(out.name)
             continue
-        if opname == "get_cube_idx":
+        if opname == "GetCubeIdx":
             out = inst.kwargs.get("out", None)
             if isinstance(out, Var) and is_tmp_var(out):
                 expr_map[out.name] = "get_block_idx()"
                 tmp_var_names.add(out.name)
             continue
-        if opname in ("ceil_div", "min", "mul", "div", "add", "sub"):
+        if opname in ("CeilDiv", "Min", "Max", "var_mul", "var_div", "var_add", "var_sub"):
             out = inst.kwargs.get("out", None)
             if not isinstance(out, Var) or not is_tmp_var(out):
                 continue
@@ -325,7 +330,7 @@ def should_skip_inst(
     if inst.opname == "create_var":
         val = inst.kwargs.get("val", None)
         return isinstance(val, Var) and is_tmp_var(val) and val.name in tmp_var_names
-    if inst.opname in ("get_cube_num", "get_cube_idx", "ceil_div", "min", "mul", "div", "add", "sub"):
+    if inst.opname in ("GetCubeNum", "GetCubeIdx", "CeilDiv", "Min", "Max", "var_mul", "var_div", "var_add", "var_sub"):
         out = inst.kwargs.get("out", None)
         return isinstance(out, Var) and out.name in tmp_var_names
     if inst.opname in ("get_buf", "slice_tensor", "create_tensor"):

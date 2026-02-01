@@ -15,6 +15,9 @@ class PipeType:
         if not isinstance(other, PipeType):
             raise TypeError(f"无法比较PipeType与{type(other)}")
         return self.name == other.name
+    
+    def __hash__(self) -> int:
+        return hash(self.name)
 
 
 class Pipe:

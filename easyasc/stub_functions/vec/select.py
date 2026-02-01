@@ -85,7 +85,7 @@ def select(
     if globvars.active_kernel is not None:
         globvars.active_kernel.instructions.append(
             Instruction(
-                "SELECT",
+                "select",
                 dst=dst,
                 mode=mode,
                 selmask=selmask,

@@ -98,7 +98,7 @@ def cast(
     if globvars.active_kernel is not None:
         globvars.active_kernel.instructions.append(
             Instruction(
-                "CAST",
+                "cast",
                 dst=dst,
                 src=src,
                 mode=round_mode,

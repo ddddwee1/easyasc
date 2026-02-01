@@ -44,7 +44,7 @@ def gather(
     if globvars.active_kernel is not None:
         globvars.active_kernel.instructions.append(
             Instruction(
-                "GATHER",
+                "gather",
                 dst=dst,
                 src=src,
                 offset=offset,
@@ -89,7 +89,7 @@ def scatter(
     if globvars.active_kernel is not None:
         globvars.active_kernel.instructions.append(
             Instruction(
-                "SCATTER",
+                "scatter",
                 dst=dst,
                 src=src,
                 offset=offset,

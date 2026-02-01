@@ -377,7 +377,7 @@ def _collect_var_deps(
         if not isinstance(out, Var):
             continue
         inputs: Set[str] = set()
-        if inst.opname in ("ceil_div", "min", "mul", "div", "add", "sub"):
+        if inst.opname in ("CeilDiv", "Min", "Max", "var_mul", "var_div", "var_add", "var_sub"):
             _extract_var_names_from_value(inst.kwargs.get("a", None), known_names, inputs)
             _extract_var_names_from_value(inst.kwargs.get("b", None), known_names, inputs)
         deps.setdefault(out.name, set()).update(inputs)
@@ -460,7 +460,7 @@ def _build_tensor_defs(instructions: List[Instruction]) -> dict[int, Instruction
             out = inst.kwargs.get("out", None)
             if isinstance(out, Tensor):
                 defs[id(out)] = inst
-        elif inst.opname == "REINTERPRET":
+        elif inst.opname == "reinterpret":
             out = inst.kwargs.get("dst", None)
             if isinstance(out, Tensor):
                 defs[id(out)] = inst
@@ -525,7 +525,7 @@ def prune_unused_vars(
                     seen_tensors.add(sid)
                     pending_tensors.append(sid)
                     used_tensors.add(sid)
-        elif inst.opname == "REINTERPRET":
+        elif inst.opname == "reinterpret":
             # Reinterpret keeps data view; usage must propagate to the source tensor.
             src = inst.kwargs.get("src", None)
             if isinstance(src, Tensor):
@@ -587,7 +587,7 @@ def prune_unused_vars(
             out = inst.kwargs.get("out", None)
             if isinstance(out, Tensor) and id(out) not in used_tensors:
                 continue
-        if inst.opname == "REINTERPRET":
+        if inst.opname == "reinterpret":
             out = inst.kwargs.get("dst", None)
             if isinstance(out, Tensor) and id(out) not in used_tensors:
                 continue

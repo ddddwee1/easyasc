@@ -57,7 +57,7 @@ def gm_to_ub_pad(
     if globvars.active_kernel is not None:
         globvars.active_kernel.instructions.append(
             Instruction(
-                "GM2UBPAD",
+                "gm_to_ub_pad",
                 dst=dst,
                 src=src,
                 n_burst=n_burst,
@@ -116,12 +116,12 @@ def ub_to_gm_pad(
     if globvars.active_kernel is not None:
         if globvars.atomic_enabled and globvars.atomic_type is not dst.dtype:
             globvars.active_kernel.instructions.append(
-                Instruction("SETATOMICTYPE", dtype=dst.dtype)
+                Instruction("set_atomic_type", dtype=dst.dtype)
             )
             globvars.atomic_type = dst.dtype
         globvars.active_kernel.instructions.append(
             Instruction(
-                "UB2GMPAD",
+                "ub_to_gm_pad",
                 dst=dst,
                 src=src,
                 n_burst=n_burst,
@@ -179,7 +179,7 @@ def ub_to_ub(
     if globvars.active_kernel is not None:
         globvars.active_kernel.instructions.append(
             Instruction(
-                "UB2UB",
+                "ub_to_ub",
                 dst=dst,
                 src=src,
                 n_burst=n_burst,

@@ -7,13 +7,13 @@ def handle_vec_select(inst, helper, expr_map) -> None:
     global _select_cnt
     dst = inst.kwargs.get("dst", None)
     if not isinstance(dst, Tensor):
-        raise TypeError(f"SELECT需要Tensor类型，当前类型: {type(dst)}")
+        raise TypeError(f"select需要Tensor类型，当前类型: {type(dst)}")
     selmask = inst.kwargs.get("selmask", None)
     if not isinstance(selmask, (Tensor, Var)):
-        raise TypeError(f"SELECT需要Tensor或Var类型，当前类型: {type(selmask)}")
+        raise TypeError(f"select需要Tensor或Var类型，当前类型: {type(selmask)}")
     src1 = inst.kwargs.get("src1", None)
     if not isinstance(src1, Tensor):
-        raise TypeError(f"SELECT需要Tensor类型，当前类型: {type(src1)}")
+        raise TypeError(f"select需要Tensor类型，当前类型: {type(src1)}")
     src2 = inst.kwargs.get("src2", None)
 
     if isinstance(selmask, Var):

@@ -109,7 +109,7 @@ def cmax(
     validate_var_or_int(dst_rep_stride, "dst_rep_stride")
     validate_var_or_int(src_blk_stride, "src_blk_stride")
     validate_var_or_int(src_rep_stride, "src_rep_stride")
-    _emit_group_inst("VCMAX", dst, src, repeat, dst_rep_stride, src_blk_stride, src_rep_stride)
+    _emit_group_inst("cmax", dst, src, repeat, dst_rep_stride, src_blk_stride, src_rep_stride)
     _warn_vc()
 
 
@@ -131,7 +131,7 @@ def cgmax(
     validate_var_or_int(dst_rep_stride, "dst_rep_stride")
     validate_var_or_int(src_blk_stride, "src_blk_stride")
     validate_var_or_int(src_rep_stride, "src_rep_stride")
-    _emit_group_inst("VCGMAX", dst, src, repeat, dst_rep_stride, src_blk_stride, src_rep_stride)
+    _emit_group_inst("cgmax", dst, src, repeat, dst_rep_stride, src_blk_stride, src_rep_stride)
     _warn_vcg()
 
 
@@ -153,7 +153,7 @@ def cmin(
     validate_var_or_int(dst_rep_stride, "dst_rep_stride")
     validate_var_or_int(src_blk_stride, "src_blk_stride")
     validate_var_or_int(src_rep_stride, "src_rep_stride")
-    _emit_group_inst("VCMIN", dst, src, repeat, dst_rep_stride, src_blk_stride, src_rep_stride)
+    _emit_group_inst("cmin", dst, src, repeat, dst_rep_stride, src_blk_stride, src_rep_stride)
     _warn_vc()
 
 
@@ -175,7 +175,7 @@ def cgmin(
     validate_var_or_int(dst_rep_stride, "dst_rep_stride")
     validate_var_or_int(src_blk_stride, "src_blk_stride")
     validate_var_or_int(src_rep_stride, "src_rep_stride")
-    _emit_group_inst("VCGMIN", dst, src, repeat, dst_rep_stride, src_blk_stride, src_rep_stride)
+    _emit_group_inst("cgmin", dst, src, repeat, dst_rep_stride, src_blk_stride, src_rep_stride)
     _warn_vcg()
 
 
@@ -197,7 +197,7 @@ def cadd(
     validate_var_or_int(dst_rep_stride, "dst_rep_stride")
     validate_var_or_int(src_blk_stride, "src_blk_stride")
     validate_var_or_int(src_rep_stride, "src_rep_stride")
-    _emit_group_inst("VCADD", dst, src, repeat, dst_rep_stride, src_blk_stride, src_rep_stride)
+    _emit_group_inst("cadd", dst, src, repeat, dst_rep_stride, src_blk_stride, src_rep_stride)
     _warn_vc()
 
 
@@ -219,7 +219,7 @@ def cgadd(
     validate_var_or_int(dst_rep_stride, "dst_rep_stride")
     validate_var_or_int(src_blk_stride, "src_blk_stride")
     validate_var_or_int(src_rep_stride, "src_rep_stride")
-    _emit_group_inst("VCGADD", dst, src, repeat, dst_rep_stride, src_blk_stride, src_rep_stride)
+    _emit_group_inst("cgadd", dst, src, repeat, dst_rep_stride, src_blk_stride, src_rep_stride)
     _warn_vcg()
 
 
@@ -241,5 +241,5 @@ def cpadd(
     validate_var_or_int(dst_rep_stride, "dst_rep_stride")
     validate_var_or_int(src_blk_stride, "src_blk_stride")
     validate_var_or_int(src_rep_stride, "src_rep_stride")
-    _emit_group_inst("VCPADD", dst, src, repeat, dst_rep_stride, src_blk_stride, src_rep_stride)
+    _emit_group_inst("cpadd", dst, src, repeat, dst_rep_stride, src_blk_stride, src_rep_stride)
     _warn_vcp()

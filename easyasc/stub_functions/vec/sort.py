@@ -50,7 +50,7 @@ def sort32(dst: Tensor, src: Tensor, idx: Tensor, repeat: Union[Var, int, None] 
 
     if globvars.active_kernel is not None:
         globvars.active_kernel.instructions.append(
-            Instruction("SORT32", dst=dst, src=src, idx=idx, repeat=repeat)
+            Instruction("sort32", dst=dst, src=src, idx=idx, repeat=repeat)
         )
 
 
@@ -79,7 +79,7 @@ def mergesort4(
     if globvars.active_kernel is not None:
         globvars.active_kernel.instructions.append(
             Instruction(
-                "MERGESORT4",
+                "mergesort4",
                 dst=dst,
                 src=src,
                 length_per_blk=length_per_blk,
@@ -117,7 +117,7 @@ def mergesort_2seq(
     if globvars.active_kernel is not None:
         globvars.active_kernel.instructions.append(
             Instruction(
-                "MERGESORT2SEQ",
+                "mergesort_2seq",
                 dst=dst,
                 src1=src1,
                 src2=src2,

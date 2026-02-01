@@ -137,7 +137,7 @@ class Var:
 
         if globvars.active_kernel is not None:
             globvars.active_kernel.instructions.append(
-                Instruction("add", a=self, b=other, out=self)
+                Instruction("var_add", a=self, b=other, out=self)
             )
         return self
 

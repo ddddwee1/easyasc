@@ -79,7 +79,7 @@ def exp(
     validate_var_or_int(src_rep_stride, "src_rep_stride")
 
     _emit_unary_inst(
-        "EXP",
+        "exp",
         dst,
         src,
         repeat,
@@ -114,7 +114,7 @@ def ln(
     validate_var_or_int(src_rep_stride, "src_rep_stride")
 
     _emit_unary_inst(
-        "LN",
+        "ln",
         dst,
         src,
         repeat,
@@ -149,7 +149,7 @@ def abs(
     validate_var_or_int(src_rep_stride, "src_rep_stride")
 
     _emit_unary_inst(
-        "ABS",
+        "abs",
         dst,
         src,
         repeat,
@@ -184,7 +184,7 @@ def rec(
     validate_var_or_int(src_rep_stride, "src_rep_stride")
 
     _emit_unary_inst(
-        "REC",
+        "rec",
         dst,
         src,
         repeat,
@@ -219,7 +219,7 @@ def sqrt(
     validate_var_or_int(src_rep_stride, "src_rep_stride")
 
     _emit_unary_inst(
-        "SQRT",
+        "sqrt",
         dst,
         src,
         repeat,
@@ -254,7 +254,7 @@ def rsqrt(
     validate_var_or_int(src_rep_stride, "src_rep_stride")
 
     _emit_unary_inst(
-        "RSQRT",
+        "rsqrt",
         dst,
         src,
         repeat,
@@ -289,7 +289,7 @@ def vnot(
     validate_var_or_int(src_rep_stride, "src_rep_stride")
 
     _emit_unary_inst(
-        "NOT",
+        "vnot",
         dst,
         src,
         repeat,
@@ -324,7 +324,7 @@ def relu(
     validate_var_or_int(src_rep_stride, "src_rep_stride")
 
     _emit_unary_inst(
-        "RELU",
+        "relu",
         dst,
         src,
         repeat,

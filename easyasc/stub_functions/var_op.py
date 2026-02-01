@@ -17,7 +17,7 @@ def CeilDiv(a: Union[Var, int], b: Union[Var, int], *, name: str = "") -> Var:
     out = Var(name=name)
     if globvars.active_kernel is not None:
         globvars.active_kernel.instructions.append(
-            Instruction("ceil_div", a=a, b=b, out=out)
+            Instruction("CeilDiv", a=a, b=b, out=out)
         )
     return out
 
@@ -28,7 +28,7 @@ def GetCubeNum(*, name: str = "") -> Var:
     out = Var(name=name)
     if globvars.active_kernel is not None:
         globvars.active_kernel.instructions.append(
-            Instruction("get_cube_num", out=out)
+            Instruction("GetCubeNum", out=out)
         )
     return out
 
@@ -39,7 +39,7 @@ def GetCubeIdx(*, name: str = "") -> Var:
     out = Var(name=name)
     if globvars.active_kernel is not None:
         globvars.active_kernel.instructions.append(
-            Instruction("get_cube_idx", out=out)
+            Instruction("GetCubeIdx", out=out)
         )
     return out
 
@@ -69,7 +69,7 @@ def var_mul(a: Union[Var, int, float], b: Union[Var, int, float], *, name: str =
     out = Var(dtype=dtype, name=name)
     if globvars.active_kernel is not None:
         globvars.active_kernel.instructions.append(
-            Instruction("mul", a=a, b=b, out=out)
+            Instruction("var_mul", a=a, b=b, out=out)
         )
     return out
 
@@ -99,7 +99,7 @@ def var_add(a: Union[Var, int, float], b: Union[Var, int, float], *, name: str =
     out = Var(dtype=dtype, name=name)
     if globvars.active_kernel is not None:
         globvars.active_kernel.instructions.append(
-            Instruction("add", a=a, b=b, out=out)
+            Instruction("var_add", a=a, b=b, out=out)
         )
     return out
 
@@ -129,7 +129,7 @@ def var_sub(a: Union[Var, int, float], b: Union[Var, int, float], *, name: str =
     out = Var(dtype=dtype, name=name)
     if globvars.active_kernel is not None:
         globvars.active_kernel.instructions.append(
-            Instruction("sub", a=a, b=b, out=out)
+            Instruction("var_sub", a=a, b=b, out=out)
         )
     return out
 
@@ -161,7 +161,7 @@ def var_div(a: Union[Var, int, float], b: Union[Var, int, float], *, name: str =
     out = Var(dtype=dtype_a, name=name)
     if globvars.active_kernel is not None:
         globvars.active_kernel.instructions.append(
-            Instruction("div", a=a, b=b, out=out)
+            Instruction("var_div", a=a, b=b, out=out)
         )
     return out
 
@@ -191,7 +191,7 @@ def Min(a: Union[Var, int, float], b: Union[Var, int, float], *, name: str = "")
     out = Var(dtype=dtype, name=name)
     if globvars.active_kernel is not None:
         globvars.active_kernel.instructions.append(
-            Instruction("min", a=a, b=b, out=out)
+            Instruction("Min", a=a, b=b, out=out)
         )
     return out
 
@@ -221,6 +221,6 @@ def Max(a: Union[Var, int, float], b: Union[Var, int, float], *, name: str = "")
     out = Var(dtype=dtype, name=name)
     if globvars.active_kernel is not None:
         globvars.active_kernel.instructions.append(
-            Instruction("max", a=a, b=b, out=out)
+            Instruction("Max", a=a, b=b, out=out)
         )
     return out

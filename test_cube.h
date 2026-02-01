@@ -1,9 +1,9 @@
-DEvent<PIPE_FIX, PIPE_M> _tmp_event1_fix_valid;
-DEvent<PIPE_M, PIPE_FIX> _tmp_event1_fix_ready;
-DEvent<PIPE_M, PIPE_MTE1> _tmp_event1_l0_valid;
-DEvent<PIPE_MTE1, PIPE_M> _tmp_event1_l0_ready;
-DEvent<PIPE_MTE1, PIPE_MTE2> _tmp_event1_l1_valid;
-DEvent<PIPE_MTE2, PIPE_MTE1> _tmp_event1_l1_ready;
+DEvent<PIPE_MTE2, PIPE_MTE1> _tmp_devent_ready_l1_0;
+DEvent<PIPE_MTE1, PIPE_MTE2> _tmp_devent_valid_l1_0;
+DEvent<PIPE_M, PIPE_MTE1> _tmp_devent_valid_l0_0;
+DEvent<PIPE_MTE1, PIPE_M> _tmp_devent_ready_l0_0;
+DEvent<PIPE_M, PIPE_FIX> _tmp_devent_ready_fix_0;
+DEvent<PIPE_FIX, PIPE_M> _tmp_devent_valid_fix_0;
 GlobalTensor<half> x;
 x.SetGlobalBuffer((__gm__ half*) x_);
 GlobalTensor<half> y;
@@ -19,41 +19,24 @@ int m1 = m_per_core*get_block_idx();
 int m2 = Min(m1 + m_per_core, M);
 for (int m = 0; m < m2; m += 128) {
     // start auto sync
-    _tmp_event1_l1_valid.wait();
+    _tmp_devent_valid_l1_0.wait();
     GM2L1_ND2NZ(l1q.get(cnt), x[K*m], 128, K, K, 128);
-    _tmp_event1_l1_ready.set();
-    _tmp_event1_l1_ready.wait();
-    _tmp_event1_l0_valid.wait();
+    _tmp_devent_ready_l1_0.set();
+    _tmp_devent_ready_l1_0.wait();
+    _tmp_devent_valid_l0_0.wait();
     L0NZ2ZZ(l0a.get(cnt), l1q.get(cnt)[1024], 64, K, 128, K);
     L0NZ2NZ(l0b.get(cnt), l1k.get(cnt), 64, K, 128, K);
-    _tmp_event1_l0_ready.set();
-    _tmp_event1_l0_ready.wait();
-    _tmp_event1_l1_valid.set();
-    _tmp_event1_fix_valid.wait();
+    _tmp_devent_ready_l0_0.set();
+    _tmp_devent_ready_l0_0.wait();
+    _tmp_devent_valid_fix_0.wait();
     MMAD(l0c.get(cnt), l0a.get(cnt), l0b.get(cnt), 64, K, 64, true);
-    _tmp_event1_fix_ready.set();
-    _tmp_event1_fix_ready.wait();
-    _tmp_event1_l0_valid.set();
+    _tmp_devent_ready_fix_0.set();
+    _tmp_devent_ready_fix_0.wait();
     L0C2GM_NZ2ND(y, l0c.get(cnt), 1, N, N, 128);
-    _tmp_event1_fix_valid.set();
     cnt = cnt + 1;
     // end auto sync
-}
-// start auto sync
-// end auto sync
-// start auto sync
-// end auto sync
-// start auto sync
-// end auto sync
-// start auto sync
-// end auto sync
-// start auto sync
-// end auto sync
-// start auto sync
-// end auto sync
-// start auto sync
-// end auto sync
-// start auto sync
-// end auto sync
-// start auto sync
-// end auto sync
+    _tmp_devent_ready_l1_0.set();
+    _tmp_devent_ready_l0_0.set();
+    _tmp_devent_ready_fix_0.set();
+    // start auto sync
+    // end auto sync

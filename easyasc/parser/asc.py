@@ -284,6 +284,9 @@ def translate(instructions: Iterable[Instruction]) -> str:
 
 def translate_split(instructions: Iterable[Instruction]) -> Tuple[str, str]:
     cube_insts, vec_insts = split_instructions(instructions)
-    cube_insts = insert_auto_sync(cube_insts)
-    vec_insts = insert_auto_sync(vec_insts)
+    print('inserting auto sync instructions...')
+    cube_insts = insert_auto_sync(cube_insts, mode='cube')
+    print('auto sync instructions inserted cuebe side.')
+    vec_insts = insert_auto_sync(vec_insts, mode='vec')
+    print('auto sync instructions inserted vec side.')
     return translate(cube_insts), translate(vec_insts)

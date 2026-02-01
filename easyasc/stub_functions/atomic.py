@@ -19,7 +19,7 @@ class atomic_add:
     def __enter__(self):
         if globvars.active_kernel is None:
             raise RuntimeError("atomic_add只能在kernel内使用")
-        globvars.active_kernel.instructions.append(Instruction("ATOMICADD"))
+        globvars.active_kernel.instructions.append(Instruction("atomic_add"))
         globvars.atomic_enabled = True
         globvars.atomic_type = self.dtype
 
@@ -28,7 +28,7 @@ class atomic_add:
             return False
         if globvars.active_kernel is None:
             raise RuntimeError("atomic_add只能在kernel内使用")
-        globvars.active_kernel.instructions.append(Instruction("ATOMICEND"))
+        globvars.active_kernel.instructions.append(Instruction("atomic_end"))
         globvars.atomic_enabled = False
         globvars.atomic_type = None
         return True
@@ -45,7 +45,7 @@ class atomic_max:
     def __enter__(self):
         if globvars.active_kernel is None:
             raise RuntimeError("atomic_max只能在kernel内使用")
-        globvars.active_kernel.instructions.append(Instruction("ATOMICMAX"))
+        globvars.active_kernel.instructions.append(Instruction("atomic_max"))
         globvars.atomic_enabled = True
         globvars.atomic_type = self.dtype
 
@@ -54,7 +54,7 @@ class atomic_max:
             return False
         if globvars.active_kernel is None:
             raise RuntimeError("atomic_max只能在kernel内使用")
-        globvars.active_kernel.instructions.append(Instruction("ATOMICEND"))
+        globvars.active_kernel.instructions.append(Instruction("atomic_end"))
         globvars.atomic_enabled = False
         globvars.atomic_type = None
         return True
@@ -71,7 +71,7 @@ class atomic_min:
     def __enter__(self):
         if globvars.active_kernel is None:
             raise RuntimeError("atomic_min只能在kernel内使用")
-        globvars.active_kernel.instructions.append(Instruction("ATOMICMIN"))
+        globvars.active_kernel.instructions.append(Instruction("atomic_min"))
         globvars.atomic_enabled = True
         globvars.atomic_type = self.dtype
 
@@ -80,7 +80,7 @@ class atomic_min:
             return False
         if globvars.active_kernel is None:
             raise RuntimeError("atomic_min只能在kernel内使用")
-        globvars.active_kernel.instructions.append(Instruction("ATOMICEND"))
+        globvars.active_kernel.instructions.append(Instruction("atomic_end"))
         globvars.atomic_enabled = False
         globvars.atomic_type = None
         return True

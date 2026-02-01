@@ -14,12 +14,12 @@ def set_mask(mask_high: Union[int, Var], mask_low: Union[int, Var]) -> None:
 
     if globvars.active_kernel is not None:
         globvars.active_kernel.instructions.append(
-            Instruction("SETMASK", low=mask_low, high=mask_high)
+            Instruction("set_mask", low=mask_low, high=mask_high)
         )
 
 
 def reset_mask() -> None:
     if globvars.active_kernel is not None:
         globvars.active_kernel.instructions.append(
-            Instruction("RESETMASK")
+            Instruction("reset_mask")
         )

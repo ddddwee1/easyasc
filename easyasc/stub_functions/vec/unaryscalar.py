@@ -83,7 +83,7 @@ def adds(
     validate_var_or_int(src_rep_stride, "src_rep_stride")
 
     _emit_unary_scalar_inst(
-        "ADDS",
+        "adds",
         dst,
         src,
         val,
@@ -121,7 +121,7 @@ def muls(
     validate_var_or_int(src_rep_stride, "src_rep_stride")
 
     _emit_unary_scalar_inst(
-        "MULS",
+        "muls",
         dst,
         src,
         val,
@@ -159,7 +159,7 @@ def vmaxs(
     validate_var_or_int(src_rep_stride, "src_rep_stride")
 
     _emit_unary_scalar_inst(
-        "MAXS",
+        "vmaxs",
         dst,
         src,
         val,
@@ -197,7 +197,7 @@ def vmins(
     validate_var_or_int(src_rep_stride, "src_rep_stride")
 
     _emit_unary_scalar_inst(
-        "MINS",
+        "vmins",
         dst,
         src,
         val,
@@ -235,7 +235,7 @@ def lrelu(
     validate_var_or_int(src_rep_stride, "src_rep_stride")
 
     _emit_unary_scalar_inst(
-        "LRELU",
+        "lrelu",
         dst,
         src,
         val,
@@ -273,7 +273,7 @@ def axpy(
     validate_var_or_int(src_rep_stride, "src_rep_stride")
 
     _emit_unary_scalar_inst(
-        "AXPY",
+        "axpy",
         dst,
         src,
         val,

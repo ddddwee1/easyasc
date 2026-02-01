@@ -96,7 +96,7 @@ def add(
     validate_var_or_int(src2_rep_stride, "src2_rep_stride")
 
     _emit_binary_inst(
-        "ADD",
+        "add",
         dst,
         src1,
         src2,
@@ -140,7 +140,7 @@ def sub(
     validate_var_or_int(src2_rep_stride, "src2_rep_stride")
 
     _emit_binary_inst(
-        "SUB",
+        "sub",
         dst,
         src1,
         src2,
@@ -184,7 +184,7 @@ def mul(
     validate_var_or_int(src2_rep_stride, "src2_rep_stride")
 
     _emit_binary_inst(
-        "MUL",
+        "mul",
         dst,
         src1,
         src2,
@@ -228,7 +228,7 @@ def div(
     validate_var_or_int(src2_rep_stride, "src2_rep_stride")
 
     _emit_binary_inst(
-        "DIV",
+        "div",
         dst,
         src1,
         src2,
@@ -272,7 +272,7 @@ def vmax(
     validate_var_or_int(src2_rep_stride, "src2_rep_stride")
 
     _emit_binary_inst(
-        "MAX",
+        "vmax",
         dst,
         src1,
         src2,
@@ -316,7 +316,7 @@ def vmin(
     validate_var_or_int(src2_rep_stride, "src2_rep_stride")
 
     _emit_binary_inst(
-        "MIN",
+        "vmin",
         dst,
         src1,
         src2,
@@ -360,7 +360,7 @@ def vand(
     validate_var_or_int(src2_rep_stride, "src2_rep_stride")
 
     _emit_binary_inst(
-        "AND",
+        "vand",
         dst,
         src1,
         src2,
@@ -404,7 +404,7 @@ def vor(
     validate_var_or_int(src2_rep_stride, "src2_rep_stride")
 
     _emit_binary_inst(
-        "OR",
+        "vor",
         dst,
         src1,
         src2,
@@ -448,7 +448,7 @@ def muladddst(
     validate_var_or_int(src2_rep_stride, "src2_rep_stride")
 
     _emit_binary_inst(
-        "MULADDDST",
+        "muladddst",
         dst,
         src1,
         src2,

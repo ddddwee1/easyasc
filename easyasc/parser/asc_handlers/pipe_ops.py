@@ -45,6 +45,6 @@ def handle_allvec_wait(inst, helper, expr_map) -> None:
 def handle_bar(inst, helper, expr_map) -> None:
     pipe = inst.kwargs.get("pipe", None)
     if not isinstance(pipe, PipeType):
-        raise TypeError(f"BAR需要PipeType类型，当前类型: {type(pipe)}")
+        raise TypeError(f"barrier需要PipeType类型，当前类型: {type(pipe)}")
     pipe_expr = _pipe_name(pipe)
     helper(f"PipeBarrier<{pipe_expr}>();")

@@ -73,6 +73,6 @@ def reinterpret(src: Tensor, target_dtype: DataTypeValue, name: str = "") -> Ten
 
     if globvars.active_kernel is not None:
         globvars.active_kernel.instructions.append(
-            Instruction("REINTERPRET", dst=out, src=src)
+            Instruction("reinterpret", dst=out, src=src)
         )
     return out

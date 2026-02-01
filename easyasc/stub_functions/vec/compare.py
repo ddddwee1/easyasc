@@ -66,7 +66,7 @@ def compare(
     if globvars.active_kernel is not None:
         globvars.active_kernel.instructions.append(
             Instruction(
-                "COMPARE",
+                "compare",
                 dst=dst,
                 src1=src1,
                 src2=src2,
@@ -124,7 +124,7 @@ def compare_scalar(
     if globvars.active_kernel is not None:
         globvars.active_kernel.instructions.append(
             Instruction(
-                "COMPARES",
+                "compare_scalar",
                 dst=dst,
                 src1=src1,
                 src2=src2,
@@ -146,5 +146,5 @@ def set_cmpmask(src: Tensor) -> None:
 
     if globvars.active_kernel is not None:
         globvars.active_kernel.instructions.append(
-            Instruction("SETCMPMASK", src=src)
+            Instruction("set_cmpmask", src=src)
         )

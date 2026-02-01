@@ -184,7 +184,7 @@ def l0c_to_gm_nz2nd(dst: GMTensor, src: Tensor, M: Union[int, Var, None]=None, N
     if globvars.active_kernel is not None:
         if globvars.atomic_enabled and globvars.atomic_type is not dst.dtype:
             globvars.active_kernel.instructions.append(
-                Instruction("SETATOMICTYPE", dtype=dst.dtype)
+                Instruction("set_atomic_type", dtype=dst.dtype)
             )
             globvars.atomic_type = dst.dtype
         globvars.active_kernel.instructions.append(

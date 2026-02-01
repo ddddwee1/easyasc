@@ -42,7 +42,7 @@ def dup(
     if globvars.active_kernel is not None:
         globvars.active_kernel.instructions.append(
             Instruction(
-                "DUP",
+                "dup",
                 dst=dst,
                 src=value,
                 repeat=repeat,
@@ -82,7 +82,7 @@ def brcb(
     if globvars.active_kernel is not None:
         globvars.active_kernel.instructions.append(
             Instruction(
-                "BRCB",
+                "brcb",
                 dst=dst,
                 src=src,
                 repeat=repeat,

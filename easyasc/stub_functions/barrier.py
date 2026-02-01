@@ -8,7 +8,7 @@ def barrier(pipe: PipeType) -> None:
         raise TypeError(f"pipe必须是PipeType类型，当前类型: {type(pipe)}")
     if globvars.active_kernel is not None:
         globvars.active_kernel.instructions.append(
-            Instruction("BAR", pipe=pipe)
+            Instruction("barrier", pipe=pipe)
         )
 
 
