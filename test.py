@@ -65,7 +65,7 @@ def cubefunc(x: GMTensor, y: GMTensor, z: GMTensor, M: Var, N: Var, K: Var):
         # test case 2
         for m in range(m1, m2, BLK):
             xub[cnt] <<= x[m:m + BLK, 0:K]
-            for i in range(10):
+            for i in range(1, 10):
                 xub[cnt] <<= xub[cnt1] + xub[cnt2]
             subset_vec(xub, cnt, cnt1, cnt2)
             z[m:m + BLK, 0:K] <<= xub[cnt]

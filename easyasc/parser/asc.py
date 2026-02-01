@@ -186,9 +186,10 @@ def _try_fold_loop(
         return -1
     dtype = dtype_to_cpp(val.dtype)
     init_expr = value_to_cpp(val.value, expr_map)
+    start = value_to_cpp(next_inst.kwargs.get("start", None), expr_map)
     stop = value_to_cpp(next_inst.kwargs.get("stop", None), expr_map)
     step = value_to_cpp(next_inst.kwargs.get("step", None), expr_map)
-    helper(f"for ({dtype} {val.name} = {init_expr}; {val.name} < {stop}; {val.name} += {step}) {{")
+    helper(f"for ({dtype} {val.name} = {start}; {val.name} < {stop}; {val.name} += {step}) {{")
     helper.ir()
     return next_idx + 1
 

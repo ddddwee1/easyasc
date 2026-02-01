@@ -1,5 +1,5 @@
-DEvent<PIPE_MTE1, PIPE_MTE2> _tmp_devent_valid_l1_0;
 DEvent<PIPE_MTE2, PIPE_MTE1> _tmp_devent_ready_l1_0;
+DEvent<PIPE_MTE1, PIPE_MTE2> _tmp_devent_valid_l1_0;
 DEvent<PIPE_M, PIPE_MTE1> _tmp_devent_valid_l0_0;
 DEvent<PIPE_MTE1, PIPE_M> _tmp_devent_ready_l0_0;
 DEvent<PIPE_M, PIPE_FIX> _tmp_devent_ready_fix_0;
@@ -17,7 +17,7 @@ int cnt = 0;
 int m_per_core = CeilDiv(M, GetBlockNum());
 int m1 = m_per_core*get_block_idx();
 int m2 = Min(m1 + m_per_core, M);
-for (int m = 0; m < m2; m += 128) {
+for (int m = m1; m < m2; m += 128) {
     // start auto sync
     _tmp_devent_valid_l1_0.wait();
     GM2L1_ND2NZ(l1q.get(cnt), x[K*m], 128, K, K, 128);
