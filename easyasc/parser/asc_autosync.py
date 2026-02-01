@@ -424,9 +424,9 @@ def insert_auto_sync(instructions: List[Instruction], mode: Literal['cube', 'vec
             curr_inst_list = tmp_insts
         curr_inst_list.append(i)
         if i.opname==_AUTO_SYNC_END:
-            curr_inst_list = result
             tmp_insts_with_autosync, event_creation = _insert_autosync_node(tmp_insts, mode)
             result.extend(tmp_insts_with_autosync)
             result = event_creation + result
+            curr_inst_list = result
             tmp_insts = []
     return result

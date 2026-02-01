@@ -1,5 +1,5 @@
-DEvent<PIPE_MTE2, PIPE_MTE1> _tmp_devent_ready_l1_0;
 DEvent<PIPE_MTE1, PIPE_MTE2> _tmp_devent_valid_l1_0;
+DEvent<PIPE_MTE2, PIPE_MTE1> _tmp_devent_ready_l1_0;
 DEvent<PIPE_M, PIPE_MTE1> _tmp_devent_valid_l0_0;
 DEvent<PIPE_MTE1, PIPE_M> _tmp_devent_ready_l0_0;
 DEvent<PIPE_M, PIPE_FIX> _tmp_devent_ready_fix_0;
@@ -38,5 +38,6 @@ for (int m = 0; m < m2; m += 128) {
     _tmp_devent_ready_l1_0.set();
     _tmp_devent_ready_l0_0.set();
     _tmp_devent_ready_fix_0.set();
-    // start auto sync
-    // end auto sync
+}
+// start auto sync
+// end auto sync

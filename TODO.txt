@@ -1,5 +1,3 @@
 # 校验DBuff / Tensor / GMTensor / DEvent / SEvent 不能在loop/if内
-# 写自动同步机制
-## 然后加入vector侧的自动同步机制（V->MTE3）
 # 加入cross core mutex 
 ## 根据类型自动添加setall和release

@@ -46,7 +46,15 @@ def cubefunc(x: GMTensor, y: GMTensor, z: GMTensor, M: Var, N: Var, K: Var):
 
             cnt += 1 
 
+
     with auto_sync():
+        # test case 1
+        for m in range(m1, m2, BLK):
+            xub[cnt] <<= x[m:m + BLK, 0:K]
+            xub[cnt] <<= xub[cnt1] + xub[cnt2]
+            subset_vec(xub, cnt, cnt1, cnt2)
+            z[m:m + BLK, 0:K] <<= xub[cnt]
+
         # test case 1
         for m in range(m1, m2, BLK):
             xub[cnt] <<= x[m:m + BLK, 0:K]
@@ -121,6 +129,8 @@ def cubefunc(x: GMTensor, y: GMTensor, z: GMTensor, M: Var, N: Var, K: Var):
                 xub[cnt] <<= xub[cnt1] + xub[cnt2]
             subset_vec(xub, cnt, cnt1, cnt2)
             z[m:m + BLK, 0:K] <<= xub[cnt]
+
+    xub[cnt] <<= xub[cnt1] + xub[cnt2]
 
 
 if __name__ == "__main__":
