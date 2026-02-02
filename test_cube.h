@@ -1,9 +1,9 @@
 DEvent<PIPE_MTE1, PIPE_MTE2> _tmp_devent_valid_l1_0;
 DEvent<PIPE_MTE2, PIPE_MTE1> _tmp_devent_ready_l1_0;
-DEvent<PIPE_M, PIPE_MTE1> _tmp_devent_valid_l0_0;
 DEvent<PIPE_MTE1, PIPE_M> _tmp_devent_ready_l0_0;
-DEvent<PIPE_M, PIPE_FIX> _tmp_devent_ready_fix_0;
+DEvent<PIPE_M, PIPE_MTE1> _tmp_devent_valid_l0_0;
 DEvent<PIPE_FIX, PIPE_M> _tmp_devent_valid_fix_0;
+DEvent<PIPE_M, PIPE_FIX> _tmp_devent_ready_fix_0;
 GlobalTensor<half> x;
 x.SetGlobalBuffer((__gm__ half*) x_);
 GlobalTensor<half> y;

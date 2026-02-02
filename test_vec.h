@@ -1,9 +1,9 @@
 DEvent<PIPE_V, PIPE_MTE2> _tmp_devent_valid_ubin_1;
-DEvent<PIPE_MTE2, PIPE_V> _tmp_devent_ready_ubin_0;
 DEvent<PIPE_MTE2, PIPE_V> _tmp_devent_ready_ubin_1;
-SEvent<PIPE_V, PIPE_MTE2> _tmp_sevent_valid_ubin_0;
-DEvent<PIPE_V, PIPE_MTE2> _tmp_devent_valid_ubin_0;
 SEvent<PIPE_MTE2, PIPE_V> _tmp_sevent_ready_ubin_0;
+DEvent<PIPE_V, PIPE_MTE2> _tmp_devent_valid_ubin_0;
+SEvent<PIPE_V, PIPE_MTE2> _tmp_sevent_valid_ubin_0;
+DEvent<PIPE_MTE2, PIPE_V> _tmp_devent_ready_ubin_0;
 DEvent<PIPE_V, PIPE_MTE3> _tmp_devent_ready_ubout_0;
 DEvent<PIPE_MTE3, PIPE_V> _tmp_devent_valid_ubout_0;
 GlobalTensor<half> x;

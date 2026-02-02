@@ -34,6 +34,14 @@ _VEC_PIPE_OPS = {"allvec_ready", "allvec_wait", "vec_ready", "wait_cube"}
 _PIPE_CUBE_NAMES = {"M", "FIX", "MTE1"}
 _PIPE_VEC_NAMES = {"V", "MTE3"}
 _INSTRUCTION_RE = re.compile(r"Instruction\(\s*['\"]([A-Za-z0-9_]+)['\"]")
+_BLOCK_FORBIDDEN_OPS = {
+    "create_gm_tensor",
+    "create_tensor",
+    "create_dbuf",
+    "create_devent",
+    "create_sevent",
+}
+_IF_STARTS = ("start_if", "start_elif", "start_else")
 
 
 def _collect_opnames_from_file(path: str) -> Set[str]:
@@ -259,8 +267,34 @@ def _try_fold_decl_assign(
     return next_idx + 1
 
 
+def validate(instructions: Iterable[Instruction]) -> None:
+    loop_depth = 0
+    if_depth = 0
+    for idx, inst in enumerate(instructions):
+        op = inst.opname
+        if op == "start_loop":
+            loop_depth += 1
+        elif op == "end_loop":
+            if loop_depth > 0:
+                loop_depth -= 1
+        elif op in _IF_STARTS:
+            if_depth += 1
+        elif op == "end_if":
+            if if_depth > 0:
+                if_depth -= 1
+        if op in _BLOCK_FORBIDDEN_OPS and (loop_depth > 0 or if_depth > 0):
+            if loop_depth > 0 and if_depth > 0:
+                scope = "loop/if"
+            elif loop_depth > 0:
+                scope = "loop"
+            else:
+                scope = "if/elif/else"
+            raise ValueError(f"{op} cannot be inside {scope} block (index {idx}).")
+
+
 def translate(instructions: Iterable[Instruction]) -> str:
     instructions = list(instructions)
+    validate(instructions)
     expr_map, tmp_var_names, tmp_tensor_names, tmp_gmtensor_names = build_expr_state(instructions)
     helper = CodeHelper()
     handlers = build_handlers()
