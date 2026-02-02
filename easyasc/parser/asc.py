@@ -37,7 +37,7 @@ _INSTRUCTION_RE = re.compile(r"Instruction\(\s*['\"]([A-Za-z0-9_]+)['\"]")
 
 def _collect_opnames_from_file(path: str) -> Set[str]:
     try:
-        with open(path, "r") as f:
+        with open(path, "r", encoding="utf-8") as f:
             text = f.read()
     except OSError:
         return set()

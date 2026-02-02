@@ -18,7 +18,6 @@ int m_per_core = CeilDiv(M, GetBlockNum());
 int m1 = m_per_core*get_block_idx();
 int m2 = Min(m1 + m_per_core, M);
 for (int m = m1; m < m2; m += 128) {
-    // start auto sync
     _tmp_devent_valid_l1_0.wait();
     GM2L1_ND2NZ(l1q.get(cnt), x[K*m], 128, K, K, 128);
     _tmp_devent_ready_l1_0.set();
@@ -34,10 +33,7 @@ for (int m = m1; m < m2; m += 128) {
     _tmp_devent_ready_fix_0.wait();
     L0C2GM_NZ2ND(y, l0c.get(cnt), 1, N, N, 128);
     cnt = cnt + 1;
-    // end auto sync
     _tmp_devent_ready_l1_0.set();
     _tmp_devent_ready_l0_0.set();
     _tmp_devent_ready_fix_0.set();
 }
-// start auto sync
-// end auto sync

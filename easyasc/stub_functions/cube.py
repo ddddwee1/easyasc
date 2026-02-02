@@ -89,6 +89,8 @@ def l1_to_l0(dst: Tensor, src: Tensor, m_dst: Union[int, Var, None]=None, n_dst:
     if n_src is None:
         n_src = src.shape[1]
 
+    dst.is_transpose = src.is_transpose
+
     _validate_var_or_int(m_dst, "m_dst")
     _validate_var_or_int(n_dst, "n_dst")
     _validate_var_or_int(m_src, "m_src")
@@ -123,11 +125,20 @@ def mmad(dst: Tensor, src_a: Tensor, src_b: Tensor, M: Union[int, Var, None]=Non
         raise ValueError(f"src_b必须在L0B位置，当前位置: {src_b.position}")
 
     if M is None:
-        M = src_a.shape[0]
+        if src_a.is_transpose:
+            M = src_a.shape[1]
+        else:
+            M = src_a.shape[0]
     if N is None:
-        N = src_b.shape[0]
+        if src_b.is_transpose:
+            N = src_b.shape[1]
+        else:
+            N = src_b.shape[0]
     if K is None:
-        K = src_a.shape[1]
+        if src_a.is_transpose:
+            K = src_a.shape[0]
+        else:
+            K = src_a.shape[1]
 
     _validate_var_or_int(M, "M")
     _validate_var_or_int(N, "N")

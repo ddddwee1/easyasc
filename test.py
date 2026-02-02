@@ -48,60 +48,60 @@ def cubefunc(x: GMTensor, y: GMTensor, z: GMTensor, M: Var, N: Var, K: Var):
 
 
     with auto_sync():
-        # test case 1
-        for m in range(m1, m2, BLK):
-            xub[cnt] <<= x[m:m + BLK, 0:K]
-            xub[cnt] <<= xub[cnt1] + xub[cnt2]
-            subset_vec(xub, cnt, cnt1, cnt2)
-            z[m:m + BLK, 0:K] <<= xub[cnt]
+        # # test case 1
+        # for m in range(m1, m2, BLK):
+        #     xub[cnt] <<= x[m:m + BLK, 0:K]
+        #     xub[cnt] <<= xub[cnt1] + xub[cnt2]
+        #     subset_vec(xub, cnt, cnt1, cnt2)
+        #     z[m:m + BLK, 0:K] <<= xub[cnt]
 
-        # test case 1
-        for m in range(m1, m2, BLK):
-            xub[cnt] <<= x[m:m + BLK, 0:K]
-            xub[cnt] <<= xub[cnt1] + xub[cnt2]
-            subset_vec(xub, cnt, cnt1, cnt2)
-            z[m:m + BLK, 0:K] <<= xub[cnt]
+        # # test case 1
+        # for m in range(m1, m2, BLK):
+        #     xub[cnt] <<= x[m:m + BLK, 0:K]
+        #     xub[cnt] <<= xub[cnt1] + xub[cnt2]
+        #     subset_vec(xub, cnt, cnt1, cnt2)
+        #     z[m:m + BLK, 0:K] <<= xub[cnt]
 
-        # test case 2
-        for m in range(m1, m2, BLK):
-            xub[cnt] <<= x[m:m + BLK, 0:K]
-            for i in range(1, 10):
-                xub[cnt] <<= xub[cnt1] + xub[cnt2]
-            subset_vec(xub, cnt, cnt1, cnt2)
-            z[m:m + BLK, 0:K] <<= xub[cnt]
+        # # test case 2
+        # for m in range(m1, m2, BLK):
+        #     xub[cnt] <<= x[m:m + BLK, 0:K]
+        #     for i in range(1, 10):
+        #         xub[cnt] <<= xub[cnt1] + xub[cnt2]
+        #     subset_vec(xub, cnt, cnt1, cnt2)
+        #     z[m:m + BLK, 0:K] <<= xub[cnt]
 
-        # test case 3
-        for m in range(m1, m2, BLK):
-            xub[cnt] <<= x[m:m + BLK, 0:K]
-            for i in range(10):
-                xub[cnt] <<= xub[cnt1] + xub[cnt2]
-                subset_vec(xub, cnt, cnt1, cnt2)
-                z[m:m + BLK, 0:K] <<= xub[cnt]
+        # # test case 3
+        # for m in range(m1, m2, BLK):
+        #     xub[cnt] <<= x[m:m + BLK, 0:K]
+        #     for i in range(10):
+        #         xub[cnt] <<= xub[cnt1] + xub[cnt2]
+        #         subset_vec(xub, cnt, cnt1, cnt2)
+        #         z[m:m + BLK, 0:K] <<= xub[cnt]
     
-        # test case 4
-        for m in range(m1, m2, BLK):
-            for i in range(10):
-                xub[cnt] <<= x[m:m + BLK, 0:K]
-                xub[cnt] <<= xub[cnt1] + xub[cnt2]
-                subset_vec(xub, cnt, cnt1, cnt2)
-            z[m:m + BLK, 0:K] <<= xub[cnt]
+        # # test case 4
+        # for m in range(m1, m2, BLK):
+        #     for i in range(10):
+        #         xub[cnt] <<= x[m:m + BLK, 0:K]
+        #         xub[cnt] <<= xub[cnt1] + xub[cnt2]
+        #         subset_vec(xub, cnt, cnt1, cnt2)
+        #     z[m:m + BLK, 0:K] <<= xub[cnt]
 
-        # test case 5
-        for m in range(m1, m2, BLK):
-            for i in range(10):
-                xub[cnt] <<= x[m:m + BLK, 0:K]
-                xub[cnt] <<= xub[cnt1] + xub[cnt2]
-            subset_vec(xub, cnt, cnt1, cnt2)
-            z[m:m + BLK, 0:K] <<= xub[cnt]
+        # # test case 5
+        # for m in range(m1, m2, BLK):
+        #     for i in range(10):
+        #         xub[cnt] <<= x[m:m + BLK, 0:K]
+        #         xub[cnt] <<= xub[cnt1] + xub[cnt2]
+        #     subset_vec(xub, cnt, cnt1, cnt2)
+        #     z[m:m + BLK, 0:K] <<= xub[cnt]
 
-        # test case 6
-        for m in range(m1, m2, BLK):
-            xub[cnt] <<= x[m:m + BLK, 0:K]
-            for i in range(10):
-                xub[cnt] <<= x[m:m + BLK, 0:K]
-                xub[cnt] <<= xub[cnt1] + xub[cnt2]
-            subset_vec(xub, cnt, cnt1, cnt2)
-            z[m:m + BLK, 0:K] <<= xub[cnt]
+        # # test case 6
+        # for m in range(m1, m2, BLK):
+        #     xub[cnt] <<= x[m:m + BLK, 0:K]
+        #     for i in range(10):
+        #         xub[cnt] <<= x[m:m + BLK, 0:K]
+        #         xub[cnt] <<= xub[cnt1] + xub[cnt2]
+        #     subset_vec(xub, cnt, cnt1, cnt2)
+        #     z[m:m + BLK, 0:K] <<= xub[cnt]
 
         # test case 7
         for m in range(m1, m2, BLK):
