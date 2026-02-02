@@ -2,6 +2,7 @@ from typing import Iterator, Union, Optional
 
 from .utils.var import Var
 from .utils.instruction import Instruction
+from .kernelbase.kernelbase import KernelBase
 from . import globvars
 
 
@@ -19,9 +20,13 @@ def range(*args: Union[Var, int], name: str = "") -> Iterator[Var]:
         raise TypeError(f"name must be str, got: {type(name)}")
 
     if len(args) == 1:
-        start, stop, step = 0, args[0], 1
+        start: Union[Var, int] = 0
+        stop: Union[Var, int] = args[0]
+        step: Union[Var, int] = 1
     elif len(args) == 2:
-        start, stop, step = args[0], args[1], 1
+        start = args[0]
+        stop = args[1]
+        step = 1
     elif len(args) == 3:
         start, stop, step = args
     else:
@@ -93,6 +98,8 @@ class Elif:
         self.cond = cond
 
     def __enter__(self):
+        if not isinstance(globvars.active_kernel, KernelBase):
+            raise RuntimeError("Elif can only be used inside kernel")
         _pop_last_end_if()
         globvars.active_kernel.instructions.append(
             Instruction("start_elif", cond=self.cond)
@@ -111,6 +118,8 @@ class Elif:
 
 class Else:
     def __enter__(self):
+        if not isinstance(globvars.active_kernel, KernelBase):
+            raise RuntimeError("Else can only be used inside kernel")
         _pop_last_end_if()
         globvars.active_kernel.instructions.append(
             Instruction("start_else")

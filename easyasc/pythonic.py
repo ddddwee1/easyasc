@@ -1,7 +1,7 @@
 import ast
 import inspect
 import textwrap
-from typing import Optional
+from typing import Any, Optional, cast
 
 
 class _VarNameAdder(ast.NodeTransformer):
@@ -14,9 +14,9 @@ class _VarNameAdder(ast.NodeTransformer):
             return node
         self._in_target = True
         node.decorator_list = [d for d in node.decorator_list if not _is_kernel_decorator(d)]
-        node = self.generic_visit(node)
+        new_node = cast(ast.FunctionDef, self.generic_visit(node))
         self._in_target = False
-        return node
+        return new_node
 
     def visit_AsyncFunctionDef(self, node: ast.AsyncFunctionDef):
         return node
@@ -30,36 +30,36 @@ class _VarNameAdder(ast.NodeTransformer):
     def visit_Assign(self, node: ast.Assign):
         if not self._in_target:
             return self.generic_visit(node)
-        node = self.generic_visit(node)
-        if len(node.targets) != 1:
-            return node
-        target = node.targets[0]
-        value = node.value
+        new_node = cast(ast.Assign, self.generic_visit(node))
+        if len(new_node.targets) != 1:
+            return new_node
+        target = new_node.targets[0]
+        value = new_node.value
         self._maybe_add_name_kw(target, value)
-        return node
+        return new_node
 
     def visit_AnnAssign(self, node: ast.AnnAssign):
         if not self._in_target:
             return self.generic_visit(node)
-        node = self.generic_visit(node)
-        if node.value is None:
-            return node
-        self._maybe_add_name_kw(node.target, node.value)
-        return node
+        new_node = cast(ast.AnnAssign, self.generic_visit(node))
+        if new_node.value is None:
+            return new_node
+        self._maybe_add_name_kw(new_node.target, new_node.value)
+        return new_node
 
     def visit_For(self, node: ast.For):
         if not self._in_target:
             return self.generic_visit(node)
-        node = self.generic_visit(node)
-        if not isinstance(node.iter, ast.Call):
-            return node
-        if not _is_named_call(node.iter):
-            return node
-        if _has_name_kw(node.iter):
-            return node
-        if isinstance(node.target, ast.Name):
-            node.iter.keywords.append(ast.keyword(arg="name", value=ast.Constant(node.target.id)))
-        return node
+        new_node = cast(ast.For, self.generic_visit(node))
+        if not isinstance(new_node.iter, ast.Call):
+            return new_node
+        if not _is_named_call(new_node.iter):
+            return new_node
+        if _has_name_kw(new_node.iter):
+            return new_node
+        if isinstance(new_node.target, ast.Name):
+            new_node.iter.keywords.append(ast.keyword(arg="name", value=ast.Constant(new_node.target.id)))
+        return new_node
 
     def _maybe_add_name_kw(self, target: ast.AST, value: ast.AST) -> None:
         if isinstance(target, (ast.Tuple, ast.List)) and isinstance(value, (ast.Tuple, ast.List)):
@@ -79,7 +79,7 @@ class _VarNameAdder(ast.NodeTransformer):
         value.keywords.append(ast.keyword(arg="name", value=ast.Constant(target.id)))
 
 
-_NAME_CALLS = {"Var", "Tensor", "DBuff", "Min", "CeilDiv", "range", "SEvent", "DEvent", "reinterpret"}
+_NAME_CALLS = {"Var", "Tensor", "DBuff", "Min", "CeilDiv", "range", "SEvent", "DEvent", "reinterpret", "split_workspace"}
 
 
 class _BoolOpRewriter(ast.NodeTransformer):
@@ -91,9 +91,9 @@ class _BoolOpRewriter(ast.NodeTransformer):
         if node.name != self._target_name or self._in_target:
             return node
         self._in_target = True
-        node = self.generic_visit(node)
+        new_node = cast(ast.FunctionDef, self.generic_visit(node))
         self._in_target = False
-        return node
+        return new_node
 
     def visit_AsyncFunctionDef(self, node: ast.AsyncFunctionDef):
         return node
@@ -107,29 +107,29 @@ class _BoolOpRewriter(ast.NodeTransformer):
     def visit_BoolOp(self, node: ast.BoolOp):
         if not self._in_target:
             return self.generic_visit(node)
-        node = self.generic_visit(node)
-        if isinstance(node.op, ast.And):
-            op = ast.BitAnd()
-        elif isinstance(node.op, ast.Or):
+        new_node = cast(ast.BoolOp, self.generic_visit(node))
+        if isinstance(new_node.op, ast.And):
+            op: ast.operator = ast.BitAnd()
+        elif isinstance(new_node.op, ast.Or):
             op = ast.BitOr()
         else:
-            return node
-        values = node.values
+            return new_node
+        values = new_node.values
         if not values:
-            return node
+            return new_node
         expr = values[0]
         for value in values[1:]:
             expr = ast.BinOp(left=expr, op=op, right=value)
-        return ast.copy_location(expr, node)
+        return ast.copy_location(expr, new_node)
 
     def visit_UnaryOp(self, node: ast.UnaryOp):
         if not self._in_target:
             return self.generic_visit(node)
-        node = self.generic_visit(node)
-        if isinstance(node.op, ast.Not):
-            new_node = ast.UnaryOp(op=ast.Invert(), operand=node.operand)
-            return ast.copy_location(new_node, node)
-        return node
+        new_node = cast(ast.UnaryOp, self.generic_visit(node))
+        if isinstance(new_node.op, ast.Not):
+            inverted = ast.UnaryOp(op=ast.Invert(), operand=new_node.operand)
+            return ast.copy_location(inverted, new_node)
+        return new_node
 
 
 class _IfRewriter(ast.NodeTransformer):
@@ -141,9 +141,9 @@ class _IfRewriter(ast.NodeTransformer):
         if node.name != self._target_name or self._in_target:
             return node
         self._in_target = True
-        node = self.generic_visit(node)
+        new_node = cast(ast.FunctionDef, self.generic_visit(node))
         self._in_target = False
-        return node
+        return new_node
 
     def visit_AsyncFunctionDef(self, node: ast.AsyncFunctionDef):
         return node
@@ -157,7 +157,7 @@ class _IfRewriter(ast.NodeTransformer):
     def visit_If(self, node: ast.If):
         if not self._in_target:
             return self.generic_visit(node)
-        def _visit_block(stmts):
+        def _visit_block(stmts: list[ast.stmt]) -> list[ast.stmt]:
             new_stmts = []
             for stmt in stmts:
                 res = self.visit(stmt)
@@ -167,7 +167,7 @@ class _IfRewriter(ast.NodeTransformer):
                     new_stmts.append(res)
             return new_stmts
 
-        blocks = []
+        blocks: list[tuple[str, Optional[ast.expr], list[ast.stmt]]] = []
         current = node
         while True:
             blocks.append(("IF", current.test, _visit_block(current.body)))
@@ -182,10 +182,10 @@ class _IfRewriter(ast.NodeTransformer):
         for idx, (kind, test, body) in enumerate(blocks):
             if kind == "ELSE":
                 call_name = "Else"
-                args = []
+                args: list[ast.expr] = []
             else:
                 call_name = "If" if idx == 0 else "Elif"
-                args = [test]
+                args = [cast(ast.expr, test)]
             with_item = ast.withitem(
                 context_expr=ast.Call(func=ast.Name(id=call_name, ctx=ast.Load()), args=args, keywords=[]),
                 optional_vars=None,

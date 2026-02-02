@@ -61,8 +61,8 @@ def infer_strides(tensor: Tensor) -> Tuple[Union[int, Var], Union[int, Var]]:
     span1 = span[1]
     c0 = tensor.dtype.C0
 
-    blk_stride = 1
-    rep_stride = 8
+    blk_stride: Union[int, Var] = 1
+    rep_stride: Union[int, Var] = 8
     matched = False
     if isinstance(span1, int):
         if span1 == 8 * c0:

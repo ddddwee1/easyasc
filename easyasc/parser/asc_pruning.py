@@ -361,7 +361,8 @@ def _extract_var_names_from_value(value: object, known_names: Set[str], out: Set
 
 def _inst_is_side_specific(inst: Instruction, side: str, classify_inst: ClassifyFn) -> bool:
     """Return True if this instruction is specific to the given side."""
-    return classify_inst(inst) == side
+    side_tag = classify_inst(inst)
+    return side_tag == side or side_tag == "both"
 
 
 def _collect_var_deps(

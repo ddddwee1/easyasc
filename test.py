@@ -14,6 +14,7 @@ def subset_vec(xub: DBuff, cnt: Var, cnt1: Var, cnt2: Var):
 
 @kernel()
 def cubefunc(x: GMTensor, y: GMTensor, z: GMTensor, M: Var, N: Var, K: Var):
+    vv = split_workspace(DT.half, [M, N])
     l1q = DBuff(DT.half, [BLK, K], Position.L1)
     l1k = DBuff(DT.half, [BLK, K], Position.L1)
     l1v = Tensor(DT.half, [BLK, K], Position.L1)
@@ -129,6 +130,15 @@ def cubefunc(x: GMTensor, y: GMTensor, z: GMTensor, M: Var, N: Var, K: Var):
                 xub[cnt] <<= xub[cnt1] + xub[cnt2]
             subset_vec(xub, cnt, cnt1, cnt2)
             z[m:m + BLK, 0:K] <<= xub[cnt]
+        
+        # test case 10
+        for m in range(m1, m2, BLK):
+            xubs <<= x[m:m + BLK, 0:K]
+            for i in range(10):
+                xub[cnt] <<= x[m:m + BLK, 0:K]
+                xub[cnt] <<= xub[cnt1] + xub[cnt2]
+            subset_vec(xub, cnt, cnt1, cnt2)
+            vv[m:m + BLK, 0:K] <<= xub[cnt]
 
     xub[cnt] <<= xub[cnt1] + xub[cnt2]
 

@@ -1,4 +1,4 @@
-from typing import Dict, List, Optional, Set, Tuple, Literal
+from typing import Dict, List, Optional, Set, Tuple, Literal, Union
 from functools import lru_cache
 
 from .asc_utils import build_expr_state, should_skip_inst
@@ -102,7 +102,7 @@ class AutosyncNode:
                              producer_src: bool, producer_dst: bool, consumer_src: bool, consumer_dst: bool, 
                              buf_name: str):
         self.insts = list(instructions)
-        self.new_insts = []
+        self.new_insts: List[Union[Instruction, "AutosyncNode"]] = []
         self.src_pipe = src_pipe
         self.dst_pipe = dst_pipe
         self.producer_src = producer_src
@@ -111,7 +111,7 @@ class AutosyncNode:
         self.consumer_dst = consumer_dst
         self.buf_idx = 0
         self.buf_name = buf_name
-        self.events_to_be_created = []
+        self.events_to_be_created: List[str] = []
         self.has_inst = False
         self.is_mixed_scope = False
         self.is_single_buffer = False 
@@ -272,26 +272,26 @@ class AutosyncNode:
             return self
         
         if self.is_single_buffer:
-            event_valid = object.__new__(SEvent)
+            event_valid: Union[SEvent, DEvent] = object.__new__(SEvent)
             event_valid.name = f"_tmp_sevent_valid_{self.buf_name}_{self.buf_idx}"
             event_valid.src_pipe = self.src_pipe
             event_valid.dst_pipe = self.dst_pipe
             event_valid.idx = 9999
             self.events_to_be_created.append(event_valid.name)
-            event_ready = object.__new__(SEvent)
+            event_ready: Union[SEvent, DEvent] = object.__new__(SEvent)
             event_ready.name = f"_tmp_sevent_ready_{self.buf_name}_{self.buf_idx}"
             event_ready.src_pipe = self.src_pipe
             event_ready.dst_pipe = self.dst_pipe
             event_ready.idx = 9998
             self.events_to_be_created.append(event_ready.name)
         else:
-            event_valid = object.__new__(DEvent)
+            event_valid: Union[SEvent, DEvent] = object.__new__(DEvent)
             event_valid.name = f"_tmp_devent_valid_{self.buf_name}_{self.buf_idx}"
             event_valid.src_pipe = self.src_pipe
             event_valid.dst_pipe = self.dst_pipe
             event_valid.idx = 9999
             self.events_to_be_created.append(event_valid.name)
-            event_ready = object.__new__(DEvent)
+            event_ready: Union[SEvent, DEvent] = object.__new__(DEvent)
             event_ready.name = f"_tmp_devent_ready_{self.buf_name}_{self.buf_idx}"
             event_ready.src_pipe = self.src_pipe
             event_ready.dst_pipe = self.dst_pipe
@@ -306,7 +306,7 @@ class AutosyncNode:
 
         declared = False 
         changed = False
-        result = []
+        result: List[Instruction | AutosyncNode] = []
         for i in self.new_insts:
             if isinstance(i, AutosyncNode):
                 if self.src_pipe in i.used_pipes and not declared:
@@ -361,7 +361,7 @@ class AutosyncNode:
         return self
 
     def get_instructions(self):
-        result = []
+        result: List[Instruction | AutosyncNode] = []
         for i in self.new_insts:
             if isinstance(i, AutosyncNode):
                 result.extend(i.insert_auto_sync_inst().get_instructions().new_insts)
@@ -375,7 +375,7 @@ class AutosyncNode:
     def create_events(self, full_instructions: List[Instruction]):
         for name in set(self.events_to_be_created):
             if name.startswith("_tmp_sevent"):
-                event = object.__new__(SEvent)
+                event: Union[SEvent, DEvent] = object.__new__(SEvent)
             else:
                 event = object.__new__(DEvent)
 
@@ -397,7 +397,7 @@ class AutosyncNode:
 
 
 def _insert_autosync_node(instructions: List[Instruction], mode: Literal['cube', 'vec']) -> Tuple[List[Instruction], List[Instruction]]:
-    event_creation = []
+    event_creation: List[Instruction] = []
     if mode == 'vec':
         instructions = AutosyncNode(instructions, Pipe.MTE2, Pipe.V, False, True, False, False, 'ubin').assign_buf_indices().insert_auto_sync_inst().get_instructions().create_events(event_creation)
         instructions = AutosyncNode(instructions, Pipe.V, Pipe.MTE3, False, False, True, False, 'ubout').assign_buf_indices().insert_auto_sync_inst().get_instructions().create_events(event_creation)
@@ -415,8 +415,8 @@ def insert_auto_sync(instructions: List[Instruction], mode: Literal['cube', 'vec
     insts = list(instructions)
     if not insts:
         return insts
-    result = []
-    tmp_insts = []
+    result: List[Instruction] = []
+    tmp_insts: List[Instruction] = []
     curr_inst_list = result
 
     for i in insts:

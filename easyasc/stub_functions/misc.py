@@ -1,6 +1,6 @@
 from typing import Union
 
-from ..utils.Tensor import Tensor
+from ..utils.Tensor import Tensor, GMTensor
 from ..utils.var import Var
 from ..utils.datatype import DataTypeValue, Datatype
 from ..utils.instruction import Instruction
@@ -74,5 +74,53 @@ def reinterpret(src: Tensor, target_dtype: DataTypeValue, name: str = "") -> Ten
     if globvars.active_kernel is not None:
         globvars.active_kernel.instructions.append(
             Instruction("reinterpret", dst=out, src=src)
+        )
+    return out
+
+
+def _shape_numel(shape: Union[list, tuple]) -> Union[int, Var]:
+    numel: Union[int, Var] = 1
+    for dim in shape:
+        if not isinstance(dim, (int, Var)):
+            raise TypeError(f"shape element must be int or Var, got: {type(dim)}")
+        if isinstance(dim, int) and dim == 1:
+            continue
+        if isinstance(numel, int) and numel == 1:
+            numel = dim
+            continue
+        if isinstance(numel, int) and isinstance(dim, int):
+            numel *= dim
+        else:
+            numel = var_mul(numel, dim)
+    return numel
+
+
+def split_workspace(dtype: DataTypeValue, shape: Union[list, tuple], name: str = "") -> GMTensor:
+    if not isinstance(dtype, DataTypeValue):
+        raise TypeError(f"dtype must be DataTypeValue, got: {type(dtype)}")
+    if not isinstance(shape, (list, tuple)):
+        raise TypeError(f"shape must be list or tuple, got: {type(shape)}")
+    if not isinstance(name, str):
+        raise TypeError(f"name must be str, got: {type(name)}")
+
+    numel = _shape_numel(shape)
+    idx = globvars.tmp_idx
+    globvars.tmp_idx += 1
+    if name == "":
+        name = f"_tmp_gmtensor_{idx}"
+
+    out = object.__new__(GMTensor)
+    out.dtype = dtype
+    out.shape = shape
+    out.name = name
+    out.idx = idx
+    out.offset = [0 for _ in shape]
+    out.span = list(shape)
+    out.step = [1 for _ in shape]
+    out.slice_mask = [False for _ in shape]
+
+    if globvars.active_kernel is not None:
+        globvars.active_kernel.instructions.append(
+            Instruction("split_workspace", dtype=dtype, numel=numel, name=name)
         )
     return out

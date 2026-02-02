@@ -3,12 +3,14 @@ from .common import (
     GMTensor,
     Tensor,
     Var,
+    Position,
     build_offset_expr,
     build_offset_expr_nz,
     dtype_to_cpp,
     position_to_cpp,
     value_to_cpp,
 )
+from ...utils.datatype import DataTypeValue
 
 
 def handle_create_var(inst, helper, expr_map) -> None:
@@ -45,6 +47,21 @@ def handle_create_gm_tensor(inst, helper, expr_map) -> None:
     dtype = dtype_to_cpp(val.dtype)
     helper(f"GlobalTensor<{dtype}> {val.name};")
     helper(f"{val.name}.SetGlobalBuffer((__gm__ {dtype}*) {val.name}_);")
+
+
+def handle_split_workspace(inst, helper, expr_map) -> None:
+    dtype = inst.kwargs.get("dtype", None)
+    if not isinstance(dtype, DataTypeValue):
+        raise TypeError(f"split_workspace expects DataTypeValue, got: {type(dtype)}")
+    numel = inst.kwargs.get("numel", None)
+    name = inst.kwargs.get("name", None)
+    if not isinstance(name, str):
+        raise TypeError(f"split_workspace expects name as str, got: {type(name)}")
+    dtype_cpp = dtype_to_cpp(dtype)
+    numel_cpp = value_to_cpp(numel, expr_map)
+    helper(f"workspace = ShiftAddr<{dtype_cpp}>(workspace, {numel_cpp}, offset);")
+    helper(f"GlobalTensor<{dtype_cpp}> {name};")
+    helper(f"{name}.SetGlobalBuffer((__gm__ {dtype_cpp}*) workspace);")
 
 
 def handle_get_buf(inst, helper, expr_map) -> None:

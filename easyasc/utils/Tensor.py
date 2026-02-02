@@ -1,9 +1,12 @@
-from typing import Union
+from typing import TYPE_CHECKING, Union
 from .datatype import DataTypeValue
 from .var import Var
 from .positions import Position, PositionType
 from .. import globvars
 from .instruction import Instruction
+
+if TYPE_CHECKING:
+    from .vecop import VecOP
 
 
 class Tensor:

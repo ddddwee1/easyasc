@@ -1,4 +1,4 @@
-from typing import Union
+from typing import Optional, Union, cast
 from .datatype import DataTypeValue, Datatype
 from .. import globvars
 from .instruction import Instruction
@@ -43,7 +43,7 @@ class Var:
     def __init__(
         self,
         value: Union[int, float, 'Var', None] = 0,
-        dtype: Union[DataTypeValue, None] = None,
+        dtype: Optional[DataTypeValue] = None,
         name: str = "",
     ):
         """
@@ -54,15 +54,16 @@ class Var:
             dtype: 数据类型，必须是DataTypeValue类型
             name: 名称，默认为空字符串
         """
-        value_is_var = isinstance(value, Var)
+        value_var: Optional[Var] = value if isinstance(value, Var) else None
+        value_is_var = value_var is not None
 
         if dtype is None:
             if isinstance(value, int):
                 dtype = Datatype.int
             elif isinstance(value, float):
                 dtype = Datatype.float
-            elif value_is_var:
-                dtype = value.dtype
+            elif value_var is not None:
+                dtype = value_var.dtype
             elif value is not None:
                 raise TypeError(f"value类型无法推断dtype，当前类型: {type(value)}")
 
@@ -75,20 +76,23 @@ class Var:
         if value is not None and not isinstance(value, (int, float, Var)):
             raise TypeError(f"value必须是int、float或Var类型，当前类型: {type(value)}")
         
-        if value_is_var:
-            idx = value.idx
+        if value_var is not None:
+            idx = value_var.idx
         else:
             idx = globvars.tmp_idx
             globvars.tmp_idx += 1
             if name == "":
                 name = f"_tmp_var_{idx}"
 
-        self.dtype = dtype
-        self.name = name
-        if value_is_var:
-            value.name = self.name
-        self.value = value.value if value_is_var else value
-        self.idx = idx
+        self.dtype: Optional[DataTypeValue] = dtype
+        self.name: str = name
+        if value_var is not None:
+            value_var.name = self.name
+        if value_var is not None:
+            self.value: Union[int, float, None] = value_var.value
+        else:
+            self.value = cast(Union[int, float, None], value)
+        self.idx: int = idx
 
         if not value_is_var:
             if globvars.active_kernel is not None and not isinstance(value, Var):

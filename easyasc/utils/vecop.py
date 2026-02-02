@@ -26,37 +26,40 @@ class VecOP:
 
         # Binary vector ops.
         if op in ("add", "sub", "mul", "div", "max", "min", "and", "or"):
+            if not isinstance(self.src2, Tensor):
+                raise TypeError("src2 must be a Tensor for binary vec ops")
+            src2 = self.src2
             from ..stub_functions.vec.binary import add, sub, mul, div, vmax, vmin, vand, vor
             if op == "add":
-                add(dst, self.src1, self.src2)  # type: ignore[arg-type]
+                add(dst, self.src1, src2)
             elif op == "sub":
-                sub(dst, self.src1, self.src2)  # type: ignore[arg-type]
+                sub(dst, self.src1, src2)
             elif op == "mul":
-                mul(dst, self.src1, self.src2)  # type: ignore[arg-type]
+                mul(dst, self.src1, src2)
             elif op == "div":
-                div(dst, self.src1, self.src2)  # type: ignore[arg-type]
+                div(dst, self.src1, src2)
             elif op == "max":
-                vmax(dst, self.src1, self.src2)  # type: ignore[arg-type]
+                vmax(dst, self.src1, src2)
             elif op == "min":
-                vmin(dst, self.src1, self.src2)  # type: ignore[arg-type]
+                vmin(dst, self.src1, src2)
             elif op == "and":
                 from ..utils.datatype import Datatype
                 if dst.dtype is Datatype.int and self.src1.dtype is Datatype.int:
-                    vand(dst, self.src1, self.src2)  # type: ignore[arg-type]
+                    vand(dst, self.src1, src2)
                 else:
                     from ..stub_functions.misc import reinterpret
                     src1_int = reinterpret(self.src1, Datatype.int)
-                    src2_int = reinterpret(self.src2, Datatype.int)
+                    src2_int = reinterpret(src2, Datatype.int)
                     dst_int = reinterpret(dst, Datatype.int)
                     vand(dst_int, src1_int, src2_int)
             else:
                 from ..utils.datatype import Datatype
                 if dst.dtype is Datatype.int and self.src1.dtype is Datatype.int:
-                    vor(dst, self.src1, self.src2)  # type: ignore[arg-type]
+                    vor(dst, self.src1, src2)
                 else:
                     from ..stub_functions.misc import reinterpret
                     src1_int = reinterpret(self.src1, Datatype.int)
-                    src2_int = reinterpret(self.src2, Datatype.int)
+                    src2_int = reinterpret(src2, Datatype.int)
                     dst_int = reinterpret(dst, Datatype.int)
                     vor(dst_int, src1_int, src2_int)
             return

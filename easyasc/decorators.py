@@ -106,7 +106,7 @@ class auto_sync:
             else:
                 self._emit_end()
                 return result
-        wrapper.__auto_sync_inner__ = func
+        wrapper.__auto_sync_inner__ = func  # type: ignore
         return wrapper
 
     def __call__(self, *args, **kwargs):
