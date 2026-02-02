@@ -1,11 +1,11 @@
-SEvent<PIPE_V, PIPE_MTE2> _tmp_sevent_valid_ubin_0;
 DEvent<PIPE_V, PIPE_MTE2> _tmp_devent_valid_ubin_1;
-DEvent<PIPE_MTE2, PIPE_V> _tmp_devent_ready_ubin_1;
-SEvent<PIPE_MTE2, PIPE_V> _tmp_sevent_ready_ubin_0;
-DEvent<PIPE_V, PIPE_MTE2> _tmp_devent_valid_ubin_0;
 DEvent<PIPE_MTE2, PIPE_V> _tmp_devent_ready_ubin_0;
-DEvent<PIPE_MTE3, PIPE_V> _tmp_devent_valid_ubout_0;
+DEvent<PIPE_MTE2, PIPE_V> _tmp_devent_ready_ubin_1;
+SEvent<PIPE_V, PIPE_MTE2> _tmp_sevent_valid_ubin_0;
+DEvent<PIPE_V, PIPE_MTE2> _tmp_devent_valid_ubin_0;
+SEvent<PIPE_MTE2, PIPE_V> _tmp_sevent_ready_ubin_0;
 DEvent<PIPE_V, PIPE_MTE3> _tmp_devent_ready_ubout_0;
+DEvent<PIPE_MTE3, PIPE_V> _tmp_devent_valid_ubout_0;
 GlobalTensor<half> x;
 x.SetGlobalBuffer((__gm__ half*) x_);
 GlobalTensor<half> z;
@@ -24,11 +24,10 @@ for (int m = m1; m < m2; m += 128) {
 for (int m = m1; m < m2; m += 128) {
     _tmp_devent_valid_ubin_0.wait();
     GM2UBPAD(xub.get(cnt), x[K*m], 128, 2*K, 2*M - 256, CeilDiv(0, 16));
-    int i = 0;
     _tmp_devent_ready_ubin_0.set();
     _tmp_devent_ready_ubin_0.wait();
     _tmp_devent_valid_ubout_0.wait();
-    for (i = 0; i < 10; i += 1) {
+    for (int i = 0; i < 10; i += 1) {
         _tmp_devent_valid_ubin_1.wait();
         GM2UBPAD(xub.get(cnt), x[K*m], 128, 2*K, 2*M - 256, CeilDiv(0, 16));
         _tmp_devent_ready_ubin_1.set();
@@ -48,11 +47,10 @@ for (int m = m1; m < m2; m += 128) {
 for (int m = m1; m < m2; m += 128) {
     _tmp_sevent_valid_ubin_0.wait();
     GM2UBPAD(xubs, x[K*m], 128, 2*K, 2*M - 256, CeilDiv(0, 16));
-    int i = 0;
     _tmp_sevent_ready_ubin_0.set();
     _tmp_sevent_ready_ubin_0.wait();
     _tmp_devent_valid_ubout_0.wait();
-    for (i = 0; i < 10; i += 1) {
+    for (int i = 0; i < 10; i += 1) {
         _tmp_devent_valid_ubin_1.wait();
         GM2UBPAD(xub.get(cnt), x[K*m], 128, 2*K, 2*M - 256, CeilDiv(0, 16));
         _tmp_devent_ready_ubin_1.set();
@@ -72,11 +70,10 @@ for (int m = m1; m < m2; m += 128) {
 for (int m = m1; m < m2; m += 128) {
     _tmp_sevent_valid_ubin_0.wait();
     GM2UBPAD(xubs, x[K*m], 128, 2*K, 2*M - 256, CeilDiv(0, 16));
-    int i = 0;
     _tmp_sevent_ready_ubin_0.set();
     _tmp_sevent_ready_ubin_0.wait();
     _tmp_devent_valid_ubout_0.wait();
-    for (i = 0; i < 10; i += 1) {
+    for (int i = 0; i < 10; i += 1) {
         _tmp_devent_valid_ubin_1.wait();
         GM2UBPAD(xub.get(cnt), x[K*m], 128, 2*K, 2*M - 256, CeilDiv(0, 16));
         _tmp_devent_ready_ubin_1.set();

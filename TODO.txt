@@ -1,3 +1,4 @@
 # 校验DBuff / Tensor / GMTensor / DEvent / SEvent 不能在loop/if内
 # 加入cross core mutex 
 ## 根据类型自动添加setall和release
+## Change tensorutils.h things 

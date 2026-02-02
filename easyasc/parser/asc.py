@@ -28,6 +28,7 @@ _EVENT_OPS = {
     "event_setall",
     "event_release",
 }
+_EVENT_SWAP_OPS = {"event_set", "event_wait"}
 _CUBE_PIPE_OPS = {"allcube_ready", "allcube_wait", "cube_ready", "wait_vec"}
 _VEC_PIPE_OPS = {"allvec_ready", "allvec_wait", "vec_ready", "wait_cube"}
 _PIPE_CUBE_NAMES = {"M", "FIX", "MTE1"}
@@ -154,6 +155,32 @@ def _next_emit_index(
     return idx
 
 
+def _try_swap_create_var_with_event(
+    instructions: List[Instruction],
+    idx: int,
+    tmp_var_names: Set[str],
+    tmp_tensor_names: Set[str],
+    tmp_gmtensor_names: Set[str],
+) -> bool:
+    inst = instructions[idx]
+    if inst.opname != "create_var":
+        return False
+    next_idx = _next_emit_index(
+        instructions,
+        idx + 1,
+        tmp_var_names,
+        tmp_tensor_names,
+        tmp_gmtensor_names,
+    )
+    if next_idx >= len(instructions):
+        return False
+    next_inst = instructions[next_idx]
+    if next_inst.opname not in _EVENT_SWAP_OPS:
+        return False
+    instructions[idx], instructions[next_idx] = instructions[next_idx], instructions[idx]
+    return True
+
+
 def _try_fold_loop(
     instructions: List[Instruction],
     idx: int,
@@ -244,6 +271,14 @@ def translate(instructions: Iterable[Instruction]) -> str:
         inst = instructions[idx]
         if should_skip_inst(inst, tmp_var_names, tmp_tensor_names, tmp_gmtensor_names):
             idx += 1
+            continue
+        if _try_swap_create_var_with_event(
+            instructions,
+            idx,
+            tmp_var_names,
+            tmp_tensor_names,
+            tmp_gmtensor_names,
+        ):
             continue
         folded = _try_fold_loop(
             instructions,
