@@ -118,6 +118,7 @@ def split_workspace(dtype: DataTypeValue, shape: Union[list, tuple], name: str =
     out.span = list(shape)
     out.step = [1 for _ in shape]
     out.slice_mask = [False for _ in shape]
+    out._mutex = None 
 
     if globvars.active_kernel is not None:
         globvars.active_kernel.instructions.append(

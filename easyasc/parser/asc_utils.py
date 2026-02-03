@@ -6,9 +6,15 @@ from ..utils.positions import POSITION_CPP_MAPPING, Position
 from ..utils.Tensor import DBuff, GMTensor, Tensor
 from ..utils.var import Var
 
-import sympy as sp
-from sympy.printing.str import StrPrinter
-from sympy.printing.precedence import precedence
+try:
+    import sympy as sp
+    from sympy.printing.str import StrPrinter
+    from sympy.printing.precedence import precedence
+except ImportError:
+    sp = None
+    StrPrinter = object  # type: ignore
+    def precedence(expr):  # type: ignore
+        return 0
 
 
 
@@ -47,7 +53,7 @@ class _MulPowPrinter(StrPrinter):
         parts = ["(" + p + ")" for p in parts]
         return " || ".join(parts)
 
-_PRINTER = _MulPowPrinter()
+_PRINTER = _MulPowPrinter() if sp is not None else None
 
 
 def dtype_to_cpp(dtype) -> str:

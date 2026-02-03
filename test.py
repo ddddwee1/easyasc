@@ -14,6 +14,7 @@ def subset_vec(xub: DBuff, cnt: Var, cnt1: Var, cnt2: Var):
 
 @kernel()
 def cubefunc(x: GMTensor, y: GMTensor, z: GMTensor, M: Var, N: Var, K: Var):
+    y.bind_cv_mutex(0)
     vv = split_workspace(DT.half, [M, N])
     l1q = DBuff(DT.half, [BLK, K], Position.L1)
     l1k = DBuff(DT.half, [BLK, K], Position.L1)
@@ -24,8 +25,6 @@ def cubefunc(x: GMTensor, y: GMTensor, z: GMTensor, M: Var, N: Var, K: Var):
     l0c2 = Tensor(DT.float, [BLK, K], Position.L0C)
     xub = DBuff(DT.half, [BLK, K], Position.UB)
     xubs = Tensor(DT.half, [BLK, K], Position.UB)
-    cv1 = CvMutex(0, 2)
-    vc1 = VcMutex(1, 2)
 
     cnt = Var(0)
     cnt1 = Var(0)
@@ -45,17 +44,17 @@ def cubefunc(x: GMTensor, y: GMTensor, z: GMTensor, M: Var, N: Var, K: Var):
 
             mmad(l0c[cnt], l0a[cnt], l0b[cnt])
 
-            cv1.lock()
+            y.lock()
             y[:1, :] <<= l0c[cnt]
             cnt += 1 
-            cv1.ready()
+            y.ready()
 
 
     with auto_sync():
         for m in range(m1, m2, BLK):
-            cv1.wait()
-            xubs <<= x[m:m + BLK, 0:K]
-            cv1.free()
+            y.wait()
+            xubs <<= y[m:m + BLK, 0:K]
+            y.free()
             for i in range(10):
                 xub[cnt] <<= x[m:m + BLK, 0:K]
                 xub[cnt] <<= xub[cnt1] + xub[cnt2]

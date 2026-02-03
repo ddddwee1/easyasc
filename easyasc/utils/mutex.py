@@ -9,7 +9,7 @@ class CvMutex:
     def __init__(
         self,
         flag_id: int,
-        depth: int,
+        depth: int = 2,
         src_start_pipe: PipeType = Pipe.S,
         dst_start_pipe: PipeType = Pipe.S,
         src_end_pipe: PipeType = Pipe.FIX,
@@ -51,7 +51,7 @@ class VcMutex:
     def __init__(
         self,
         flag_id: int,
-        depth: int,
+        depth: int = 2,
         src_start_pipe: PipeType = Pipe.S,
         dst_start_pipe: PipeType = Pipe.S,
         src_end_pipe: PipeType = Pipe.MTE3,

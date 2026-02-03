@@ -1,12 +1,14 @@
-from typing import TYPE_CHECKING, Union
+from typing import TYPE_CHECKING, Optional, Union
 from .datatype import DataTypeValue
 from .var import Var
 from .positions import Position, PositionType
+from .pipe import Pipe, PipeType
 from .. import globvars
 from .instruction import Instruction
 
 if TYPE_CHECKING:
     from .vecop import VecOP
+    from .mutex import CvMutex, VcMutex
 
 
 class Tensor:
@@ -430,6 +432,7 @@ class GMTensor:
         self.span = list(shape)
         self.step = [1 for _ in shape]
         self.slice_mask = [False for _ in shape]
+        self._mutex: Optional[Union["CvMutex", "VcMutex"]] = None
         
         if globvars.active_kernel is not None:
             globvars.active_kernel.instructions.append(
@@ -441,6 +444,82 @@ class GMTensor:
             f"GMTensor(name={self.name!r}, dtype={self.dtype!r}, shape={self.shape!r}, "
             f"idx={self.idx!r})"
         )
+
+    def bind_cv_mutex(
+        self,
+        flag_id: int,
+        depth: int = 2,
+        src_start_pipe: PipeType = Pipe.S,
+        dst_start_pipe: PipeType = Pipe.S,
+        src_end_pipe: PipeType = Pipe.FIX,
+        dst_end_pipe: Optional[PipeType] = None,
+    ) -> "CvMutex":
+        from .mutex import CvMutex
+
+        mutex = CvMutex(
+            flag_id,
+            depth,
+            src_start_pipe=src_start_pipe,
+            dst_start_pipe=dst_start_pipe,
+            src_end_pipe=src_end_pipe,
+            dst_end_pipe=dst_end_pipe,
+        )
+        self._mutex = mutex
+        return mutex
+
+    def bind_vc_mutex(
+        self,
+        flag_id: int,
+        depth: int = 2,
+        src_start_pipe: PipeType = Pipe.S,
+        dst_start_pipe: PipeType = Pipe.S,
+        src_end_pipe: PipeType = Pipe.MTE3,
+        dst_end_pipe: PipeType = Pipe.FIX,
+    ) -> "VcMutex":
+        from .mutex import VcMutex
+
+        mutex = VcMutex(
+            flag_id,
+            depth,
+            src_start_pipe=src_start_pipe,
+            dst_start_pipe=dst_start_pipe,
+            src_end_pipe=src_end_pipe,
+            dst_end_pipe=dst_end_pipe,
+        )
+        self._mutex = mutex
+        return mutex
+
+    def lock(self) -> None:
+        if self._mutex is None:
+            raise ValueError("GMTensor尚未绑定mutex")
+        from .mutex import CvMutex, VcMutex
+        if not isinstance(self._mutex, (CvMutex, VcMutex)):
+            raise TypeError(f"GMTensor的mutex类型错误: {type(self._mutex)}")
+        self._mutex.lock()
+
+    def ready(self) -> None:
+        if self._mutex is None:
+            raise ValueError("GMTensor尚未绑定mutex")
+        from .mutex import CvMutex, VcMutex
+        if not isinstance(self._mutex, (CvMutex, VcMutex)):
+            raise TypeError(f"GMTensor的mutex类型错误: {type(self._mutex)}")
+        self._mutex.ready()
+
+    def wait(self) -> None:
+        if self._mutex is None:
+            raise ValueError("GMTensor尚未绑定mutex")
+        from .mutex import CvMutex, VcMutex
+        if not isinstance(self._mutex, (CvMutex, VcMutex)):
+            raise TypeError(f"GMTensor的mutex类型错误: {type(self._mutex)}")
+        self._mutex.wait()
+
+    def free(self) -> None:
+        if self._mutex is None:
+            raise ValueError("GMTensor尚未绑定mutex")
+        from .mutex import CvMutex, VcMutex
+        if not isinstance(self._mutex, (CvMutex, VcMutex)):
+            raise TypeError(f"GMTensor的mutex类型错误: {type(self._mutex)}")
+        self._mutex.free()
 
     def __ilshift__(self, other: "Tensor") -> "GMTensor":
         if isinstance(other, Tensor):
@@ -511,6 +590,7 @@ class GMTensor:
         out.span = spans
         out.step = steps
         out.slice_mask = slice_mask
+        out._mutex = getattr(self, "_mutex", None)
         if globvars.active_kernel is not None:
             globvars.active_kernel.instructions.append(
                 Instruction(
