@@ -4,6 +4,8 @@ DEvent<PIPE_M, PIPE_MTE1> _tmp_devent_valid_l0_0;
 DEvent<PIPE_MTE1, PIPE_M> _tmp_devent_ready_l0_0;
 DEvent<PIPE_FIX, PIPE_M> _tmp_devent_valid_fix_0;
 DEvent<PIPE_M, PIPE_FIX> _tmp_devent_ready_fix_0;
+CUBE_READY(1, PIPE_FIX);
+CUBE_READY(1, PIPE_FIX);
 GlobalTensor<half> x;
 x.SetGlobalBuffer((__gm__ half*) x_);
 GlobalTensor<half> y;
@@ -36,11 +38,15 @@ for (int m = m1; m < m2; m += 128) {
     _tmp_devent_ready_l0_0.wait();
     _tmp_devent_valid_fix_0.wait();
     MMAD(l0c.get(cnt), l0a.get(cnt), l0b.get(cnt), 64, K, 64, true);
+    WAIT_VEC(0, PIPE_S);
     _tmp_devent_ready_fix_0.set();
     _tmp_devent_ready_fix_0.wait();
     L0C2GM_NZ2ND(y, l0c.get(cnt), 1, N, N, 128);
     cnt = cnt + 1;
+    CUBE_READY(0, PIPE_FIX);
     _tmp_devent_ready_l1_0.set();
     _tmp_devent_ready_l0_0.set();
     _tmp_devent_ready_fix_0.set();
 }
+WAIT_VEC(0, PIPE_S);
+WAIT_VEC(0, PIPE_S);

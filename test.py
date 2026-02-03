@@ -24,6 +24,8 @@ def cubefunc(x: GMTensor, y: GMTensor, z: GMTensor, M: Var, N: Var, K: Var):
     l0c2 = Tensor(DT.float, [BLK, K], Position.L0C)
     xub = DBuff(DT.half, [BLK, K], Position.UB)
     xubs = Tensor(DT.half, [BLK, K], Position.UB)
+    cv1 = CvMutex(0, 2)
+    vc1 = VcMutex(1, 2)
 
     cnt = Var(0)
     cnt1 = Var(0)
@@ -43,97 +45,17 @@ def cubefunc(x: GMTensor, y: GMTensor, z: GMTensor, M: Var, N: Var, K: Var):
 
             mmad(l0c[cnt], l0a[cnt], l0b[cnt])
 
+            cv1.lock()
             y[:1, :] <<= l0c[cnt]
-
             cnt += 1 
+            cv1.ready()
 
 
     with auto_sync():
-        # # test case 1
-        # for m in range(m1, m2, BLK):
-        #     xub[cnt] <<= x[m:m + BLK, 0:K]
-        #     xub[cnt] <<= xub[cnt1] + xub[cnt2]
-        #     subset_vec(xub, cnt, cnt1, cnt2)
-        #     z[m:m + BLK, 0:K] <<= xub[cnt]
-
-        # # test case 1
-        # for m in range(m1, m2, BLK):
-        #     xub[cnt] <<= x[m:m + BLK, 0:K]
-        #     xub[cnt] <<= xub[cnt1] + xub[cnt2]
-        #     subset_vec(xub, cnt, cnt1, cnt2)
-        #     z[m:m + BLK, 0:K] <<= xub[cnt]
-
-        # # test case 2
-        # for m in range(m1, m2, BLK):
-        #     xub[cnt] <<= x[m:m + BLK, 0:K]
-        #     for i in range(1, 10):
-        #         xub[cnt] <<= xub[cnt1] + xub[cnt2]
-        #     subset_vec(xub, cnt, cnt1, cnt2)
-        #     z[m:m + BLK, 0:K] <<= xub[cnt]
-
-        # # test case 3
-        # for m in range(m1, m2, BLK):
-        #     xub[cnt] <<= x[m:m + BLK, 0:K]
-        #     for i in range(10):
-        #         xub[cnt] <<= xub[cnt1] + xub[cnt2]
-        #         subset_vec(xub, cnt, cnt1, cnt2)
-        #         z[m:m + BLK, 0:K] <<= xub[cnt]
-    
-        # # test case 4
-        # for m in range(m1, m2, BLK):
-        #     for i in range(10):
-        #         xub[cnt] <<= x[m:m + BLK, 0:K]
-        #         xub[cnt] <<= xub[cnt1] + xub[cnt2]
-        #         subset_vec(xub, cnt, cnt1, cnt2)
-        #     z[m:m + BLK, 0:K] <<= xub[cnt]
-
-        # # test case 5
-        # for m in range(m1, m2, BLK):
-        #     for i in range(10):
-        #         xub[cnt] <<= x[m:m + BLK, 0:K]
-        #         xub[cnt] <<= xub[cnt1] + xub[cnt2]
-        #     subset_vec(xub, cnt, cnt1, cnt2)
-        #     z[m:m + BLK, 0:K] <<= xub[cnt]
-
-        # # test case 6
-        # for m in range(m1, m2, BLK):
-        #     xub[cnt] <<= x[m:m + BLK, 0:K]
-        #     for i in range(10):
-        #         xub[cnt] <<= x[m:m + BLK, 0:K]
-        #         xub[cnt] <<= xub[cnt1] + xub[cnt2]
-        #     subset_vec(xub, cnt, cnt1, cnt2)
-        #     z[m:m + BLK, 0:K] <<= xub[cnt]
-
-        # test case 7
         for m in range(m1, m2, BLK):
-            xub[cnt] <<= x[m:m + BLK, 0:K]
-            for i in range(10):
-                xub[cnt] <<= x[m:m + BLK, 0:K]
-                xub[cnt] <<= xub[cnt1] + xub[cnt2]
-            subset_vec(xub, cnt, cnt1, cnt2)
-            z[m:m + BLK, 0:K] <<= xub[cnt]
-
-        # test case 8
-        for m in range(m1, m2, BLK):
+            cv1.wait()
             xubs <<= x[m:m + BLK, 0:K]
-            for i in range(10):
-                xub[cnt] <<= x[m:m + BLK, 0:K]
-                xub[cnt] <<= xub[cnt1] + xub[cnt2]
-            subset_vec(xub, cnt, cnt1, cnt2)
-            z[m:m + BLK, 0:K] <<= xub[cnt]
-
-        # test case 9
-        for m in range(m1, m2, BLK):
-            xubs <<= x[m:m + BLK, 0:K]
-            for i in range(10):
-                xub[cnt] <<= x[m:m + BLK, 0:K]
-                xub[cnt] <<= xub[cnt1] + xub[cnt2]
-            subset_vec(xub, cnt, cnt1, cnt2)
-            z[m:m + BLK, 0:K] <<= xub[cnt]
-        
-        # test case 10
-        for m in range(m1, m2, BLK):
-            xubs <<= x[m:m + BLK, 0:K]
+            cv1.free()
             for i in range(10):
                 xub[cnt] <<= x[m:m + BLK, 0:K]
                 xub[cnt] <<= xub[cnt1] + xub[cnt2]

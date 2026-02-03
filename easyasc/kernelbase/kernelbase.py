@@ -1,9 +1,10 @@
 import inspect
-from typing import List
+from typing import List, Union
 
 from ..utils.instruction import Instruction
 from ..utils.Tensor import GMTensor
 from ..utils.var import Var
+from ..utils.mutex import CvMutex, VcMutex
 from .. import globvars
 
 
@@ -13,6 +14,7 @@ class KernelBase:
         self.name = name
         self.func = func
         self.instructions: List[Instruction] = []
+        self.crosscore_mutex: List[Union[CvMutex, VcMutex]] = []
 
     def __call__(self, *args, **kwargs):
         sig = inspect.signature(self.func)
@@ -30,6 +32,33 @@ class KernelBase:
                     Instruction("create_gm_tensor", val=value)
                 )
         res = self.func(*args, **kwargs)
+        head_instructions = []
+        tail_instructions = []
+        for mutex in self.crosscore_mutex:
+            if not isinstance(mutex, (CvMutex, VcMutex)):
+                raise TypeError(
+                    f"crosscore_mutex元素必须是CvMutex或VcMutex，当前类型: {type(mutex)}"
+                )
+            if isinstance(mutex, CvMutex):
+                for _ in range(mutex.depth):
+                    head_instructions.append(
+                        Instruction("vec_ready", flag_id=mutex.flag_id, pipe=mutex.dst_end_pipe)
+                    )
+                    tail_instructions.append(
+                        Instruction("wait_vec", flag_id=mutex.flag_id, pipe=mutex.src_start_pipe)
+                    )
+            else:
+                for _ in range(mutex.depth):
+                    head_instructions.append(
+                        Instruction("cube_ready", flag_id=mutex.flag_id, pipe=mutex.dst_end_pipe)
+                    )
+                    tail_instructions.append(
+                        Instruction("wait_cube", flag_id=mutex.flag_id, pipe=mutex.src_start_pipe)
+                    )
+        if head_instructions:
+            self.instructions[:0] = head_instructions
+        if tail_instructions:
+            self.instructions.extend(tail_instructions)
         globvars.tmp_idx = 0
         globvars.active_kernel = None
         return res
