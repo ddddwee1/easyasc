@@ -19,6 +19,12 @@ from .asc_autosync import insert_auto_sync
 from .helper import CodeHelper
 from ..utils.instruction import Instruction
 from ..utils.var import Var
+from ..utils.Tensor import Tensor, DBuff
+from rich import box
+from rich.align import Align
+from rich.console import Console
+from rich.table import Table
+from rich.text import Text
 
 _EVENT_OPS = {
     "create_sevent",
@@ -354,9 +360,67 @@ def translate(instructions: Iterable[Instruction]) -> str:
 
 def translate_split(instructions: Iterable[Instruction]) -> Tuple[str, str]:
     cube_insts, vec_insts = split_instructions(instructions)
-    print('inserting auto sync instructions...')
+    # print('inserting auto sync instructions...')
     cube_insts = insert_auto_sync(cube_insts, mode='cube')
-    print('auto sync instructions inserted cuebe side.')
+    analyze_usage(cube_insts)
+    # print('auto sync instructions inserted cuebe side.')
     vec_insts = insert_auto_sync(vec_insts, mode='vec')
-    print('auto sync instructions inserted vec side.')
+    analyze_usage(vec_insts)
+    # print('auto sync instructions inserted vec side.')
     return translate(cube_insts), translate(vec_insts)
+
+
+def analyze_usage(instructions: Iterable[Instruction]) -> None:
+    pos_order: List[str] = []
+    grouped: dict[str, List[Text]] = {}
+
+    def _emit_shape(val) -> None:
+        if not isinstance(val, (Tensor, DBuff)):
+            return
+        shape_values = []
+        for dim in val.shape:
+            if isinstance(dim, Var):
+                shape_values.append(dim.value)
+            else:
+                shape_values.append(dim)
+        label = "(Tensor)" if isinstance(val, Tensor) else "(DBuff)"
+        label_style = "cyan" if isinstance(val, Tensor) else "bright_blue"
+        size_kb = "UNKNOWN KB"
+        if len(shape_values) >= 2:
+            dim0, dim1 = shape_values[0], shape_values[1]
+            if isinstance(dim0, (int, float)) and isinstance(dim1, (int, float)):
+                size = (dim0 * dim1) / 1024
+                if isinstance(size, float) and size.is_integer():
+                    size = int(size)
+                size_kb = f"{size} KB"
+        line = Text.assemble(
+            (label, label_style),
+            (" ", "white"),
+            (val.name, "white"),
+            (": ", "white"),
+            (size_kb, "white"),
+        )
+        pos_label = str(getattr(val, "position", "UNKNOWN"))
+        if pos_label not in grouped:
+            grouped[pos_label] = []
+            pos_order.append(pos_label)
+        grouped[pos_label].append(line)
+
+    for inst in instructions:
+        if inst.opname not in ("create_tensor", "create_dbuf"):
+            continue
+        _emit_shape(inst.kwargs.get("val", None))
+
+    if not grouped:
+        return
+
+    console = Console()
+    table = Table(show_header=False, box=box.ASCII, width=50)
+    table.add_column(justify="center")
+    for pos_idx, pos_label in enumerate(pos_order):
+        if pos_idx:
+            table.add_section()
+        table.add_row(Text(f"Position: {pos_label}", style="green"))
+        for line in grouped.get(pos_label, []):
+            table.add_row(line)
+    console.print(Align.center(table))

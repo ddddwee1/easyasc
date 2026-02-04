@@ -34,7 +34,6 @@ class CvMutex:
 
     def lock(self) -> None:
         wait_vec(self.flag_id, self.src_start_pipe)
-        print('LOCK CV')
 
     def ready(self) -> None:
         cube_ready(self.flag_id, self.src_end_pipe)
@@ -44,7 +43,6 @@ class CvMutex:
 
     def free(self) -> None:
         vec_ready(self.flag_id, self.dst_end_pipe)
-        print('READY CV')
 
 
 class VcMutex:

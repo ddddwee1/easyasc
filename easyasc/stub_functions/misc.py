@@ -125,3 +125,10 @@ def split_workspace(dtype: DataTypeValue, shape: Union[list, tuple], name: str =
             Instruction("split_workspace", dtype=dtype, numel=numel, name=name)
         )
     return out
+
+
+def reset_cache() -> None:
+    if globvars.active_kernel is not None:
+        globvars.active_kernel.instructions.append(
+            Instruction("reset_cache")
+        )

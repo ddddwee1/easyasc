@@ -102,6 +102,7 @@ from .vec_cast import handle_vec_cast
 from .vec_compare import handle_vec_compare, handle_vec_compares, handle_vec_set_cmpmask
 from .vec_select import handle_vec_select
 from .reinterpret import handle_reinterpret
+from .misc import handle_reset_cache
 
 
 def build_handlers() -> dict[str, Handler]:
@@ -201,6 +202,7 @@ def build_handlers() -> dict[str, Handler]:
         "select": handle_vec_select,
         "set_cmpmask": handle_vec_set_cmpmask,
         "reinterpret": handle_reinterpret,
+        "reset_cache": handle_reset_cache,
         "start_auto_sync": handle_start_auto_sync,
         "end_auto_sync": handle_end_auto_sync,
     }

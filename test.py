@@ -25,6 +25,7 @@ def cubefunc(x: GMTensor, y: GMTensor, z: GMTensor, M: Var, N: Var, K: Var):
     l0c2 = Tensor(DT.float, [BLK, K], Position.L0C)
     xub = DBuff(DT.half, [BLK, K], Position.UB)
     xubs = Tensor(DT.half, [BLK, K], Position.UB)
+    reset_cache()
 
     cnt = Var(0)
     cnt1 = Var(0)
@@ -73,5 +74,6 @@ if __name__ == "__main__":
     z= GMTensor(DT.half, [M, N])
     cubefunc(x, y, z, M, N, K)
     # cubefunc.print_instructions()
-    cubefunc.dump_asc("test")
+    # cubefunc.dump_asc("test")
+    cubefunc.dump_kernel('test')
 

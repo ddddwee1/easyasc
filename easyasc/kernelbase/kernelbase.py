@@ -15,10 +15,12 @@ class KernelBase:
         self.func = func
         self.instructions: List[Instruction] = []
         self.crosscore_mutex: List[Union[CvMutex, VcMutex]] = []
+        self._last_bound_args = {}
 
     def __call__(self, *args, **kwargs):
         sig = inspect.signature(self.func)
         bound = sig.bind_partial(*args, **kwargs)
+        self._last_bound_args = dict(bound.arguments)
         for param_name, value in bound.arguments.items():
             if isinstance(value, (GMTensor, Var)):
                 value.name = param_name
@@ -79,3 +81,74 @@ class KernelBase:
             f.write(cube_code)
         with open(f"{path}_vec.h", "w") as f:
             f.write(vec_code)
+
+    def dump_kernel(self, path: str) -> None:
+        from ..parser.asc import translate_split
+        from ..parser.asc_utils import dtype_to_cpp
+
+        cube_code, vec_code = translate_split(self.instructions)
+        sig = inspect.signature(self.func)
+        param_names = list(sig.parameters.keys())
+
+        gmtensors = {}
+        vars_by_name = {}
+
+        def _collect_var(value):
+            if isinstance(value, Var):
+                vars_by_name.setdefault(value.name, value)
+                return
+            if isinstance(value, (list, tuple)):
+                for item in value:
+                    _collect_var(item)
+                return
+            if isinstance(value, dict):
+                for item in value.values():
+                    _collect_var(item)
+
+        for inst in self.instructions:
+            if inst.opname == "create_gm_tensor":
+                val = inst.kwargs.get("val", None)
+                if isinstance(val, GMTensor):
+                    gmtensors[val.name] = val
+            for value in inst.kwargs.values():
+                _collect_var(value)
+
+        gmtensor_params = []
+        var_params = []
+        for name in param_names:
+            bound_val = self._last_bound_args.get(name, None)
+            if isinstance(bound_val, GMTensor) or name in gmtensors:
+                gmtensor_params.append(f"GM_ADDR {name}_")
+            else:
+                dtype = None
+                if isinstance(bound_val, Var):
+                    dtype = bound_val.dtype
+                elif name in vars_by_name:
+                    dtype = vars_by_name[name].dtype
+                var_params.append(f"{dtype_to_cpp(dtype)} {name}")
+
+        params = gmtensor_params + ["GM_ADDR workspace"] + var_params
+        param_list = ", ".join(params)
+
+        def _wrap(code: str, suffix: str) -> str:
+            header = '#include "tensorutils.h"\n\n'
+            fn_name = f"{self.name}_{suffix}"
+            body = code.strip("\n")
+            if body:
+                body = "\n".join(f"    {line}" if line else "" for line in body.splitlines())
+                return (
+                    f"{header}__aicore__ inline void {fn_name}({param_list}) {{\n"
+                    f"    int _offset = 0;\n"
+                    f"{body}\n"
+                    f"}}\n"
+                )
+            return (
+                f"{header}__aicore__ inline void {fn_name}({param_list}) {{\n"
+                f"    int _offset = 0;\n"
+                f"}}\n"
+            )
+
+        with open(f"{path}_cube.h", "w") as f:
+            f.write(_wrap(cube_code, "cube"))
+        with open(f"{path}_vec.h", "w") as f:
+            f.write(_wrap(vec_code, "vec"))

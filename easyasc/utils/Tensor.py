@@ -63,7 +63,7 @@ class Tensor:
 
         if globvars.active_kernel is not None:
             globvars.active_kernel.instructions.append(
-                Instruction("create_tensor", val=self)
+                Instruction("create_tensor", val=self, shape=list(self.shape))
             )
 
     def __repr__(self):
@@ -355,7 +355,7 @@ class DBuff:
 
         if globvars.active_kernel is not None:
             globvars.active_kernel.instructions.append(
-                Instruction("create_dbuf", val=self)
+                Instruction("create_dbuf", val=self, shape=list(self.shape))
             )
 
     def __repr__(self):

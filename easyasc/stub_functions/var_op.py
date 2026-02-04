@@ -1,9 +1,19 @@
-from typing import Union
+from typing import Optional, Union
 
 from ..utils.var import Var
 from ..utils.datatype import Datatype
 from ..utils.instruction import Instruction
 from .. import globvars
+
+
+def _value_of(value: Union[Var, int, float]) -> Optional[Union[int, float]]:
+    if isinstance(value, Var):
+        if isinstance(value.value, (int, float)):
+            return value.value
+        return None
+    if isinstance(value, (int, float)):
+        return value
+    return None
 
 
 def CeilDiv(a: Union[Var, int], b: Union[Var, int], *, name: str = "") -> Var:
@@ -15,6 +25,10 @@ def CeilDiv(a: Union[Var, int], b: Union[Var, int], *, name: str = "") -> Var:
         raise TypeError(f"name必须是str类型，当前类型: {type(name)}")
 
     out = Var(name=name)
+    a_val = _value_of(a)
+    b_val = _value_of(b)
+    if a_val is not None and b_val is not None and b_val != 0:
+        out.value = (a_val + b_val - 1) // b_val
     if globvars.active_kernel is not None:
         globvars.active_kernel.instructions.append(
             Instruction("CeilDiv", a=a, b=b, out=out)
@@ -67,6 +81,10 @@ def var_mul(a: Union[Var, int, float], b: Union[Var, int, float], *, name: str =
         dtype = Datatype.int
 
     out = Var(dtype=dtype, name=name)
+    a_val = _value_of(a)
+    b_val = _value_of(b)
+    if a_val is not None and b_val is not None:
+        out.value = a_val * b_val
     if globvars.active_kernel is not None:
         globvars.active_kernel.instructions.append(
             Instruction("var_mul", a=a, b=b, out=out)
@@ -97,6 +115,10 @@ def var_add(a: Union[Var, int, float], b: Union[Var, int, float], *, name: str =
         dtype = Datatype.int
 
     out = Var(dtype=dtype, name=name)
+    a_val = _value_of(a)
+    b_val = _value_of(b)
+    if a_val is not None and b_val is not None:
+        out.value = a_val + b_val
     if globvars.active_kernel is not None:
         globvars.active_kernel.instructions.append(
             Instruction("var_add", a=a, b=b, out=out)
@@ -127,6 +149,10 @@ def var_sub(a: Union[Var, int, float], b: Union[Var, int, float], *, name: str =
         dtype = Datatype.int
 
     out = Var(dtype=dtype, name=name)
+    a_val = _value_of(a)
+    b_val = _value_of(b)
+    if a_val is not None and b_val is not None:
+        out.value = a_val - b_val
     if globvars.active_kernel is not None:
         globvars.active_kernel.instructions.append(
             Instruction("var_sub", a=a, b=b, out=out)
@@ -159,6 +185,13 @@ def var_div(a: Union[Var, int, float], b: Union[Var, int, float], *, name: str =
         raise TypeError(f"a与b的数据类型必须一致，当前为{dtype_a}与{dtype_b}")
 
     out = Var(dtype=dtype_a, name=name)
+    a_val = _value_of(a)
+    b_val = _value_of(b)
+    if a_val is not None and b_val is not None and b_val != 0:
+        if dtype_a is Datatype.int:
+            out.value = a_val // b_val
+        else:
+            out.value = a_val / b_val
     if globvars.active_kernel is not None:
         globvars.active_kernel.instructions.append(
             Instruction("var_div", a=a, b=b, out=out)
@@ -189,6 +222,10 @@ def Min(a: Union[Var, int, float], b: Union[Var, int, float], *, name: str = "")
         dtype = Datatype.int
 
     out = Var(dtype=dtype, name=name)
+    a_val = _value_of(a)
+    b_val = _value_of(b)
+    if a_val is not None and b_val is not None:
+        out.value = min(a_val, b_val)
     if globvars.active_kernel is not None:
         globvars.active_kernel.instructions.append(
             Instruction("Min", a=a, b=b, out=out)
@@ -219,6 +256,10 @@ def Max(a: Union[Var, int, float], b: Union[Var, int, float], *, name: str = "")
         dtype = Datatype.int
 
     out = Var(dtype=dtype, name=name)
+    a_val = _value_of(a)
+    b_val = _value_of(b)
+    if a_val is not None and b_val is not None:
+        out.value = max(a_val, b_val)
     if globvars.active_kernel is not None:
         globvars.active_kernel.instructions.append(
             Instruction("Max", a=a, b=b, out=out)

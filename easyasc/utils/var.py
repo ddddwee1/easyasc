@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from typing import Optional, Union, cast
 from .datatype import DataTypeValue, Datatype
 from .. import globvars

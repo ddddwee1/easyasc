@@ -59,7 +59,7 @@ def handle_split_workspace(inst, helper, expr_map) -> None:
         raise TypeError(f"split_workspace expects name as str, got: {type(name)}")
     dtype_cpp = dtype_to_cpp(dtype)
     numel_cpp = value_to_cpp(numel, expr_map)
-    helper(f"workspace = ShiftAddr<{dtype_cpp}>(workspace, {numel_cpp}, offset);")
+    helper(f"workspace = ShiftAddr<{dtype_cpp}>(workspace, {numel_cpp}, _offset);")
     helper(f"GlobalTensor<{dtype_cpp}> {name};")
     helper(f"{name}.SetGlobalBuffer((__gm__ {dtype_cpp}*) workspace);")
 

@@ -1,0 +1,3 @@
+- Read ai_summary.md for a general impression before complex tasks
+- Summarize changes made by each step and append it to ai_modifications.md
+- When asked to update ai_summary.md, always consider the contents in ai_modifications.md. After updating, clear all contents in ai_midifications.md 
