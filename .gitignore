@@ -2,3 +2,6 @@ legacy
 .vscode
 __pycache__
 .mypy_cache
+CustomOp
+test_folder
+cann-ops-adv
