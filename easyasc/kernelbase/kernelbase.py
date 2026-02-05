@@ -22,11 +22,26 @@ class KernelBase:
         self.crosscore_mutex: List[Union[CvMutex, VcMutex]] = []
         self.workspace_shapes: List[Union[list, tuple]] = []
         self._last_bound_args = {}
+        self._last_output_gmtensors = set()
 
     def __call__(self, *args, **kwargs):
+        def _collect_gmtensors(value, out):
+            if isinstance(value, GMTensor):
+                out.add(value)
+                return
+            if isinstance(value, (list, tuple, set)):
+                for item in value:
+                    _collect_gmtensors(item, out)
+                return
+            if isinstance(value, dict):
+                for item in value.values():
+                    _collect_gmtensors(item, out)
+                return
+
         sig = inspect.signature(self.func)
         bound = sig.bind_partial(*args, **kwargs)
         self._last_bound_args = dict(bound.arguments)
+        self._last_output_gmtensors = set()
         self.workspace_shapes = []
         for param_name, value in bound.arguments.items():
             if isinstance(value, (GMTensor, Var)):
@@ -48,6 +63,9 @@ class KernelBase:
             Instruction("reset_cache")
         )
         res = self.func(*args, **kwargs)
+        outputs = set()
+        _collect_gmtensors(res, outputs)
+        self._last_output_gmtensors = outputs
         head_instructions = []
         tail_instructions = []
         for mutex in self.crosscore_mutex:
@@ -224,6 +242,30 @@ class KernelBase:
                 return name
             return "".join(p[:1].upper() + p[1:] for p in parts)
 
+        def _dtype_to_ge(dtype) -> str:
+            name = getattr(dtype, "name", None)
+            mapping = {
+                "half": "ge::DT_FLOAT16",
+                "float": "ge::DT_FLOAT",
+                "bfloat16_t": "ge::DT_BF16",
+                "int": "ge::DT_INT32",
+                "int32_t": "ge::DT_INT32",
+                "int64_t": "ge::DT_INT64",
+                "uint32_t": "ge::DT_UINT32",
+                "uint64_t": "ge::DT_UINT64",
+                "int8_t": "ge::DT_INT8",
+                "uint8_t": "ge::DT_UINT8",
+                "int16_t": "ge::DT_INT16",
+                "uint16_t": "ge::DT_UINT16",
+            }
+            return mapping.get(name, "ge::DT_FLOAT16")
+
+        def _attr_method(dtype) -> str:
+            name = getattr(dtype, "name", None)
+            if name == "float":
+                return "Float(0)"
+            return "Int(0)"
+
         param_names = list(sig.parameters.keys())
         var_names = []
         for name in param_names:
@@ -249,6 +291,10 @@ class KernelBase:
 
         with open(f"{self.name}_tiling.h", "w") as f:
             f.write(content)
+
+        output_gmtensors = set()
+        if isinstance(getattr(self, "_last_output_gmtensors", None), set):
+            output_gmtensors = self._last_output_gmtensors
 
         cpp_lines = [
             f'#include "{self.name}_tiling.h"',
@@ -282,16 +328,66 @@ class KernelBase:
             "public:",
             f"    explicit {op_name}(const char* name) : OpDef(name)",
             "    {",
-            "        this->SetInferShape(ge::InferShape).SetInferDataType(ge::InferDataType);",
-            "",
-            "        this->AICore().SetTiling(optiling::TilingFunc);",
-            "    }",
-            "};",
-            "",
-            f"OP_ADD({op_name});",
-            "}",
-            "",
         ]
+
+        for name in param_names:
+            bound_val = self._last_bound_args.get(name, None)
+            if not isinstance(bound_val, GMTensor):
+                continue
+            ge_dt = _dtype_to_ge(bound_val.dtype)
+            if bound_val in output_gmtensors:
+                cpp_lines.extend(
+                    [
+                        f'        this->Output("{name}")',
+                        "            .ParamType(REQUIRED)",
+                        f"            .DataType({{{ge_dt}}})",
+                        "            .Format({ge::FORMAT_ND})",
+                        "            .UnknownShapeFormat({ge::FORMAT_ND})",
+                        "            .InitValue(0);",
+                    ]
+                )
+            else:
+                cpp_lines.extend(
+                    [
+                        f'        this->Input("{name}")',
+                        "            .ParamType(REQUIRED)",
+                        f"            .DataType({{{ge_dt}}})",
+                        "            .Format({ge::FORMAT_ND})",
+                        "            .UnknownShapeFormat({ge::FORMAT_ND});",
+                    ]
+                )
+
+        for name in var_names:
+            bound_val = self._last_bound_args.get(name, None)
+            dtype = bound_val.dtype if isinstance(bound_val, Var) else None
+            attr_method = _attr_method(dtype)
+            cpp_lines.extend(
+                [
+                    f'        this->Attr("{name}")',
+                    "            .AttrType(REQUIRED)",
+                    f"            .{attr_method};",
+                ]
+            )
+
+        cpp_lines.extend(
+            [
+                "        this->SetInferShape(ge::InferShape).SetInferDataType(ge::InferDataType);",
+                "",
+                "        this->AICore().SetTiling(optiling::TilingFunc);",
+                '        this->AICore().AddConfig("ascend910b");',
+                '        this->AICore().AddConfig("ascend910_95");',
+            ]
+        )
+        cpp_lines.extend(
+            [
+                "    }",
+                "};",
+                "",
+                f"OP_ADD({op_name});",
+                "}",
+                "",
+            ]
+        )
         with open(f"{self.name}.cpp", "w") as f:
             f.write("\n".join(cpp_lines))
 

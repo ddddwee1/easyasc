@@ -1,0 +1,3 @@
+- Added output GMTensor detection from kernel return values and used it to emit Inputs/Outputs/Attrs in op host cpp generation; regenerated cubefunc.cpp via test.py.
+- Adjusted op host cpp generation to emit single DataType/Format entries per Input/Output to match legacy style.
+- Updated op host cpp generation to emit Attr Int/Float defaulting to 0 and add ascend910_95 config.

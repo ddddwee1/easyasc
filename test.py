@@ -67,6 +67,7 @@ def cubefunc(x: GMTensor, y: GMTensor, z: GMTensor, M: Var, N: Var, K: Var):
             vv[m:m + BLK, 0:K] <<= xub[cnt]
 
     xub[cnt] <<= xub[cnt1] + xub[cnt2]
+    return z 
 
 
 @kernel()
@@ -79,6 +80,7 @@ def cubefunc_splitn(x: GMTensor, y_t: GMTensor, z: GMTensor, M: Var, N: Var, K: 
         l1b <<= y_t[0:N, 0:K]
         matmul(l0c, l1a, l1b, splitn=splitn)
         z[0:BLK, 0:N] <<= l0c
+    return z 
 
 
 @kernel()
@@ -92,28 +94,7 @@ def cubefunc_splitk(x: GMTensor, y_t: GMTensor, z: GMTensor, M: Var, N: Var, K: 
         matmul(l0c, l1a, l1b, splitk=splitk, is_init=True)
         matmul(l0c, l1a, l1b, splitk=splitk, is_init=False)
         z[0:BLK, 0:N] <<= l0c
-
-
-@kernel()
-def constfunc(M: Var, N: Var, K: Var):
-    a16 = Align16(M)
-    a32 = Align32(N)
-    a64 = Align64(K)
-    a128 = Align128(a64)
-    a256 = Align256(a32)
-    vnum = GetVecNum()
-    vidx = GetVecIdx()
-    sbidx = GetSubBlockIdx()
-    repeat_base = a16 + a32 + a64 + a128 + a256 + vnum + vidx + sbidx
-    repeat = CeilDiv(repeat_base, 128)
-    fill = scalar_sqrt(Var(4.0))
-    flag_id = Var(1)
-    setflag(Pipe.V, Pipe.MTE3, flag_id)
-    waitflag(Pipe.V, Pipe.MTE3, flag_id)
-    setflag(Pipe.M, Pipe.FIX, flag_id)
-    waitflag(Pipe.M, Pipe.FIX, flag_id)
-    ub = Tensor(DT.half, [a16, 1], Position.UB)
-    dup(ub, fill, repeat=repeat)
+    return z 
 
 
 if __name__ == "__main__":
@@ -140,6 +121,4 @@ if __name__ == "__main__":
     cubefunc_splitn.dump_kernel("test_splitn")
     cubefunc_splitk(x, y_t, z_splitk, M, N, K, splitk)
     cubefunc_splitk.dump_kernel("test_splitk")
-    constfunc(M, N, K)
-    constfunc.dump_kernel('const_test')
 

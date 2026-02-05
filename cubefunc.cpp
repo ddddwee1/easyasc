@@ -29,9 +29,36 @@ class Cubefunc : public OpDef {
 public:
     explicit Cubefunc(const char* name) : OpDef(name)
     {
+        this->Input("x")
+            .ParamType(REQUIRED)
+            .DataType({ge::DT_FLOAT16})
+            .Format({ge::FORMAT_ND})
+            .UnknownShapeFormat({ge::FORMAT_ND});
+        this->Input("y")
+            .ParamType(REQUIRED)
+            .DataType({ge::DT_FLOAT16})
+            .Format({ge::FORMAT_ND})
+            .UnknownShapeFormat({ge::FORMAT_ND});
+        this->Output("z")
+            .ParamType(REQUIRED)
+            .DataType({ge::DT_FLOAT16})
+            .Format({ge::FORMAT_ND})
+            .UnknownShapeFormat({ge::FORMAT_ND})
+            .InitValue(0);
+        this->Attr("M")
+            .AttrType(REQUIRED)
+            .Int(0);
+        this->Attr("N")
+            .AttrType(REQUIRED)
+            .Int(0);
+        this->Attr("K")
+            .AttrType(REQUIRED)
+            .Int(0);
         this->SetInferShape(ge::InferShape).SetInferDataType(ge::InferDataType);
 
         this->AICore().SetTiling(optiling::TilingFunc);
+        this->AICore().AddConfig("ascend910b");
+        this->AICore().AddConfig("ascend910_95");
     }
 };
 
