@@ -118,14 +118,23 @@ __aicore__ inline T1 shiftAddr(T1 base, uint64_t size, T2 &offset){
     return res;
 }
 
+template <typename T>
+__aicore__ inline T Min(T a, T b){
+    return (a<b) ? a : b;
+}
+
+template <typename T>
+__aicore__ inline T Max(T a, T b){
+    return (a<b) ? b : a;
+}
 
 /* ------------- Tensor ------------- */ 
 template <TPosition pos, typename T>
-__aicore__ inline void AllocateLocalTensor(LocalTensor<T> &tsr, int len){
+__aicore__ inline LocalTensor<T> AllocateLocalTensor(int len){
     TBuf<pos> tbuf;
     TPipe* ptr = GetTPipePtr();
     ptr->InitBuffer(tbuf, len * sizeof(T));
-    tsr = tbuf.template Get<T>();
+    return tbuf.template Get<T>();
 }
 
 /* ------------- Tensor ------------- */ 
@@ -352,7 +361,7 @@ private:
 
 /* ------------- Funcs -------------- */
 template<typename T>
-__aicore__ inline void L1ND2NZ(LocalTensor<T> dst, GlobalTensor<T> src, int h, int w, int W, int Hdst){
+__aicore__ inline void GM2L1_ND2NZ(LocalTensor<T> dst, GlobalTensor<T> src, int h, int w, int W, int Hdst){
     Nd2NzParams param;
     param.ndNum = 1;
     param.nValue = h;
@@ -366,7 +375,7 @@ __aicore__ inline void L1ND2NZ(LocalTensor<T> dst, GlobalTensor<T> src, int h, i
 }
 
 // NOTE: This only support float
-__aicore__ inline void L1ND2ZZ(LocalTensor<float> dst, GlobalTensor<float> src, int h, int w, int W){
+__aicore__ inline void GM2L1_ND2ZZ(LocalTensor<float> dst, GlobalTensor<float> src, int h, int w, int W){
     if (W<4096){
         Nd2NzParams param;
         param.ndNum = h/16;
@@ -738,7 +747,7 @@ __aicore__ inline void L0C2L1(LocalTensor<T> dst, LocalTensor<T2> src, int m, in
 
 
 template <typename T, typename T2>
-__aicore__ inline void L0C2GM_NZ2ND(GlobalTensor<T> dst, LocalTensor<T2> src, int m, int n, int N, int nz_M, uint8_t uflag){
+__aicore__ inline void L0C2GM_NZ2ND(GlobalTensor<T> dst, LocalTensor<T2> src, int m, int n, int N, int nz_M){
     QuantMode_t q;
     if constexpr(std::is_same<T, float>::value && std::is_same<T2, float>::value){
         q = NoQuant; 
@@ -826,7 +835,7 @@ __aicore__ inline void L0C2UB_NZ2ND(LocalTensor<T> dst, LocalTensor<T2> src, int
 
 
 template <typename T1, typename T2, typename T3>
-__aicore__ inline void MMAD(LocalTensor<T1> dst, LocalTensor<T2> src0, LocalTensor<T3> src1, uint16_t m, uint16_t k, uint16_t n, bool cmatrixInitVal, uint8_t unitFlag){
+__aicore__ inline void MMAD(LocalTensor<T1> dst, LocalTensor<T2> src0, LocalTensor<T3> src1, uint16_t m, uint16_t k, uint16_t n, bool cmatrixInitVal){
     MmadParams param;
     param.m = (m+15)/16*16;
     param.n = n;

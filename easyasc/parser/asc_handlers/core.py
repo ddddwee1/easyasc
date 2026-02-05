@@ -61,7 +61,7 @@ def handle_create_tensor(inst, helper, expr_map) -> None:
         numel_expr = dim_expr if numel_expr is None else format_binop("*", numel_expr, dim_expr)
     if numel_expr is None:
         numel_expr = "0"
-    helper(f"LocalTensor<{dtype}> {val.name} = AllocateTensor<{position}>({numel_expr});")
+    helper(f"LocalTensor<{dtype}> {val.name} = AllocateLocalTensor<{position}, {dtype}>({numel_expr});")
 
 
 def handle_create_gm_tensor(inst, helper, expr_map) -> None:
@@ -83,7 +83,7 @@ def handle_split_workspace(inst, helper, expr_map) -> None:
         raise TypeError(f"split_workspace expects name as str, got: {type(name)}")
     dtype_cpp = dtype_to_cpp(dtype)
     numel_cpp = value_to_cpp(numel, expr_map)
-    helper(f"workspace = ShiftAddr<{dtype_cpp}>(workspace, {numel_cpp}, _offset);")
+    helper(f"workspace = shiftAddr<{dtype_cpp}>(workspace, {numel_cpp}, _offset);")
     helper(f"GlobalTensor<{dtype_cpp}> {name};")
     helper(f"{name}.SetGlobalBuffer((__gm__ {dtype_cpp}*) workspace);")
 

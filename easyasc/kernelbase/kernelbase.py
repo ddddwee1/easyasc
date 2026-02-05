@@ -1,6 +1,7 @@
 import inspect
 import json
 import os
+import shutil
 import tarfile
 from typing import List, Union
 
@@ -273,6 +274,42 @@ class KernelBase:
             if isinstance(bound_val, Var):
                 var_names.append(name)
 
+        def _workspace_size_expr() -> str:
+            if not self.workspace_shapes:
+                return "0"
+
+            def _dim_expr(dim) -> str:
+                if isinstance(dim, int):
+                    return str(dim)
+                if isinstance(dim, Var):
+                    if dim.name in var_names:
+                        return dim.name
+                    if dim.value is not None:
+                        return str(dim.value)
+                    raise ValueError(f"workspace_shape包含未绑定参数的Var: {dim.name!r}")
+                raise TypeError(f"workspace_shape元素必须是int或Var，当前类型: {type(dim)}")
+
+            def _shape_expr(shape) -> str:
+                if not isinstance(shape, (list, tuple)):
+                    raise TypeError(f"workspace_shape必须是list或tuple，当前类型: {type(shape)}")
+                factors = []
+                for dim in shape:
+                    if isinstance(dim, int) and dim == 1:
+                        continue
+                    factors.append(_dim_expr(dim))
+                if not factors:
+                    return "1"
+                if len(factors) == 1:
+                    return factors[0]
+                return "(" + " * ".join(factors) + ")"
+
+            terms = [_shape_expr(shape) for shape in self.workspace_shapes]
+            if len(terms) == 1:
+                return terms[0]
+            return " + ".join(terms)
+
+        workspace_size_expr = _workspace_size_expr()
+
         op_name = _to_camel(self.name)
         tiling_name = f"{op_name}TilingData"
         lines = [
@@ -301,34 +338,61 @@ class KernelBase:
             '#include "register/op_def_registry.h"',
             '#include "tiling/tiling_api.h"',
             "",
+            "#define SET_ATTR_TO_TILING(name, dtype, idx) \\",
+            "    const auto* name##_ptr = attrs->GetAttrPointer<dtype>(idx); \\",
+            "    dtype name = *name##_ptr; \\",
+            "    tiling.set_##name(name);",
+            "#define GET_ATTR_BY_IDX(name, dtype, idx) \\",
+            "    const auto* name##_ptr = attrs->GetAttrPointer<dtype>(idx); \\",
+            "    dtype name = *name##_ptr;",
+            "",
             "namespace optiling {",
             "static ge::graphStatus TilingFunc(gert::TilingContext* context)",
             "{",
-            "    (void)context;",
-            "    return ge::GRAPH_SUCCESS;",
-            "}",
-            "}",
+            "    // set block size",
+            "    auto ascendcPlatform = platform_ascendc::PlatformAscendC(context->GetPlatformInfo());",
+            "    auto core_num = ascendcPlatform.GetCoreNum();   // NOTE: this is vec number!",
+            "    context->SetBlockDim(core_num/2);",
             "",
-            "namespace ge {",
-            "static ge::graphStatus InferShape(gert::InferShapeContext* context)",
-            "{",
-            "    (void)context;",
-            "    return GRAPH_SUCCESS;",
-            "}",
-            "",
-            "static ge::graphStatus InferDataType(gert::InferDataTypeContext* context)",
-            "{",
-            "    (void)context;",
-            "    return GRAPH_SUCCESS;",
-            "}",
-            "}",
-            "",
-            "namespace ops {",
-            f"class {op_name} : public OpDef {{",
-            "public:",
-            f"    explicit {op_name}(const char* name) : OpDef(name)",
-            "    {",
+            f"    {tiling_name} tiling;",
+            "    auto attrs = context->GetAttrs();",
         ]
+        for idx, name in enumerate(var_names):
+            cpp_lines.append(f"    SET_ATTR_TO_TILING({name}, uint32_t, {idx});")
+        cpp_lines.extend(
+            [
+                "    tiling.SaveToBuffer(context->GetRawTilingData()->GetData(), context->GetRawTilingData()->GetCapacity());",
+                "    context->GetRawTilingData()->SetDataSize(tiling.GetDataSize());",
+                "",
+                f"    size_t userWorkspaceSize = {workspace_size_expr};",
+                "    size_t sysWorkspaceSize = static_cast<size_t>(ascendcPlatform.GetLibApiWorkSpaceSize());",
+                "    size_t *currentWorkspace = context->GetWorkspaceSizes(1);",
+                "    currentWorkspace[0] = userWorkspaceSize + sysWorkspaceSize;",
+                "    return ge::GRAPH_SUCCESS;",
+                "}",
+                "}",
+                "",
+                "namespace ge {",
+                "static ge::graphStatus InferShape(gert::InferShapeContext* context)",
+                "{",
+                "    (void)context;",
+                "    return GRAPH_SUCCESS;",
+                "}",
+                "",
+                "static ge::graphStatus InferDataType(gert::InferDataTypeContext* context)",
+                "{",
+                "    (void)context;",
+                "    return GRAPH_SUCCESS;",
+                "}",
+                "}",
+                "",
+                "namespace ops {",
+                f"class {op_name} : public OpDef {{",
+                "public:",
+                f"    explicit {op_name}(const char* name) : OpDef(name)",
+                "    {",
+            ]
+        )
 
         for name in param_names:
             bound_val = self._last_bound_args.get(name, None)
@@ -440,3 +504,37 @@ class KernelBase:
         with open(preset_out, "w", encoding="utf-8") as f:
             json.dump(preset_data, f, indent=4)
             f.write("\n")
+
+    def generate(self, out_dir: str, cann_path: str) -> None:
+        if not isinstance(out_dir, str):
+            raise TypeError(f"out_dir必须是str类型，当前类型: {type(out_dir)}")
+        if not isinstance(cann_path, str):
+            raise TypeError(f"cann_path必须是str类型，当前类型: {type(cann_path)}")
+
+        self.generate_op_project(out_dir, cann_path)
+
+        abs_out_dir = os.path.abspath(out_dir)
+        op_host_dir = os.path.join(abs_out_dir, "op_host")
+        op_kernel_dir = os.path.join(abs_out_dir, "op_kernel")
+        os.makedirs(op_host_dir, exist_ok=True)
+        os.makedirs(op_kernel_dir, exist_ok=True)
+
+        cwd = os.getcwd()
+        try:
+            os.chdir(op_host_dir)
+            self.generate_op_host()
+        finally:
+            os.chdir(cwd)
+
+        cwd = os.getcwd()
+        try:
+            os.chdir(op_kernel_dir)
+            self.dump_kernel(self.name)
+        finally:
+            os.chdir(cwd)
+
+        resources_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "resources"))
+        tensorutils_src = os.path.join(resources_dir, "tensorutils.h")
+        if not os.path.isfile(tensorutils_src):
+            raise FileNotFoundError(f"未找到tensorutils.h: {tensorutils_src}")
+        shutil.copy2(tensorutils_src, os.path.join(op_kernel_dir, "tensorutils.h"))
