@@ -69,7 +69,7 @@ def get_pipe_opnames() -> Dict[str, Set[str]]:
         str(Pipe.MTE2): {"gm_to_l1_nd2nz", "gm_to_ub_pad"},
         str(Pipe.MTE1): {"l1_to_l0"},
         str(Pipe.M): {"mmad"},
-        str(Pipe.FIX): {"l0c_to_gm_nz2nd"},
+        str(Pipe.FIX): {"l0c_to_gm_nz2nd", "l0c_to_l1"},
         str(Pipe.MTE3): {"ub_to_gm_pad"},
     }
     vec_pipe_ops = set(_EXPLICIT_VEC_OPNAMES)
@@ -382,9 +382,11 @@ class AutosyncNode:
             if 'valid' in name:
                 event.src_pipe = self.dst_pipe
                 event.dst_pipe = self.src_pipe
+                event.preset = True
             else:
                 event.src_pipe = self.src_pipe
                 event.dst_pipe = self.dst_pipe
+                event.preset = False
             event.name = name
             event.idx = 9999 if 'valid' in name else 9998
 

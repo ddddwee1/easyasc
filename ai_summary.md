@@ -1,91 +1,89 @@
 # easyasc Summary
 
 **Project Overview**
-- `easyasc` is a Python front-end that builds an instruction list (`Instruction`) from high-level tensor/var operations, then translates it into C++-style ASC code via the parser/handlers pipeline.
-- Core flow: user code (decorators + Pythonic transforms) -> runtime objects (`Var`, `Tensor`, `DBuff`, `GMTensor`, events/mutex) emit `Instruction`s -> `parser/asc.py` validates, simplifies, and emits code using handler mappings.
+- `easyasc` is a Python front-end that records tensor/var operations as `Instruction`s and translates them into Ascend C++ code (cube/vec) through the parser + handler pipeline.
+- Flow: decorators + AST transforms create `KernelBase`; runtime objects (`Var`, `Tensor`, `DBuff`, `GMTensor`, events/mutex) append instructions; `parser/asc.py` validates/simplifies, inserts auto-sync, and emits C++.
 
 **easyasc/__init__.py**
-- Public API aggregator: re-exports data types, tensor/var classes, decorators, positions/pipes/events/mutex, and all stub ops (var ops, cube ops, vec ops, misc ops like `split_workspace` and `reset_cache`).
+- Re-exports core types, decorators, positions/pipes/events/mutex, and all stub ops (var/cube/vec/misc, including `split_workspace` and `reset_cache`).
 
 **easyasc/decorators.py**
-- Defines `@kernel`, `@func`, and `@auto_sync` decorators.
-- `kernel` wraps a transformed function in `KernelBase`, handling auto-sync wrapper if needed.
-- `func` applies AST transforms but does not create a `KernelBase`.
-- `auto_sync` injects `start_auto_sync`/`end_auto_sync` instructions around a call or context manager block.
+- `kernel` wraps a transformed function in `KernelBase`; if the function was `auto_sync`-decorated, it wraps with start/end markers.
+- `func` applies AST transforms (and optional auto-sync wrapping) without creating a `KernelBase`.
+- `auto_sync` is a decorator/context manager that emits `start_auto_sync`/`end_auto_sync` instructions around a call or `with` block.
 
 **easyasc/flowcontrol.py**
-- Custom `range`/`unroll` for kernel loops emitting `start_loop`/`end_loop` instructions.
-- `If/Elif/Else` context managers emit `start_if/start_elif/start_else/end_if` instructions, with validation that they run inside a kernel.
+- `range`/`unroll` create loop vars and emit `start_loop`/`end_loop`, validating args and non-zero step.
+- `If/Elif/Else` context managers emit `start_if/start_elif/start_else/end_if` and enforce kernel-only usage.
 
 **easyasc/globvars.py**
-- Global state: current kernel (`active_kernel`), temporary index counter (`tmp_idx`), atomic settings, and device type.
+- Global state: `active_kernel`, `tmp_idx`, atomic settings, `device_type`, and memory cap constants (L1/L0/UB) used by usage analysis.
 
 **easyasc/kernelbase/kernelbase.py**
-- `KernelBase` stores the kernel function, instruction list, and cross-core mutex metadata.
-- `__call__` binds args, assigns names to `GMTensor`/`Var`, emits `create_gm_tensor`, executes the kernel function, and injects cross-core sync instructions from mutexes.
-- `dump_asc` writes raw translated cube/vec code.
-- `dump_kernel` wraps translated code with `#include "tensorutils.h"` and generates `__aicore__ inline void {name}_{cube/vec}(...);` signatures with ordered parameters: `GMTensor` as `GM_ADDR {name}_`, then `GM_ADDR workspace`, then `Var` parameters with their C++ dtypes. Inserts `int _offset = 0;` as the first statement.
+- `KernelBase` stores the kernel name, transformed function, instruction list, and cross-core mutexes.
+- `KernelBase` tracks `workspace_shapes` to record shapes from `split_workspace` during a call.
+- `__call__` clears `workspace_shapes`, binds args, assigns names to `GMTensor`/`Var`, emits `create_gm_tensor`, runs the kernel, then inserts cross-core ready/wait instructions from `CvMutex`/`VcMutex` before resetting globals.
+- `dump_asc` writes `{path}_cube.h` and `{path}_vec.h` via `translate_split`.
+- `dump_kernel` wraps emitted code with `tensorutils.h`, `TPipe* pipe_ptr = GetTPipePtr();`, and `int _offset = 0;` inside `__aicore__ inline void {name}_{cube/vec}(...)`. It also emits `{path}.cpp` entry boilerplate with tiling extraction for `Var` params and `ASCEND_IS_AIC/AIV` dispatch.
+- `generate_op_host` emits `{name}_tiling.h` describing tiling data fields for input `Var` parameters (CamelCase op + `TilingData`) and registers the tiling class.
+- `generate_op_project(path, cann_path)` extracts `easyasc/resources/CustomOp.tar.gz` (skips if target dir exists and is non-empty) and writes `CMakePresets.json` from template, replacing `ASCEND_CANN_PACKAGE_PATH` and optional `ASCEND_COMPUTE_UNIT` based on `globvars.device_type` (`b*`→`ascend910b`, `d*`→`ascend910_93`).
 
 **easyasc/pythonic.py**
-- AST transforms for “pythonic” kernel syntax:
-- `_VarNameAdder` auto-injects `name=` keyword into `Var/Tensor/DBuff/Min/CeilDiv/range/...` calls based on assignment target.
-- `_BoolOpRewriter` rewrites `and/or/not` into bitwise `&/|/~` to build expression objects.
-- `_IfRewriter` converts `if/elif/else` into `with If/Elif/Else` blocks.
-- `transform_kernel` applies transforms and re-compiles the function while preserving metadata.
+- `_VarNameAdder` injects `name=` for assignment targets on calls like `Var`, `Tensor`, `DBuff`, `Min`, `CeilDiv`, `range`, `SEvent`, `DEvent`, `reinterpret`, and `split_workspace`.
+- `_BoolOpRewriter` turns `and/or/not` into bitwise `&/|/~` for expression construction.
+- `_IfRewriter` converts `if/elif/else` statements into `with If/Elif/Else` blocks.
+- `transform_kernel` parses source, applies transforms, recompiles, and preserves metadata.
 
 **easyasc/parser/asc.py**
-- Core translation pipeline: validates block structure, builds expression state, and emits C++ statements via handlers.
-- Supports folding of var declarations and expressions for temporary vars/tensors.
-- `translate_split` splits instructions into cube/vec, inserts auto-sync, and translates each side.
-- `analyze_usage` (used during translate_split) prints a centered, fixed-width rich table (width=50) grouped by `Position`, listing each `create_tensor/create_dbuf` `val` as `(Tensor|DBuff) name: size_kb` where size is `shape[0]*shape[1]/1024` if numeric.
+- `translate` validates block structure, builds expression state, folds decl/loop patterns, and emits C++ via handlers; unhandled opnames are commented.
+- `translate_split` splits cube/vec instructions, inserts auto-sync, runs `analyze_usage` per side, then translates each side.
+- `analyze_usage` prints `rich` tables grouped by `Position` for `create_tensor/create_dbuf`, estimating size from the first two shape dims and `dtype.size` (DBuff doubled). It prints per-position `Usage: used KB / cap KB` and restarts after `reset_cache` with a centered reset banner and optional centered label line (`{name}_cube/vec`).
 
 **easyasc/parser/asc_autosync.py**
-- Builds pipe/opname maps and inserts auto-sync (event-based) instructions between producer/consumer pipelines.
-- `AutosyncNode` analyzes instruction blocks, pipe usage, and buffer reuse to decide when to insert sync events.
+- Builds pipe/opname maps and inserts auto-sync event instructions between producer/consumer segments.
+- `AutosyncNode` analyzes pipe usage and buffer reuse; auto-created events set `preset=True` for names containing `valid` and swap src/dst pipes accordingly.
 
 **easyasc/parser/asc_utils.py**
-- Utility helpers: dtype/position mapping to C++ tokens, expression simplification, and value->C++ string conversion.
-- Tracks assignment-style ops and builds temporary expression maps for inlining.
+- dtype/position C++ mapping, expression simplification, and value-to-C++ formatting.
+- Tracks assignment-style ops and temporary expression maps used by `translate`.
 
 **easyasc/parser/asc_pruning.py**
-- Pruning passes to remove unused or empty blocks and declarations:
-- `prune_empty_blocks`: removes loops/if-chains that emit no code.
-- `prune_unused_decls`: removes unused `create_*` instructions for tensors/buffers/events.
-- `prune_unused_vars`: removes unused `create_var` declarations based on expression use.
+- `prune_empty_blocks`, `prune_unused_decls`, and `prune_unused_vars` remove dead loops/ifs and unused create_* / create_var declarations.
 
 **easyasc/parser/helper.py**
-- `CodeHelper`: string builder with indentation tracking for emitting C++ code.
+- `CodeHelper` is an indentation-aware string builder for emitted C++ code.
 
 **easyasc/parser/asc_handlers/**
-- Handler registry maps `Instruction.opname` to C++ code emitters.
-- `core.py`: create_var/dbuf/tensor/gm_tensor, split_workspace, get_buf, slice operations.
-- `math_ops.py`: scalar ops `GetCubeNum/GetCubeIdx/CeilDiv/Min/Max` and var arithmetic.
+- Handler registry maps `Instruction.opname` to C++ emitters.
+- `core.py`: `create_var/dbuf/tensor/gm_tensor`, `split_workspace`, `get_buf`, slice helpers; `create_tensor`/`create_dbuf` compute `numel` from shape expressions (DBuff calls `.Init(numel)`).
+- `cube.py`: GM<->L1/L0, MMAD, L0C->GM, and `l0c_to_l1` (`L0C2L1`).
+- `vec_*`: vector arithmetic, unary, scalar, compare/select, data movement, gather/scatter, sort, group, cast, vecmask.
+- `events.py`: `SEvent/DEvent` creation with `preset` template arg plus set/wait/release operations.
+- `pipe_ops.py`: PIPE barrier/ready/wait emitters.
+- `math_ops.py`: scalar ops (`GetCubeNum/Idx`, `CeilDiv`, `Min/Max`, arithmetic).
 - `flow.py`: loop and if/else emitters.
-- `cube.py`: GM->L1, L1->L0, MMAD, L0C->GM operations.
-- `vec_*`: vector arithmetic, unary ops, scalar ops, compare/select, data movement, gather/scatter, sort, group ops.
-- `pipe_ops.py`: PIPE barrier/ready/wait op emitters.
-- `events.py`: create/set/wait/release events.
 - `reinterpret.py`: tensor reinterpret cast.
-- `misc.py`: `reset_cache` emits `_pipe->Reset();`.
+- `misc.py`: `reset_cache` emits `pipe_ptr->Reset();` and `OccupyMMTE1Events();`.
 
 **easyasc/stub_functions/**
 - Thin Python APIs that validate inputs and append `Instruction`s.
-- `var_op.py`: scalar math (mul/div/add/sub/min/max/ceildiv). Dtype inference, optional constant folding by updating `out.value` when both operands are numeric and denominator non-zero.
-- `cube.py`: cube/matrix ops (`gm_to_l1_nd2nz`, `l1_to_l0`, `mmad`, `l0c_to_gm_nz2nd`).
-- `vec/`: vector ops grouped by category (binary/unary/unaryscalar/group/compare/select/sort/datamove/cast/gather/scatter/vecmask).
-- `atomic.py`: emits atomic add/max/min and end.
-- `barrier.py`: pipe barriers for each pipe.
+- `var_op.py`: scalar math with dtype inference and constant folding for numeric inputs; includes `Align16/32/64/128/256`, `scalar_sqrt`, `GetVecNum/Idx`, `GetSubBlockIdx`.
+- `cube.py`: cube/matrix ops (`gm_to_l1_nd2nz`, `l1_to_l0`, `mmad`, `l0c_to_gm_nz2nd`, `l0c_to_l1`).
+- `flags.py`: `setflag`/`waitflag` pipe event instructions.
+- `vec/`: vector ops by category (binary/unary/unaryscalar/group/compare/select/sort/datamove/cast/gather/scatter/vecmask).
+- `atomic.py`: atomic add/max/min and end.
+- `barrier.py`: pipe barriers per pipe.
 - `crosscore.py`: cube/vec ready/wait sync ops.
-- `misc.py`: `reinterpret`, `split_workspace` (creates `GMTensor` from workspace), and `reset_cache`.
+- `misc.py`: `reinterpret`, `split_workspace` (creates `GMTensor` from workspace and records its shape on the active kernel), and `reset_cache`.
 
 **easyasc/utils/**
-- `datatype.py`: `DataTypeValue` and `Datatype` enum-like definitions (half/float/int/etc.).
-- `var.py`: `Var` holds dtype/value/name and emits `create_var`; supports arithmetic by forwarding to `stub_functions.var_op` and builds `Expr` for comparisons.
-- `Tensor.py`: `Tensor`, `DBuff`, `GMTensor` classes; emit create instructions; slicing and buffer views; operator overloads for vector ops; GM binding and mutex helpers.
-- `positions.py`: `Position` enum -> C++ position mapping.
+- `datatype.py`: `DataTypeValue` plus `Datatype` definitions.
+- `var.py`: `Var` tracks dtype/value/name, emits `create_var`, and forwards arithmetic/comparison to `stub_functions.var_op`.
+- `Tensor.py`: `Tensor`, `DBuff`, `GMTensor` classes; creation instructions, slicing/views, vector op overloads, GM binding, and mutex helpers; `Tensor <<= L0C` uses `l0c_to_l1`.
+- `positions.py`: `Position` enum mapping to C++.
 - `pipe.py`: `Pipe` enum and `PipeType` wrappers.
-- `events.py`: `SEvent/DEvent` emit event instructions for set/wait/release.
-- `mutex.py`: `CvMutex/VcMutex` use cross-core ops to coordinate cube/vec pipelines; auto-registered on active kernel.
-- `instruction.py`: lightweight container for opname + kwargs.
-- `vecop.py`: deferred vector op wrapper consumed by `<<=`; handles binary/unary/scalar/group/cast ops and does reinterpret for int-only ops when needed.
-- `comparemode.py`, `roundmode.py`, `selectmode.py`: enum-like wrappers for modes used by vector compare/select/cast.
+- `events.py`: `SEvent/DEvent` with `preset` flag and event ops.
+- `mutex.py`: `CvMutex`/`VcMutex` register with the active kernel for cross-core sync.
+- `instruction.py`: `Instruction` container (opname + kwargs).
+- `vecop.py`: deferred vector op wrapper consumed by `<<=`, including reinterpret for int-only ops when needed.
+- `comparemode.py`, `roundmode.py`, `selectmode.py`: enum-like wrappers for modes.

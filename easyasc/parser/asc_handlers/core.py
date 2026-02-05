@@ -7,6 +7,7 @@ from .common import (
     build_offset_expr,
     build_offset_expr_nz,
     dtype_to_cpp,
+    format_binop,
     position_to_cpp,
     value_to_cpp,
 )
@@ -28,7 +29,19 @@ def handle_create_dbuf(inst, helper, expr_map) -> None:
         raise TypeError(f"create_dbuf需要DBuff类型，当前类型: {type(val)}")
     dtype = dtype_to_cpp(val.dtype)
     position = position_to_cpp(val.position)
+    shape = inst.kwargs.get("shape", None)
+    if shape is None:
+        shape = getattr(val, "shape", None)
+    if not isinstance(shape, (list, tuple)):
+        raise TypeError(f"create_dbuf需要shape为list或tuple，当前类型: {type(shape)}")
+    numel_expr = None
+    for dim in shape:
+        dim_expr = value_to_cpp(dim, expr_map)
+        numel_expr = dim_expr if numel_expr is None else format_binop("*", numel_expr, dim_expr)
+    if numel_expr is None:
+        numel_expr = "0"
     helper(f"DBuff<{dtype}, {position}> {val.name};")
+    helper(f"{val.name}.Init({numel_expr});")
 
 
 def handle_create_tensor(inst, helper, expr_map) -> None:
@@ -37,7 +50,18 @@ def handle_create_tensor(inst, helper, expr_map) -> None:
         raise TypeError(f"create_tensor需要Tensor类型，当前类型: {type(val)}")
     dtype = dtype_to_cpp(val.dtype)
     position = position_to_cpp(val.position)
-    helper(f"LocalTensor<{dtype}> {val.name};")
+    shape = inst.kwargs.get("shape", None)
+    if shape is None:
+        shape = getattr(val, "shape", None)
+    if not isinstance(shape, (list, tuple)):
+        raise TypeError(f"create_tensor需要shape为list或tuple，当前类型: {type(shape)}")
+    numel_expr = None
+    for dim in shape:
+        dim_expr = value_to_cpp(dim, expr_map)
+        numel_expr = dim_expr if numel_expr is None else format_binop("*", numel_expr, dim_expr)
+    if numel_expr is None:
+        numel_expr = "0"
+    helper(f"LocalTensor<{dtype}> {val.name} = AllocateTensor<{position}>({numel_expr});")
 
 
 def handle_create_gm_tensor(inst, helper, expr_map) -> None:

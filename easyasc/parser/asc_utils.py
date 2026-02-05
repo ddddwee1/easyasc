@@ -186,6 +186,15 @@ def build_offset_expr_nz(shape, offset, dtype, expr_map: Dict[str, str]) -> str:
 _ASSIGNMENT_OPS = {
     "GetCubeNum",
     "GetCubeIdx",
+    "GetVecNum",
+    "GetVecIdx",
+    "GetSubBlockIdx",
+    "scalar_sqrt",
+    "Align16",
+    "Align32",
+    "Align64",
+    "Align128",
+    "Align256",
     "CeilDiv",
     "Min",
     "Max",
@@ -201,9 +210,23 @@ def is_assignment_op(opname: str) -> bool:
 
 
 def uses_var_in_operands(inst: Instruction, name: str) -> bool:
-    if inst.opname in ("GetCubeNum", "GetCubeIdx"):
+    if inst.opname in ("GetCubeNum", "GetCubeIdx", "GetVecNum", "GetVecIdx", "GetSubBlockIdx"):
         return False
-    if inst.opname in ("CeilDiv", "Min", "Max", "var_mul", "var_div", "var_add", "var_sub"):
+    if inst.opname in (
+        "CeilDiv",
+        "Min",
+        "Max",
+        "var_mul",
+        "var_div",
+        "var_add",
+        "var_sub",
+        "scalar_sqrt",
+        "Align16",
+        "Align32",
+        "Align64",
+        "Align128",
+        "Align256",
+    ):
         for key in ("a", "b"):
             val = inst.kwargs.get(key, None)
             if isinstance(val, Var) and val.name == name:
@@ -217,6 +240,30 @@ def assignment_expr(inst: Instruction, expr_map: Dict[str, str]) -> str:
         return "GetBlockNum()"
     if opname == "GetCubeIdx":
         return "get_block_idx()"
+    if opname == "GetVecNum":
+        return "GetBlockNum() * 2"
+    if opname == "GetVecIdx":
+        return "GetBlockIdx()"
+    if opname == "GetSubBlockIdx":
+        return "get_subblockid()"
+    if opname == "scalar_sqrt":
+        a = value_to_cpp(inst.kwargs.get("a", None), expr_map)
+        return f"sqrt({a})"
+    if opname == "Align16":
+        a = value_to_cpp(inst.kwargs.get("a", None), expr_map)
+        return f"Align16B({a})"
+    if opname == "Align32":
+        a = value_to_cpp(inst.kwargs.get("a", None), expr_map)
+        return f"Align32B({a})"
+    if opname == "Align64":
+        a = value_to_cpp(inst.kwargs.get("a", None), expr_map)
+        return f"Align64B({a})"
+    if opname == "Align128":
+        a = value_to_cpp(inst.kwargs.get("a", None), expr_map)
+        return f"Align128B({a})"
+    if opname == "Align256":
+        a = value_to_cpp(inst.kwargs.get("a", None), expr_map)
+        return f"Align256B({a})"
     if opname == "CeilDiv":
         a = value_to_cpp(inst.kwargs.get("a", None), expr_map)
         b = value_to_cpp(inst.kwargs.get("b", None), expr_map)
@@ -267,7 +314,31 @@ def build_expr_state(
                 expr_map[out.name] = "get_block_idx()"
                 tmp_var_names.add(out.name)
             continue
+        if opname == "GetVecNum":
+            out = inst.kwargs.get("out", None)
+            if isinstance(out, Var) and is_tmp_var(out):
+                expr_map[out.name] = "GetBlockNum() * 2"
+                tmp_var_names.add(out.name)
+            continue
+        if opname == "GetVecIdx":
+            out = inst.kwargs.get("out", None)
+            if isinstance(out, Var) and is_tmp_var(out):
+                expr_map[out.name] = "GetBlockIdx()"
+                tmp_var_names.add(out.name)
+            continue
+        if opname == "GetSubBlockIdx":
+            out = inst.kwargs.get("out", None)
+            if isinstance(out, Var) and is_tmp_var(out):
+                expr_map[out.name] = "get_subblockid()"
+                tmp_var_names.add(out.name)
+            continue
         if opname in ("CeilDiv", "Min", "Max", "var_mul", "var_div", "var_add", "var_sub"):
+            out = inst.kwargs.get("out", None)
+            if not isinstance(out, Var) or not is_tmp_var(out):
+                continue
+            expr_map[out.name] = assignment_expr(inst, expr_map)
+            tmp_var_names.add(out.name)
+        if opname in ("scalar_sqrt", "Align16", "Align32", "Align64", "Align128", "Align256"):
             out = inst.kwargs.get("out", None)
             if not isinstance(out, Var) or not is_tmp_var(out):
                 continue
@@ -336,7 +407,26 @@ def should_skip_inst(
     if inst.opname == "create_var":
         val = inst.kwargs.get("val", None)
         return isinstance(val, Var) and is_tmp_var(val) and val.name in tmp_var_names
-    if inst.opname in ("GetCubeNum", "GetCubeIdx", "CeilDiv", "Min", "Max", "var_mul", "var_div", "var_add", "var_sub"):
+    if inst.opname in (
+        "GetCubeNum",
+        "GetCubeIdx",
+        "GetVecNum",
+        "GetVecIdx",
+        "GetSubBlockIdx",
+        "scalar_sqrt",
+        "Align16",
+        "Align32",
+        "Align64",
+        "Align128",
+        "Align256",
+        "CeilDiv",
+        "Min",
+        "Max",
+        "var_mul",
+        "var_div",
+        "var_add",
+        "var_sub",
+    ):
         out = inst.kwargs.get("out", None)
         return isinstance(out, Var) and out.name in tmp_var_names
     if inst.opname in ("get_buf", "slice_tensor", "create_tensor"):

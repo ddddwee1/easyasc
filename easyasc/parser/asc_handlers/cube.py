@@ -75,3 +75,20 @@ def handle_l0c_to_gm_nz2nd(inst, helper, expr_map) -> None:
     n_dst = value_to_cpp(inst.kwargs.get("N_dst", None), expr_map)
     m_src = value_to_cpp(inst.kwargs.get("M_src", None), expr_map)
     helper(f"L0C2GM_NZ2ND({dst_expr}, {src_expr}, {m}, {n}, {n_dst}, {m_src});")
+
+
+def handle_l0c_to_l1(inst, helper, expr_map) -> None:
+    dst = inst.kwargs.get("dst", None)
+    if not isinstance(dst, Tensor):
+        raise TypeError(f"l0c_to_l1需要Tensor类型，当前类型: {type(dst)}")
+    src = inst.kwargs.get("src", None)
+    if not isinstance(src, Tensor):
+        raise TypeError(f"l0c_to_l1需要Tensor类型，当前类型: {type(src)}")
+    dst_expr = value_to_cpp(dst, expr_map)
+    src_expr = value_to_cpp(src, expr_map)
+    m = value_to_cpp(inst.kwargs.get("M", None), expr_map)
+    n = value_to_cpp(inst.kwargs.get("N", None), expr_map)
+    m_dst = value_to_cpp(inst.kwargs.get("M_dst", None), expr_map)
+    m_src = value_to_cpp(inst.kwargs.get("M_src", None), expr_map)
+    relu = value_to_cpp(inst.kwargs.get("relu", None), expr_map)
+    helper(f"L0C2L1({dst_expr}, {src_expr}, {m}, {n}, {m_dst}, {m_src}, {relu});")

@@ -25,6 +25,10 @@ class PositionType:
             raise TypeError(f"无法比较PositionType与{type(other)}")
         return self.name == other.name
 
+    @property
+    def cpp(self):
+        return POSITION_CPP_MAPPING[self.name]
+
 
 class Position:
     """位置枚举类，包含L1/L0A/L0B/L0C/UB成员"""

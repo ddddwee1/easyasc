@@ -107,6 +107,10 @@ class Tensor:
                 return self
             raise ValueError(f"Tensor位置必须为L1或UB，当前位置: {self.position}")
         if isinstance(other, Tensor):
+            if self.position is Position.L1 and other.position is Position.L0C:
+                from ..stub_functions.cube import l0c_to_l1
+                l0c_to_l1(self, other)
+                return self
             if self.position not in (Position.L0A, Position.L0B):
                 raise ValueError(f"Tensor位置必须为L0A或L0B，当前位置: {self.position}")
             new_shape = list(other.span) if hasattr(other, "span") else list(other.shape)

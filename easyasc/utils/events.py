@@ -4,11 +4,13 @@ from .. import globvars
 
 
 class _BaseEvent:
-    def __init__(self, src_pipe: PipeType, dst_pipe: PipeType, name: str, prefix: str, create_op: str):
+    def __init__(self, src_pipe: PipeType, dst_pipe: PipeType, preset: bool, name: str, prefix: str, create_op: str):
         if not isinstance(src_pipe, PipeType):
             raise TypeError(f"src_pipe必须是PipeType类型，当前类型: {type(src_pipe)}")
         if not isinstance(dst_pipe, PipeType):
             raise TypeError(f"dst_pipe必须是PipeType类型，当前类型: {type(dst_pipe)}")
+        if not isinstance(preset, bool):
+            raise TypeError(f"preset必须是bool类型，当前类型: {type(preset)}")
         if not isinstance(name, str):
             raise TypeError(f"name必须是str类型，当前类型: {type(name)}")
 
@@ -19,6 +21,7 @@ class _BaseEvent:
 
         self.src_pipe = src_pipe
         self.dst_pipe = dst_pipe
+        self.preset = preset
         self.name = name
         self.idx = idx
 
@@ -30,7 +33,7 @@ class _BaseEvent:
     def __repr__(self):
         return (
             f"{type(self).__name__}(name={self.name!r}, src_pipe={self.src_pipe!r}, "
-            f"dst_pipe={self.dst_pipe!r}, idx={self.idx!r})"
+            f"dst_pipe={self.dst_pipe!r}, preset={self.preset!r}, idx={self.idx!r})"
         )
 
     def set(self) -> None:
@@ -60,11 +63,11 @@ class _BaseEvent:
 
 class SEvent(_BaseEvent):
     """单事件类"""
-    def __init__(self, src_pipe: PipeType, dst_pipe: PipeType, name: str = ""):
-        super().__init__(src_pipe, dst_pipe, name, "_tmp_sevent_", "create_sevent")
+    def __init__(self, src_pipe: PipeType, dst_pipe: PipeType, preset: bool = False, name: str = ""):
+        super().__init__(src_pipe, dst_pipe, preset, name, "_tmp_sevent_", "create_sevent")
 
 
 class DEvent(_BaseEvent):
     """双事件类"""
-    def __init__(self, src_pipe: PipeType, dst_pipe: PipeType, name: str = ""):
-        super().__init__(src_pipe, dst_pipe, name, "_tmp_devent_", "create_devent")
+    def __init__(self, src_pipe: PipeType, dst_pipe: PipeType, preset: bool = False, name: str = ""):
+        super().__init__(src_pipe, dst_pipe, preset, name, "_tmp_devent_", "create_devent")

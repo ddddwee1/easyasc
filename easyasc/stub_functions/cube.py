@@ -198,3 +198,50 @@ def l0c_to_gm_nz2nd(dst: GMTensor, src: Tensor, M: Union[int, Var, None]=None, N
                 M_src=M_src,
             )
         )
+
+
+def l0c_to_l1(
+    dst: Tensor,
+    src: Tensor,
+    M: Union[int, Var, None] = None,
+    N: Union[int, Var, None] = None,
+    M_dst: Union[int, Var, None] = None,
+    M_src: Union[int, Var, None] = None,
+    relu: bool = False,
+):
+    if not isinstance(dst, Tensor):
+        raise TypeError(f"dst必须是Tensor类型，当前类型: {type(dst)}")
+    if not isinstance(src, Tensor):
+        raise TypeError(f"src必须是Tensor类型，当前类型: {type(src)}")
+    if src.position is not Position.L0C:
+        raise ValueError(f"src必须在L0C位置，当前位置: {src.position}")
+    if dst.position is not Position.L1:
+        raise ValueError(f"dst必须在L1位置，当前位置: {dst.position}")
+
+    if M is None:
+        M = dst.span[0] if hasattr(dst, "span") else dst.shape[0]
+    if N is None:
+        N = dst.span[1] if hasattr(dst, "span") else dst.shape[1]
+    if M_dst is None:
+        M_dst = dst.shape[0]
+    if M_src is None:
+        M_src = src.shape[0]
+
+    _validate_var_or_int(M, "M")
+    _validate_var_or_int(N, "N")
+    _validate_var_or_int(M_dst, "M_dst")
+    _validate_var_or_int(M_src, "M_src")
+
+    if globvars.active_kernel is not None:
+        globvars.active_kernel.instructions.append(
+            Instruction(
+                "l0c_to_l1",
+                dst=dst,
+                src=src,
+                M=M,
+                N=N,
+                M_dst=M_dst,
+                M_src=M_src,
+                relu=relu,
+            )
+        )

@@ -7,7 +7,8 @@ def handle_create_devent(inst, helper, expr_map) -> None:
         raise TypeError(f"create_devent需要DEvent类型，当前类型: {type(val)}")
     src_pipe = f"PIPE_{val.src_pipe}"
     dst_pipe = f"PIPE_{val.dst_pipe}"
-    helper(f"DEvent<{src_pipe}, {dst_pipe}> {val.name};")
+    preset = "true" if getattr(val, "preset", False) else "false"
+    helper(f"DEvent<{src_pipe}, {dst_pipe}, {preset}> {val.name};")
 
 
 def handle_create_sevent(inst, helper, expr_map) -> None:
@@ -16,7 +17,8 @@ def handle_create_sevent(inst, helper, expr_map) -> None:
         raise TypeError(f"create_sevent需要SEvent类型，当前类型: {type(val)}")
     src_pipe = f"PIPE_{val.src_pipe}"
     dst_pipe = f"PIPE_{val.dst_pipe}"
-    helper(f"SEvent<{src_pipe}, {dst_pipe}> {val.name};")
+    preset = "true" if getattr(val, "preset", False) else "false"
+    helper(f"SEvent<{src_pipe}, {dst_pipe}, {preset}> {val.name};")
 
 
 def handle_event_set(inst, helper, expr_map) -> None:

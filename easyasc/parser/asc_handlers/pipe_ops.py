@@ -48,3 +48,24 @@ def handle_bar(inst, helper, expr_map) -> None:
         raise TypeError(f"barrier需要PipeType类型，当前类型: {type(pipe)}")
     pipe_expr = _pipe_name(pipe)
     helper(f"PipeBarrier<{pipe_expr}>();")
+
+
+def _handle_pipe_event_op(inst, helper, expr_map, opname: str) -> None:
+    event_id = value_to_cpp(inst.kwargs.get("event_id", None), expr_map)
+    src = inst.kwargs.get("src", None)
+    dst = inst.kwargs.get("dst", None)
+    if not isinstance(src, PipeType):
+        raise TypeError(f"{opname}需要PipeType类型src，当前类型: {type(src)}")
+    if not isinstance(dst, PipeType):
+        raise TypeError(f"{opname}需要PipeType类型dst，当前类型: {type(dst)}")
+    src_expr = _pipe_name(src)
+    dst_expr = _pipe_name(dst)
+    helper(f"{opname}<{src_expr}, {dst_expr}>({event_id});")
+
+
+def handle_setflag(inst, helper, expr_map) -> None:
+    _handle_pipe_event_op(inst, helper, expr_map, "SetFlag")
+
+
+def handle_waitflag(inst, helper, expr_map) -> None:
+    _handle_pipe_event_op(inst, helper, expr_map, "WaitFlag")

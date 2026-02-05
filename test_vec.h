@@ -1,12 +1,15 @@
+#pragma once
 #include "tensorutils.h"
+
 __aicore__ inline void cubefunc_vec(GM_ADDR x_, GM_ADDR y_, GM_ADDR z_, GM_ADDR workspace, int M, int N, int K) {
+    TPipe* pipe_ptr = GetTPipePtr();
     int _offset = 0;
-    DEvent<PIPE_MTE2, PIPE_V> _tmp_devent_ready_ubin_1;
-    DEvent<PIPE_V, PIPE_MTE2> _tmp_devent_valid_ubin_1;
-    SEvent<PIPE_MTE2, PIPE_V> _tmp_sevent_ready_ubin_0;
-    SEvent<PIPE_V, PIPE_MTE2> _tmp_sevent_valid_ubin_0;
-    DEvent<PIPE_V, PIPE_MTE3> _tmp_devent_ready_ubout_0;
-    DEvent<PIPE_MTE3, PIPE_V> _tmp_devent_valid_ubout_0;
+    DEvent<PIPE_V, PIPE_MTE2, true> _tmp_devent_valid_ubin_1;
+    SEvent<PIPE_MTE2, PIPE_V, false> _tmp_sevent_ready_ubin_0;
+    DEvent<PIPE_MTE2, PIPE_V, false> _tmp_devent_ready_ubin_1;
+    SEvent<PIPE_V, PIPE_MTE2, true> _tmp_sevent_valid_ubin_0;
+    DEvent<PIPE_MTE3, PIPE_V, true> _tmp_devent_valid_ubout_0;
+    DEvent<PIPE_V, PIPE_MTE3, false> _tmp_devent_ready_ubout_0;
     VEC_READY(0, PIPE_MTE2);
     VEC_READY(0, PIPE_MTE2);
     GlobalTensor<half> x;
@@ -17,8 +20,10 @@ __aicore__ inline void cubefunc_vec(GM_ADDR x_, GM_ADDR y_, GM_ADDR z_, GM_ADDR 
     GlobalTensor<half> vv;
     vv.SetGlobalBuffer((__gm__ half*) workspace);
     DBuff<half, TPosition::VECCALC> xub;
-    LocalTensor<half> xubs;
-    _pipe->Reset();
+    xub.Init(128 * K);
+    pipe_ptr->Reset();
+    OccupyMMTE1Events();
+    LocalTensor<half> xubs = AllocateTensor<TPosition::VECCALC>(128 * K);
     int cnt = 0;
     int cnt1 = 0;
     int cnt2 = 0;

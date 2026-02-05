@@ -121,6 +121,7 @@ def split_workspace(dtype: DataTypeValue, shape: Union[list, tuple], name: str =
     out._mutex = None 
 
     if globvars.active_kernel is not None:
+        globvars.active_kernel.workspace_shapes.append(shape)
         globvars.active_kernel.instructions.append(
             Instruction("split_workspace", dtype=dtype, numel=numel, name=name)
         )

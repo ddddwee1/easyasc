@@ -1,4 +1,5 @@
 from typing import Optional, Union
+import math
 
 from ..utils.var import Var
 from ..utils.datatype import Datatype
@@ -54,6 +55,154 @@ def GetCubeIdx(*, name: str = "") -> Var:
     if globvars.active_kernel is not None:
         globvars.active_kernel.instructions.append(
             Instruction("GetCubeIdx", out=out)
+        )
+    return out
+
+
+def GetVecNum(*, name: str = "") -> Var:
+    if not isinstance(name, str):
+        raise TypeError(f"name必须是str类型，当前类型: {type(name)}")
+    out = Var(dtype=Datatype.int, name=name)
+    if globvars.active_kernel is not None:
+        globvars.active_kernel.instructions.append(
+            Instruction("GetVecNum", out=out)
+        )
+    return out
+
+
+def GetVecIdx(*, name: str = "") -> Var:
+    if not isinstance(name, str):
+        raise TypeError(f"name必须是str类型，当前类型: {type(name)}")
+    out = Var(dtype=Datatype.int, name=name)
+    if globvars.active_kernel is not None:
+        globvars.active_kernel.instructions.append(
+            Instruction("GetVecIdx", out=out)
+        )
+    return out
+
+
+def GetSubBlockIdx(*, name: str = "") -> Var:
+    if not isinstance(name, str):
+        raise TypeError(f"name必须是str类型，当前类型: {type(name)}")
+    out = Var(dtype=Datatype.int, name=name)
+    if globvars.active_kernel is not None:
+        globvars.active_kernel.instructions.append(
+            Instruction("GetSubBlockIdx", out=out)
+        )
+    return out
+
+
+def scalar_sqrt(a: Union[Var, float], *, name: str = "") -> Var:
+    if not isinstance(a, (Var, float)):
+        raise TypeError(f"a必须是Var或float类型，当前类型: {type(a)}")
+    if not isinstance(name, str):
+        raise TypeError(f"name必须是str类型，当前类型: {type(name)}")
+    if isinstance(a, Var) and a.dtype is not Datatype.float:
+        raise TypeError("scalar_sqrt仅支持float类型的Var")
+    out = Var(dtype=Datatype.float, name=name)
+    a_val = _value_of(a)
+    if isinstance(a_val, (int, float)):
+        out.value = math.sqrt(a_val)
+    if globvars.active_kernel is not None:
+        globvars.active_kernel.instructions.append(
+            Instruction("scalar_sqrt", a=a, out=out)
+        )
+    return out
+
+
+def _align_value(a: Union[Var, int], align: int) -> Optional[int]:
+    a_val = _value_of(a)
+    if isinstance(a_val, (int, float)):
+        return (int(a_val) + align - 1) // align * align
+    return None
+
+
+def Align16(a: Union[Var, int], *, name: str = "") -> Var:
+    if not isinstance(a, (Var, int)):
+        raise TypeError(f"a必须是Var或int类型，当前类型: {type(a)}")
+    if not isinstance(name, str):
+        raise TypeError(f"name必须是str类型，当前类型: {type(name)}")
+    if isinstance(a, Var) and a.dtype is not Datatype.int:
+        raise TypeError("Align16仅支持int类型的Var")
+    out = Var(dtype=Datatype.int, name=name)
+    aligned = _align_value(a, 16)
+    if aligned is not None:
+        out.value = aligned
+    if globvars.active_kernel is not None:
+        globvars.active_kernel.instructions.append(
+            Instruction("Align16", a=a, out=out)
+        )
+    return out
+
+
+def Align32(a: Union[Var, int], *, name: str = "") -> Var:
+    if not isinstance(a, (Var, int)):
+        raise TypeError(f"a必须是Var或int类型，当前类型: {type(a)}")
+    if not isinstance(name, str):
+        raise TypeError(f"name必须是str类型，当前类型: {type(name)}")
+    if isinstance(a, Var) and a.dtype is not Datatype.int:
+        raise TypeError("Align32仅支持int类型的Var")
+    out = Var(dtype=Datatype.int, name=name)
+    aligned = _align_value(a, 32)
+    if aligned is not None:
+        out.value = aligned
+    if globvars.active_kernel is not None:
+        globvars.active_kernel.instructions.append(
+            Instruction("Align32", a=a, out=out)
+        )
+    return out
+
+
+def Align64(a: Union[Var, int], *, name: str = "") -> Var:
+    if not isinstance(a, (Var, int)):
+        raise TypeError(f"a必须是Var或int类型，当前类型: {type(a)}")
+    if not isinstance(name, str):
+        raise TypeError(f"name必须是str类型，当前类型: {type(name)}")
+    if isinstance(a, Var) and a.dtype is not Datatype.int:
+        raise TypeError("Align64仅支持int类型的Var")
+    out = Var(dtype=Datatype.int, name=name)
+    aligned = _align_value(a, 64)
+    if aligned is not None:
+        out.value = aligned
+    if globvars.active_kernel is not None:
+        globvars.active_kernel.instructions.append(
+            Instruction("Align64", a=a, out=out)
+        )
+    return out
+
+
+def Align128(a: Union[Var, int], *, name: str = "") -> Var:
+    if not isinstance(a, (Var, int)):
+        raise TypeError(f"a必须是Var或int类型，当前类型: {type(a)}")
+    if not isinstance(name, str):
+        raise TypeError(f"name必须是str类型，当前类型: {type(name)}")
+    if isinstance(a, Var) and a.dtype is not Datatype.int:
+        raise TypeError("Align128仅支持int类型的Var")
+    out = Var(dtype=Datatype.int, name=name)
+    aligned = _align_value(a, 128)
+    if aligned is not None:
+        out.value = aligned
+    if globvars.active_kernel is not None:
+        globvars.active_kernel.instructions.append(
+            Instruction("Align128", a=a, out=out)
+        )
+    return out
+
+
+def Align256(a: Union[Var, int], *, name: str = "") -> Var:
+    if not isinstance(a, (Var, int)):
+        raise TypeError(f"a必须是Var或int类型，当前类型: {type(a)}")
+    if not isinstance(name, str):
+        raise TypeError(f"name必须是str类型，当前类型: {type(name)}")
+    if isinstance(a, Var) and a.dtype is not Datatype.int:
+        raise TypeError("Align256仅支持int类型的Var")
+    out = Var(dtype=Datatype.int, name=name)
+    aligned = _align_value(a, 256)
+    if aligned is not None:
+        out.value = aligned
+    if globvars.active_kernel is not None:
+        globvars.active_kernel.instructions.append(
+            Instruction("Align256", a=a, out=out)
         )
     return out
 

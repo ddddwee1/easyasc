@@ -381,6 +381,8 @@ def _collect_var_deps(
         if inst.opname in ("CeilDiv", "Min", "Max", "var_mul", "var_div", "var_add", "var_sub"):
             _extract_var_names_from_value(inst.kwargs.get("a", None), known_names, inputs)
             _extract_var_names_from_value(inst.kwargs.get("b", None), known_names, inputs)
+        elif inst.opname in ("scalar_sqrt", "Align16", "Align32", "Align64", "Align128", "Align256"):
+            _extract_var_names_from_value(inst.kwargs.get("a", None), known_names, inputs)
         deps.setdefault(out.name, set()).update(inputs)
     return deps
 

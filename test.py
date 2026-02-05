@@ -1,5 +1,6 @@
 import easyasc as ea 
 from easyasc import * 
+import os
 
 
 BLK = 128
@@ -24,8 +25,8 @@ def cubefunc(x: GMTensor, y: GMTensor, z: GMTensor, M: Var, N: Var, K: Var):
     l0c = DBuff(DT.float, [BLK, K], Position.L0C)
     l0c2 = Tensor(DT.float, [BLK, K], Position.L0C)
     xub = DBuff(DT.half, [BLK, K], Position.UB)
-    xubs = Tensor(DT.half, [BLK, K], Position.UB)
     reset_cache()
+    xubs = Tensor(DT.half, [BLK, K], Position.UB)
 
     cnt = Var(0)
     cnt1 = Var(0)
@@ -44,6 +45,7 @@ def cubefunc(x: GMTensor, y: GMTensor, z: GMTensor, M: Var, N: Var, K: Var):
             l0b[cnt] <<= l1k[cnt][0:BLK//2, 0:K]
 
             mmad(l0c[cnt], l0a[cnt], l0b[cnt])
+            l1v <<= l0c[cnt]
 
             y.lock()
             y[:1, :] <<= l0c[cnt]
@@ -65,6 +67,28 @@ def cubefunc(x: GMTensor, y: GMTensor, z: GMTensor, M: Var, N: Var, K: Var):
     xub[cnt] <<= xub[cnt1] + xub[cnt2]
 
 
+@kernel()
+def constfunc(M: Var, N: Var, K: Var):
+    a16 = Align16(M)
+    a32 = Align32(N)
+    a64 = Align64(K)
+    a128 = Align128(a64)
+    a256 = Align256(a32)
+    vnum = GetVecNum()
+    vidx = GetVecIdx()
+    sbidx = GetSubBlockIdx()
+    repeat_base = a16 + a32 + a64 + a128 + a256 + vnum + vidx + sbidx
+    repeat = CeilDiv(repeat_base, 128)
+    fill = scalar_sqrt(Var(4.0))
+    flag_id = Var(1)
+    setflag(Pipe.V, Pipe.MTE3, flag_id)
+    waitflag(Pipe.V, Pipe.MTE3, flag_id)
+    setflag(Pipe.M, Pipe.FIX, flag_id)
+    waitflag(Pipe.M, Pipe.FIX, flag_id)
+    ub = Tensor(DT.half, [a16, 1], Position.UB)
+    dup(ub, fill, repeat=repeat)
+
+
 if __name__ == "__main__":
     M = Var(64)
     N = Var(64)
@@ -76,4 +100,10 @@ if __name__ == "__main__":
     # cubefunc.print_instructions()
     # cubefunc.dump_asc("test")
     cubefunc.dump_kernel('test')
+    cubefunc.generate_op_host()
+    out_dir = "test_cust_op"
+    cann_path = os.environ.get("ASCEND_CANN_PACKAGE_PATH", "/home/ma-user/work/ascend-toolkit/latest")
+    cubefunc.generate_op_project(out_dir, cann_path)
+    constfunc(M, N, K)
+    constfunc.dump_kernel('const_test')
 
