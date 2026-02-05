@@ -1,9 +1,10 @@
 import inspect
 import json
 import os
+import platform
 import shutil
 import tarfile
-from typing import List, Union
+from typing import List, Optional, Union
 
 from ..utils.instruction import Instruction
 from ..utils.Tensor import GMTensor, DBuff
@@ -505,9 +506,13 @@ class KernelBase:
             json.dump(preset_data, f, indent=4)
             f.write("\n")
 
-    def generate(self, out_dir: str, cann_path: str) -> None:
+    def generate(self, out_dir: str, cann_path: Optional[str] = None) -> None:
         if not isinstance(out_dir, str):
             raise TypeError(f"out_dir必须是str类型，当前类型: {type(out_dir)}")
+        if cann_path is None:
+            cann_path = os.getenv("ASCEND_HOME_PATH")
+            if not cann_path:
+                raise ValueError("cann_path为None且环境变量ASCEND_HOME_PATH未设置，请手动指定cann_path")
         if not isinstance(cann_path, str):
             raise TypeError(f"cann_path必须是str类型，当前类型: {type(cann_path)}")
 
@@ -538,3 +543,294 @@ class KernelBase:
         if not os.path.isfile(tensorutils_src):
             raise FileNotFoundError(f"未找到tensorutils.h: {tensorutils_src}")
         shutil.copy2(tensorutils_src, os.path.join(op_kernel_dir, "tensorutils.h"))
+
+    def generate_aclnn_test(
+        self,
+        path: str,
+        cann_path: Optional[str] = None,
+        profile: bool = False,
+    ) -> None:
+        if not isinstance(path, str):
+            raise TypeError(f"path必须是str类型，当前类型: {type(path)}")
+        if cann_path is None:
+            cann_path = os.getenv("ASCEND_HOME_PATH")
+            if not cann_path:
+                raise ValueError("cann_path为None且环境变量ASCEND_HOME_PATH未设置，请手动指定cann_path")
+        if not isinstance(cann_path, str):
+            raise TypeError(f"cann_path必须是str类型，当前类型: {type(cann_path)}")
+        if not isinstance(profile, bool):
+            raise TypeError(f"profile必须是bool类型，当前类型: {type(profile)}")
+
+        abs_path = os.path.abspath(path)
+        os.makedirs(abs_path, exist_ok=True)
+        resources_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "resources"))
+        macros_src = os.path.join(resources_dir, "macros.h")
+        if not os.path.isfile(macros_src):
+            raise FileNotFoundError(f"未找到macros.h: {macros_src}")
+        shutil.copy2(macros_src, os.path.join(abs_path, "macros.h"))
+        parse_prof_src = os.path.join(resources_dir, "parse_prof.py")
+        if not os.path.isfile(parse_prof_src):
+            raise FileNotFoundError(f"未找到parse_prof.py: {parse_prof_src}")
+        shutil.copy2(parse_prof_src, os.path.join(abs_path, "parse_prof.py"))
+        setup_aclnn_src = os.path.join(resources_dir, "setup_aclnn.py")
+        if not os.path.isfile(setup_aclnn_src):
+            raise FileNotFoundError(f"未找到setup_aclnn.py: {setup_aclnn_src}")
+        with open(setup_aclnn_src, "r", encoding="utf-8") as f:
+            setup_lines = f.readlines()
+        cann_path_literal = repr(cann_path)
+        replaced = False
+        for idx, line in enumerate(setup_lines):
+            if line.lstrip().startswith("ascend_toolkit_install_path="):
+                setup_lines[idx] = f"ascend_toolkit_install_path={cann_path_literal}\n"
+                replaced = True
+                break
+        if not replaced:
+            raise ValueError("setup_aclnn.py中未找到ascend_toolkit_install_path配置项")
+        machine = platform.machine().lower()
+        if machine in ("x86_64", "amd64"):
+            arch_tag = "x86_64"
+        elif machine in ("aarch64", "arm64"):
+            arch_tag = "aarch64"
+        else:
+            raise ValueError(f"未知系统架构: {machine}")
+        arch_token = f"{arch_tag}-linux"
+        setup_lines = [
+            line.replace("aarch64-linux", arch_token).replace("x86_64-linux", arch_token)
+            for line in setup_lines
+        ]
+        with open(os.path.join(abs_path, "setup_aclnn.py"), "w", encoding="utf-8") as f:
+            f.writelines(setup_lines)
+        tensorx_src = os.path.join(resources_dir, "tensorx.h")
+        if not os.path.isfile(tensorx_src):
+            raise FileNotFoundError(f"未找到tensorx.h: {tensorx_src}")
+        with open(tensorx_src, "r", encoding="utf-8") as f:
+            tensorx_lines = f.readlines()
+        include_replaced = False
+        for idx, line in enumerate(tensorx_lines):
+            if line.lstrip().startswith('#include "cust_op_list.h"'):
+                tensorx_lines[idx] = f'#include "aclnn_{self.name}.h"\n'
+                include_replaced = True
+                break
+        if not include_replaced:
+            raise ValueError('tensorx.h中未找到#include "cust_op_list.h"')
+        with open(os.path.join(abs_path, "tensorx.h"), "w", encoding="utf-8") as f:
+            f.writelines(tensorx_lines)
+        if not self._last_bound_args:
+            raise RuntimeError("generate_aclnn_test需要先调用kernel以绑定参数")
+        sig = inspect.signature(self.func)
+        param_names = list(sig.parameters.keys())
+        output_gmtensors = set()
+        if isinstance(getattr(self, "_last_output_gmtensors", None), set):
+            output_gmtensors = self._last_output_gmtensors
+
+        var_params = []
+        gmtensor_params = []
+        for name in param_names:
+            bound_val = self._last_bound_args.get(name, None)
+            if isinstance(bound_val, Var):
+                var_params.append((name, bound_val))
+            elif isinstance(bound_val, GMTensor):
+                gmtensor_params.append((name, bound_val))
+            else:
+                raise TypeError(f"kernel入参只能为GMTensor或Var，当前{name}类型: {type(bound_val)}")
+
+        gmtensor_values = {val for _, val in gmtensor_params}
+        for out in output_gmtensors:
+            if out not in gmtensor_values:
+                raise ValueError("输出GMTensor必须来自kernel参数")
+
+        var_name_set = {name for name, _ in var_params}
+
+        def _to_camel(name: str) -> str:
+            parts = [p for p in name.split("_") if p]
+            if not parts:
+                return name
+            return "".join(p[:1].upper() + p[1:] for p in parts)
+
+        def _var_decl(name: str, var: Var) -> str:
+            if var.dtype is None or var.value is None:
+                raise ValueError(f"Var {name} 没有有效的dtype或value")
+            if var.dtype is Datatype.int:
+                ctype = "int"
+            elif var.dtype is Datatype.float:
+                ctype = "float"
+            else:
+                raise ValueError(f"Var {name} 仅支持int或float类型，当前: {var.dtype}")
+            if not isinstance(var.value, (int, float)):
+                raise ValueError(f"Var {name} 的value必须是int或float，当前: {type(var.value)}")
+            return f"    {ctype} {name} = {var.value};"
+
+        def _tensorx_type(dtype) -> str:
+            name = getattr(dtype, "name", None)
+            mapping = {
+                "half": "FP16",
+                "float": "FP32",
+                "bfloat16_t": "BF16",
+                "int": "INT32",
+                "int8_t": "INT8",
+                "int16_t": "INT16",
+                "int64_t": "INT64",
+                "uint8_t": "UINT8",
+                "uint16_t": "UINT16",
+                "uint32_t": "UINT32",
+                "uint64_t": "UINT64",
+            }
+            if name in ("int4", "hif8", "bool"):
+                raise ValueError(f"不支持的数据类型: {name}")
+            if name not in mapping:
+                raise ValueError(f"未找到dtype映射: {name}")
+            return mapping[name]
+
+        def _dim_expr(dim) -> str:
+            if isinstance(dim, int):
+                return str(dim)
+            if isinstance(dim, Var):
+                if dim.name in var_name_set:
+                    if dim.dtype is not Datatype.int:
+                        raise ValueError(f"shape包含非int的Var: {dim.name}")
+                    return dim.name
+                if isinstance(dim.value, int):
+                    return str(dim.value)
+                raise ValueError(f"shape包含未绑定参数的Var: {dim.name!r}")
+            raise TypeError(f"shape元素必须是int或Var，当前类型: {type(dim)}")
+
+        def _shape_expr(shape) -> str:
+            if not isinstance(shape, (list, tuple)):
+                raise TypeError(f"shape必须是list或tuple，当前类型: {type(shape)}")
+            return ", ".join(_dim_expr(dim) for dim in shape)
+
+        output_names = {name for name, val in gmtensor_params if val in output_gmtensors}
+        input_params = [(name, val) for name, val in gmtensor_params if name not in output_names]
+        output_params = [(name, val) for name, val in gmtensor_params if name in output_names]
+
+        profile_pre_lines = []
+        profile_post_lines = []
+        if profile:
+            template_src = os.path.join(resources_dir, "test.cpp")
+            if not os.path.isfile(template_src):
+                raise FileNotFoundError(f"未找到test.cpp模板: {template_src}")
+            with open(template_src, "r", encoding="utf-8") as f:
+                legacy_lines = f.readlines()
+
+            def _extract_comment_block(anchor: str) -> list:
+                for i, line in enumerate(legacy_lines):
+                    if anchor in line:
+                        start = i
+                        while start - 1 >= 0 and legacy_lines[start - 1].lstrip().startswith("//"):
+                            start -= 1
+                        end = i
+                        while end + 1 < len(legacy_lines) and legacy_lines[end + 1].lstrip().startswith("//"):
+                            end += 1
+                        return [ln.rstrip("\n") for ln in legacy_lines[start : end + 1]]
+                return []
+
+            profile_pre_lines = _extract_comment_block("aclprofInit")
+            profile_post_lines = _extract_comment_block("aclprofStop")
+            if not profile_pre_lines or not profile_post_lines:
+                raise ValueError("legacy/test.cpp中未找到profiling注释代码块")
+            def _uncomment_line(line: str) -> str:
+                prefix, sep, rest = line.partition("//")
+                if sep == "":
+                    return line
+                return f"{prefix}{rest.lstrip()}"
+            profile_pre_lines = [_uncomment_line(line) for line in profile_pre_lines]
+            profile_post_lines = [_uncomment_line(line) for line in profile_post_lines]
+
+        lines = [
+            "#include <iostream>",
+            "#include <cstdio>",
+            "#include <cstring>",
+            "#include <vector>",
+            "#include <fstream>",
+            "#include <sys/stat.h>",
+            '#include "tensorx.h"',
+            '#include "acl/acl.h"',
+            '#include "acl/acl_prof.h"',
+            '#include "macros.h"',
+            "",
+            "",
+            "int main(int argc, char **argv)",
+            "{",
+            "    int32_t deviceId = 0;",
+            "    aclrtContext context;",
+            "    aclrtStream stream;",
+            "    auto ret = aclInit(nullptr);",
+            "    ret = aclrtSetDevice(deviceId);",
+            "    ret = aclrtCreateContext(&context, deviceId);",
+            "    ret = aclrtSetCurrentContext(context);",
+            "    ret = aclrtCreateStream(&stream);",
+        ]
+        if profile and profile_pre_lines:
+            lines.extend(profile_pre_lines)
+        lines.extend(
+            [
+                "    ",
+            "    printf(\"--> Initializing tensors...\\n\");",
+            ]
+        )
+
+        for name, var in var_params:
+            lines.append(_var_decl(name, var))
+        if var_params:
+            lines.append("    ")
+
+        for name, val in input_params:
+            tensorx_type = _tensorx_type(val.dtype)
+            shape_expr = _shape_expr(val.shape)
+            lines.append(f"    TensorX<{tensorx_type}> {name}({{{shape_expr}}});")
+            lines.append(f"    {name}.initAll();")
+            lines.append(f"    {name}.fillHostWithBinFile(\"./input/input_{name}.bin\");")
+            lines.append(f"    {name}.copyToDevice();")
+        if input_params:
+            lines.append("    ")
+
+        for name, val in output_params:
+            tensorx_type = _tensorx_type(val.dtype)
+            shape_expr = _shape_expr(val.shape)
+            lines.append(f"    TensorX<{tensorx_type}> {name}({{{shape_expr}}});")
+            lines.append(f"    {name}.initAll();")
+        if output_params:
+            lines.append("    ")
+
+        for name, _ in gmtensor_params:
+            lines.append(f"    aclTensor* {name}_acl = {name}.toAclTensor();")
+        if gmtensor_params:
+            lines.append("    ")
+
+        op_name = _to_camel(self.name)
+        lines.append("    printf(\"--> Running OP...\\n\");")
+        lines.append("    PREPARE_OP();")
+        exec_args = []
+        for name in param_names:
+            bound_val = self._last_bound_args.get(name, None)
+            if isinstance(bound_val, GMTensor) and bound_val not in output_gmtensors:
+                exec_args.append(f"{name}_acl")
+        for name in param_names:
+            bound_val = self._last_bound_args.get(name, None)
+            if isinstance(bound_val, Var):
+                exec_args.append(name)
+        for name in param_names:
+            bound_val = self._last_bound_args.get(name, None)
+            if isinstance(bound_val, GMTensor) and bound_val in output_gmtensors:
+                exec_args.append(f"{name}_acl")
+        args_str = ", ".join(exec_args)
+        if profile:
+            lines.append("    for (int i=0; i<100; ++i){")
+            lines.append(f"        EXECOP(aclnn{op_name}, stream, {args_str});")
+            lines.append("    }")
+        lines.append(f"    EXECOP(aclnn{op_name}, stream, {args_str});")
+        lines.append("    CHECK_RET(aclrtSynchronizeStream(stream));")
+        lines.append("    ")
+        lines.append("    printf(\"--> Saving output tensors...\\n\");")
+        for name, _ in output_params:
+            lines.append(f"    {name}.copyToHost();")
+            lines.append(f"    {name}.saveHostToBinFile(\"output/output_{name}.bin\");")
+        if profile and profile_post_lines:
+            lines.append("    ")
+            lines.extend(profile_post_lines)
+        lines.append("    ")
+        lines.append("    aclFinalize();")
+        lines.append("}")
+
+        with open(os.path.join(abs_path, "test.cpp"), "w", encoding="utf-8") as f:
+            f.write("\n".join(lines))

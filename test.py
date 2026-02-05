@@ -67,7 +67,7 @@ def cubefunc(x: GMTensor, y: GMTensor, z: GMTensor, M: Var, N: Var, K: Var):
             vv[m:m + BLK, 0:K] <<= xub[cnt]
 
     xub[cnt] <<= xub[cnt1] + xub[cnt2]
-    return z 
+    return y, z 
 
 
 if __name__ == "__main__":
@@ -82,5 +82,5 @@ if __name__ == "__main__":
     z_splitk = GMTensor(DT.float, [M, N])
     cubefunc(x, y, z, M, N, K)
     out_dir = "test_cust_op"
-    cann_path = os.environ.get("ASCEND_HOME_PATH", "/home/ma-user/work/ascend-toolkit/latest")
-    cubefunc.generate(out_dir, cann_path)
+    cubefunc.generate(out_dir)
+    cubefunc.generate_aclnn_test("test_aclnn", profile=True)

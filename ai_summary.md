@@ -7,7 +7,7 @@
 **Repository Layout**
 - `easyasc/`: Core library (DSL, runtime objects, parser, handlers, resources, shortcuts).
 - `testcases/`: Example kernels covering vec ops, autosync patterns, cube/vec mixing, and syntax sugar.
-- `test.py`: End-to-end sample kernel using auto-sync, matmul shortcut, mutex sync, and custom op generation.
+- `test.py`: End-to-end sample kernel using auto-sync, matmul shortcut, mutex sync, and custom op + ACLNN test generation.
 - `test_cust_op/`: Sample CustomOp build tree with CMake files and a helper build script.
 - `legacy/`: Present but empty.
 - `wsl_setenv.sh`: Environment setup for WSL (LD_LIBRARY_PATH, PYTHONPATH, include paths).
@@ -29,14 +29,15 @@
 - `dump_kernel` emits cube/vec headers with `__aicore__ inline void {name}_{cube/vec}(...)` wrappers and a `.cpp` entry that loads tiling, dispatches AIC/AIV, and passes GM/workspace/var params.
 - `generate_op_host` writes a tiling data header and op-def `.cpp` with inferred inputs/outputs/attrs, tiling size calculation (including `workspace_shapes`), and block size setup.
 - `generate_op_project` extracts `resources/CustomOp.tar.gz` and updates `CMakePresets.json` for `ASCEND_CANN_PACKAGE_PATH` and device type.
-- `generate` orchestrates project creation, host/kernel emission, and copies `tensorutils.h` into `op_kernel`.
+- `generate` now accepts `cann_path: Optional[str]` and falls back to `ASCEND_HOME_PATH` when `None`.
+- `generate_aclnn_test` creates an ACLNN test scaffold: copies `macros.h`/`parse_prof.py`, writes `setup_aclnn.py` with injected `cann_path` and architecture-specific `x86_64-linux`/`aarch64-linux` paths, emits `tensorx.h` with `#include "aclnn_{name}.h"`, and generates `test.cpp` from the last bound kernel args/outputs (requires the kernel be called). It maps dtypes to `TensorX<...>` macros, enforces `Var` to be `int`/`float` with values, orders `EXECOP` args as inputs → vars → outputs, uses `aclnn{CamelName}`, and when `profile=True` inserts profiling blocks from `resources/test.cpp` and runs a 100-iteration loop plus a single call.
 
 **Runtime Data Model (`easyasc/utils`)**
 - `Tensor`/`DBuff`/`GMTensor` in `utils/Tensor.py` validate types, allocate temp names, emit `create_*`, support slicing via `__getitem__`, and use `__ilshift__` to select the correct data-move operation by position.
 - `GMTensor` supports up to 2 sliced dimensions and exposes `bind_cv_mutex/bind_vc_mutex` plus `lock/ready/wait/free` for cross-core sync.
 - `Var` in `utils/var.py` records `create_var`, tracks dtype/value, supports arithmetic via stub functions, and returns `Expr` for comparisons (which intentionally fail Python boolean evaluation).
 - `VecOP` in `utils/vecop.py` captures `dst <<= src1 + src2` style operations and emits the correct vector stub calls, reinterpreting int-only ops when needed.
-- Type and enum helpers in `datatype.py`, `positions.py`, `pipe.py`, `comparemode.py`, `roundmode.py`, and `selectmode.py` provide small wrapper types and C++ mappings.
+- Type and enum helpers in `datatype.py`, `positions.py`, `pipe.py`, `comparemode.py`, `roundmode.py`, and `selectmode.py` provide small wrapper types and C++ mappings; `Datatype.int64` is now available.
 - `events.py` defines `SEvent`/`DEvent` with `set/wait/setall/release` instruction emission.
 - `mutex.py` defines `CvMutex`/`VcMutex` and registers them with the active kernel for cross-core coordination.
 
@@ -60,9 +61,11 @@
 **Resources**
 - `resources/CustomOp.tar.gz` and `resources/CMakePresets.json` template a CANN custom op project.
 - `resources/tensorutils.h` is bundled into generated kernel code.
+- `resources/macros.h` defines `TensorX` dtype macros (including INT64/UINT8/UINT16/UINT32/UINT64 additions).
+- `resources/test.cpp` serves as the profiling snippet template for ACLNN test generation.
 
 **Tests and Examples**
-- `test.py` demonstrates auto-sync, matmul shortcut, workspace splitting, mutex sync, cache reset, and custom op generation (`KernelBase.generate`).
+- `test.py` demonstrates auto-sync, matmul shortcut, workspace splitting, mutex sync, cache reset, and custom op generation (`KernelBase.generate`), and now also exercises `generate_aclnn_test`.
 - `testcases/test_allvec.py` exercises most vector ops, barriers, events, and atomic variants in one kernel.
 - `testcases/test_cube_autosync.py` stresses autosync insertion across nested loops/ifs and mixed cube/vec scopes.
 - `testcases/test_cvmix.py` mixes cube and vec phases with control flow and sync events.

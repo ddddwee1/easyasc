@@ -39,6 +39,8 @@ class DataTypeValue:
             return 8
         elif self.name == "uint64_t":
             return 4
+        elif self.name == "int64_t":
+            return 4
         else:
             raise ValueError(f"未知数据类型: {self.name}")
 
@@ -64,6 +66,8 @@ class DataTypeValue:
             return 4
         elif self.name == "uint64_t":
             return 8
+        elif self.name == "int64_t":
+            return 8
         else:
             raise ValueError(f"未知数据类型: {self.name}")
 
@@ -80,3 +84,4 @@ class Datatype:
     bfloat16 = DataTypeValue("bfloat16_t")
     uint32 = DataTypeValue("uint32_t")
     uint64 = DataTypeValue("uint64_t")
+    int64 = DataTypeValue("int64_t")
