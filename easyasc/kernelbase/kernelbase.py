@@ -5,9 +5,11 @@ import tarfile
 from typing import List, Union
 
 from ..utils.instruction import Instruction
-from ..utils.Tensor import GMTensor
+from ..utils.Tensor import GMTensor, DBuff
 from ..utils.var import Var
 from ..utils.mutex import CvMutex, VcMutex
+from ..utils.datatype import Datatype
+from ..utils.positions import Position
 from .. import globvars
 
 
@@ -38,6 +40,10 @@ class KernelBase:
                 self.instructions.append(
                     Instruction("create_gm_tensor", val=value)
                 )
+        self._l0a = DBuff(Datatype.half, [128, 128], position=Position.L0A, name='_l0a')
+        self._l0b = DBuff(Datatype.half, [128, 128], position=Position.L0B, name='_l0b')
+        self._l0acnt = Var(0, name='_l0acnt')
+        self._l0bcnt = Var(0, name='_l0bcnt')
         res = self.func(*args, **kwargs)
         head_instructions = []
         tail_instructions = []

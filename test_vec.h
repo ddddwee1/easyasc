@@ -4,9 +4,9 @@
 __aicore__ inline void cubefunc_vec(GM_ADDR x_, GM_ADDR y_, GM_ADDR z_, GM_ADDR workspace, int M, int N, int K) {
     TPipe* pipe_ptr = GetTPipePtr();
     int _offset = 0;
-    DEvent<PIPE_V, PIPE_MTE2, true> _tmp_devent_valid_ubin_1;
-    SEvent<PIPE_MTE2, PIPE_V, false> _tmp_sevent_ready_ubin_0;
     DEvent<PIPE_MTE2, PIPE_V, false> _tmp_devent_ready_ubin_1;
+    SEvent<PIPE_MTE2, PIPE_V, false> _tmp_sevent_ready_ubin_0;
+    DEvent<PIPE_V, PIPE_MTE2, true> _tmp_devent_valid_ubin_1;
     SEvent<PIPE_V, PIPE_MTE2, true> _tmp_sevent_valid_ubin_0;
     DEvent<PIPE_MTE3, PIPE_V, true> _tmp_devent_valid_ubout_0;
     DEvent<PIPE_V, PIPE_MTE3, false> _tmp_devent_ready_ubout_0;
@@ -16,6 +16,8 @@ __aicore__ inline void cubefunc_vec(GM_ADDR x_, GM_ADDR y_, GM_ADDR z_, GM_ADDR 
     x.SetGlobalBuffer((__gm__ half*) x_);
     GlobalTensor<half> y;
     y.SetGlobalBuffer((__gm__ half*) y_);
+    int _l0acnt = 0;
+    int _l0bcnt = 0;
     workspace = ShiftAddr<half>(workspace, M*N, _offset);
     GlobalTensor<half> vv;
     vv.SetGlobalBuffer((__gm__ half*) workspace);
