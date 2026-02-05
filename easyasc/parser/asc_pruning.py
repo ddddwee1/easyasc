@@ -306,7 +306,7 @@ def prune_unused_decls(instructions: List[Instruction]) -> List[Instruction]:
     used_ids = _collect_used_ids(instructions, tmp_var_names, tmp_tensor_names, tmp_gmtensor_names)
     pruned: List[Instruction] = []
     for inst in instructions:
-        if inst.opname in ("create_dbuf", "create_tensor", "create_gm_tensor", "create_sevent", "create_devent"):
+        if inst.opname in ("create_gm_tensor", "create_sevent", "create_devent"):
             val = inst.kwargs.get("val", None)
             if val is None:
                 pruned.append(inst)
@@ -421,6 +421,8 @@ def _collect_seed_usage(
             if ntype == "inst":
                 inst = node["inst"]
                 if _inst_is_side_specific(inst, side, classify_inst):
+                    if inst.opname == "create_var":
+                        continue
                     has_side = True
                     for value in inst.kwargs.values():
                         _collect_from_value(value)

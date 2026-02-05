@@ -4,11 +4,16 @@
 __aicore__ inline void constfunc_cube(GM_ADDR workspace, int M, int N, int K) {
     TPipe* pipe_ptr = GetTPipePtr();
     int _offset = 0;
-    int _l0acnt = 0;
-    int _l0bcnt = 0;
-    int repeat = CeilDiv(Align128B(Align64B(K)) + Align16B(M) + Align256B(Align32B(N)) + Align32B(N) + Align64B(K) + GetBlockIdx() + 2*GetBlockNum() + get_subblockid(), 128);
+    DBuff<half, TPosition::A2> _l0a;
+    _l0a.Init(128 * 128);
+    DBuff<half, TPosition::B2> _l0b;
+    _l0b.Init(128 * 128);
+    pipe_ptr->Reset();
+    OccupyMMTE1Events();
+    int repeat = CeilDiv(((((((Align16B(M) + Align32B(N)) + Align64B(K)) + Align128B(Align64B(K))) + Align256B(Align32B(N))) + (GetBlockNum() * 2)) + GetBlockIdx()) + get_subblockid(), 128);
     float _tmp_var_20 = 4.0;
     int flag_id = 1;
     SetFlag<PIPE_M, PIPE_FIX>(flag_id);
     WaitFlag<PIPE_M, PIPE_FIX>(flag_id);
+    LocalTensor<half> ub = AllocateTensor<TPosition::VECCALC>(Align16B(M) * 1);
 }

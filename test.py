@@ -1,5 +1,6 @@
 import easyasc as ea 
 from easyasc import * 
+from easyasc.shortcuts.matmul import matmul
 import os
 
 
@@ -41,10 +42,11 @@ def cubefunc(x: GMTensor, y: GMTensor, z: GMTensor, M: Var, N: Var, K: Var):
     for m in range(m1, m2, BLK):
         with auto_sync():
             l1q[cnt] <<= x[m:m + BLK, 0:K]
-            l0a[cnt] <<= l1q[cnt][BLK//2:BLK, 0:K]
-            l0b[cnt] <<= l1k[cnt][0:BLK//2, 0:K]
-
-            mmad(l0c[cnt], l0a[cnt], l0b[cnt])
+            matmul(
+                l0c[cnt],
+                l1q[cnt][BLK // 2 : BLK, 0:K],
+                l1k[cnt][0 : BLK // 2, 0:K],
+            )
             l1v <<= l0c[cnt]
 
             y.lock()
@@ -65,6 +67,31 @@ def cubefunc(x: GMTensor, y: GMTensor, z: GMTensor, M: Var, N: Var, K: Var):
             vv[m:m + BLK, 0:K] <<= xub[cnt]
 
     xub[cnt] <<= xub[cnt1] + xub[cnt2]
+
+
+@kernel()
+def cubefunc_splitn(x: GMTensor, y_t: GMTensor, z: GMTensor, M: Var, N: Var, K: Var, splitn: Var):
+    l1a = Tensor(DT.half, [BLK, K], Position.L1)
+    l1b = Tensor(DT.half, [N, K], Position.L1)
+    l0c = Tensor(DT.float, [BLK, N], Position.L0C)
+    with auto_sync():
+        l1a <<= x[0:BLK, 0:K]
+        l1b <<= y_t[0:N, 0:K]
+        matmul(l0c, l1a, l1b, splitn=splitn)
+        z[0:BLK, 0:N] <<= l0c
+
+
+@kernel()
+def cubefunc_splitk(x: GMTensor, y_t: GMTensor, z: GMTensor, M: Var, N: Var, K: Var, splitk: Var):
+    l1a = Tensor(DT.half, [BLK, K], Position.L1)
+    l1b = Tensor(DT.half, [N, K], Position.L1)
+    l0c = Tensor(DT.float, [BLK, N], Position.L0C)
+    with auto_sync():
+        l1a <<= x[0:BLK, 0:K]
+        l1b <<= y_t[0:N, 0:K]
+        matmul(l0c, l1a, l1b, splitk=splitk, is_init=True)
+        matmul(l0c, l1a, l1b, splitk=splitk, is_init=False)
+        z[0:BLK, 0:N] <<= l0c
 
 
 @kernel()
@@ -96,6 +123,9 @@ if __name__ == "__main__":
     x= GMTensor(DT.half, [M, K])
     y= GMTensor(DT.half, [K, N])
     z= GMTensor(DT.half, [M, N])
+    y_t = GMTensor(DT.half, [N, K])
+    z_splitn = GMTensor(DT.float, [M, N])
+    z_splitk = GMTensor(DT.float, [M, N])
     cubefunc(x, y, z, M, N, K)
     # cubefunc.print_instructions()
     # cubefunc.dump_asc("test")
@@ -104,6 +134,12 @@ if __name__ == "__main__":
     out_dir = "test_cust_op"
     cann_path = os.environ.get("ASCEND_CANN_PACKAGE_PATH", "/home/ma-user/work/ascend-toolkit/latest")
     cubefunc.generate_op_project(out_dir, cann_path)
+    splitn = Var(32)
+    splitk = Var(32)
+    cubefunc_splitn(x, y_t, z_splitn, M, N, K, splitn)
+    cubefunc_splitn.dump_kernel("test_splitn")
+    cubefunc_splitk(x, y_t, z_splitk, M, N, K, splitk)
+    cubefunc_splitk.dump_kernel("test_splitk")
     constfunc(M, N, K)
     constfunc.dump_kernel('const_test')
 

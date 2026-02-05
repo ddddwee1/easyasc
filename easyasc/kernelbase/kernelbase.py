@@ -44,6 +44,9 @@ class KernelBase:
         self._l0b = DBuff(Datatype.half, [128, 128], position=Position.L0B, name='_l0b')
         self._l0acnt = Var(0, name='_l0acnt')
         self._l0bcnt = Var(0, name='_l0bcnt')
+        self.instructions.append(
+            Instruction("reset_cache")
+        )
         res = self.func(*args, **kwargs)
         head_instructions = []
         tail_instructions = []
@@ -246,6 +249,51 @@ class KernelBase:
 
         with open(f"{self.name}_tiling.h", "w") as f:
             f.write(content)
+
+        cpp_lines = [
+            f'#include "{self.name}_tiling.h"',
+            '#include "register/op_def_registry.h"',
+            '#include "tiling/tiling_api.h"',
+            "",
+            "namespace optiling {",
+            "static ge::graphStatus TilingFunc(gert::TilingContext* context)",
+            "{",
+            "    (void)context;",
+            "    return ge::GRAPH_SUCCESS;",
+            "}",
+            "}",
+            "",
+            "namespace ge {",
+            "static ge::graphStatus InferShape(gert::InferShapeContext* context)",
+            "{",
+            "    (void)context;",
+            "    return GRAPH_SUCCESS;",
+            "}",
+            "",
+            "static ge::graphStatus InferDataType(gert::InferDataTypeContext* context)",
+            "{",
+            "    (void)context;",
+            "    return GRAPH_SUCCESS;",
+            "}",
+            "}",
+            "",
+            "namespace ops {",
+            f"class {op_name} : public OpDef {{",
+            "public:",
+            f"    explicit {op_name}(const char* name) : OpDef(name)",
+            "    {",
+            "        this->SetInferShape(ge::InferShape).SetInferDataType(ge::InferDataType);",
+            "",
+            "        this->AICore().SetTiling(optiling::TilingFunc);",
+            "    }",
+            "};",
+            "",
+            f"OP_ADD({op_name});",
+            "}",
+            "",
+        ]
+        with open(f"{self.name}.cpp", "w") as f:
+            f.write("\n".join(cpp_lines))
 
     def generate_op_project(self, path: str, cann_path: str) -> None:
         if not isinstance(path, str):

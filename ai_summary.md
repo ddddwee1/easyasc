@@ -25,7 +25,7 @@
 - `__call__` clears `workspace_shapes`, binds args, assigns names to `GMTensor`/`Var`, emits `create_gm_tensor`, runs the kernel, then inserts cross-core ready/wait instructions from `CvMutex`/`VcMutex` before resetting globals.
 - `dump_asc` writes `{path}_cube.h` and `{path}_vec.h` via `translate_split`.
 - `dump_kernel` wraps emitted code with `tensorutils.h`, `TPipe* pipe_ptr = GetTPipePtr();`, and `int _offset = 0;` inside `__aicore__ inline void {name}_{cube/vec}(...)`. It also emits `{path}.cpp` entry boilerplate with tiling extraction for `Var` params and `ASCEND_IS_AIC/AIV` dispatch.
-- `generate_op_host` emits `{name}_tiling.h` describing tiling data fields for input `Var` parameters (CamelCase op + `TilingData`) and registers the tiling class.
+- `generate_op_host` emits `{name}_tiling.h` describing tiling data fields for input `Var` parameters (CamelCase op + `TilingData`), registers the tiling class, and also emits a stub `{name}.cpp` with empty tiling/infer/OpDef entry points.
 - `generate_op_project(path, cann_path)` extracts `easyasc/resources/CustomOp.tar.gz` (skips if target dir exists and is non-empty) and writes `CMakePresets.json` from template, replacing `ASCEND_CANN_PACKAGE_PATH` and optional `ASCEND_COMPUTE_UNIT` based on `globvars.device_type` (`b*`→`ascend910b`, `d*`→`ascend910_93`).
 
 **easyasc/pythonic.py**
@@ -37,7 +37,7 @@
 **easyasc/parser/asc.py**
 - `translate` validates block structure, builds expression state, folds decl/loop patterns, and emits C++ via handlers; unhandled opnames are commented.
 - `translate_split` splits cube/vec instructions, inserts auto-sync, runs `analyze_usage` per side, then translates each side.
-- `analyze_usage` prints `rich` tables grouped by `Position` for `create_tensor/create_dbuf`, estimating size from the first two shape dims and `dtype.size` (DBuff doubled). It prints per-position `Usage: used KB / cap KB` and restarts after `reset_cache` with a centered reset banner and optional centered label line (`{name}_cube/vec`).
+- `analyze_usage` prints `rich` tables for `create_tensor/create_dbuf`, estimating size from the first two shape dims and `dtype.size` (DBuff doubled). It filters and orders reported positions by `device_type` and cube/vec side, and restarts after `reset_cache` with a centered reset banner and optional centered label line (`{name}_cube/vec`).
 
 **easyasc/parser/asc_autosync.py**
 - Builds pipe/opname maps and inserts auto-sync event instructions between producer/consumer segments.
@@ -49,6 +49,10 @@
 
 **easyasc/parser/asc_pruning.py**
 - `prune_empty_blocks`, `prune_unused_decls`, and `prune_unused_vars` remove dead loops/ifs and unused create_* / create_var declarations.
+- `prune_unused_decls` no longer removes `create_tensor`/`create_dbuf`, and unused Var pruning avoids seeding usage from `create_var`.
+
+**easyasc/shortcuts/**
+- `matmul.py` provides a legacy-style matmul helper built on `mmad`, with split-n/split-k handling and L0A/L0B buffers pulled from the active kernel.
 
 **easyasc/parser/helper.py**
 - `CodeHelper` is an indentation-aware string builder for emitted C++ code.

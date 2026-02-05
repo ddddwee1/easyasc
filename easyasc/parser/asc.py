@@ -395,6 +395,24 @@ def analyze_usage(instructions: Iterable[Instruction], label: Optional[str] = No
         "L0C": globvars.l0c_cap,
         "UB": globvars.ub_cap,
     }
+    mode = None
+    if label:
+        if label.endswith("_cube"):
+            mode = "cube"
+        elif label.endswith("_vec"):
+            mode = "vec"
+    device_type = globvars.device_type or ""
+    allowed_positions = None
+    if device_type.startswith("b"):
+        if mode == "cube":
+            allowed_positions = ["L1", "L0C"]
+        elif mode == "vec":
+            allowed_positions = ["UB"]
+    elif device_type.startswith("d"):
+        if mode == "cube":
+            allowed_positions = ["L1", "L0C", "UB"]
+        elif mode == "vec":
+            allowed_positions = ["UB", "L1"]
 
     def _fmt_num(value: float):
         if isinstance(value, float) and value.is_integer():
@@ -451,9 +469,12 @@ def analyze_usage(instructions: Iterable[Instruction], label: Optional[str] = No
             (size_kb, "white"),
         )
         pos_label = str(getattr(val, "position", "UNKNOWN"))
+        if allowed_positions is not None and pos_label not in allowed_positions:
+            return
         if pos_label not in grouped:
             grouped[pos_label] = []
-            pos_order.append(pos_label)
+            if allowed_positions is None:
+                pos_order.append(pos_label)
         grouped[pos_label].append(line)
         if size_kb_value is not None:
             totals[pos_label] = totals.get(pos_label, 0.0) + float(size_kb_value)
@@ -479,10 +500,15 @@ def analyze_usage(instructions: Iterable[Instruction], label: Optional[str] = No
     grouped: dict[str, List[Text]] = {}
     totals: dict[str, float] = {}
 
+    def _snapshot_table():
+        if allowed_positions is not None:
+            return ([pos for pos in allowed_positions if pos in grouped], grouped, totals)
+        return (pos_order, grouped, totals)
+
     for inst in instructions:
         if inst.opname == "reset_cache":
             if grouped:
-                blocks.append(("table", (pos_order, grouped, totals)))
+                blocks.append(("table", _snapshot_table()))
             blocks.append(("reset", None))
             pos_order = []
             grouped = {}
@@ -493,7 +519,7 @@ def analyze_usage(instructions: Iterable[Instruction], label: Optional[str] = No
         _emit_shape(inst.kwargs.get("val", None), pos_order, grouped, totals)
 
     if grouped:
-        blocks.append(("table", (pos_order, grouped, totals)))
+        blocks.append(("table", _snapshot_table()))
 
     if not any(kind == "table" for kind, _ in blocks):
         return
