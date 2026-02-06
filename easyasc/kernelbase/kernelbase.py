@@ -177,6 +177,7 @@ class KernelBase:
                 body = "\n".join(f"    {line}" if line else "" for line in body.splitlines())
                 return (
                     f"{header}__aicore__ inline void {fn_name}({param_list}) {{\n"
+                    f"    TPipe pipe;"
                     f"    TPipe* pipe_ptr = GetTPipePtr();\n"
                     f"    int _offset = 0;\n"
                     f"{body}\n"
@@ -184,6 +185,7 @@ class KernelBase:
                 )
             return (
                 f"{header}__aicore__ inline void {fn_name}({param_list}) {{\n"
+                f"    TPipe pipe;"
                 f"    TPipe* pipe_ptr = GetTPipePtr();\n"
                 f"    int _offset = 0;\n"
                 f"}}\n"
