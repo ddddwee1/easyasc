@@ -31,16 +31,18 @@ def gm_to_ub_pad(
     span1 = span[1]
     shape0 = src.shape[0]
     shape1 = dst.shape[1]
+    shape1src = src.shape[1]
     validate_var_or_int(span0, "src.span[0]")
     validate_var_or_int(span1, "src.span[1]")
     validate_var_or_int(shape0, "src.shape[0]")
     validate_var_or_int(shape1, "dst.shape[1]")
+    validate_var_or_int(shape1src, "src.shape[1]")
     if n_burst is None:
         n_burst = span0
     if burst_len_element is None:
         burst_len_element = span1
     if src_stride_element is None:
-        src_stride_element = shape0 - span0
+        src_stride_element = shape1src - span1
     if dst_stride is None:
         dst_stride = CeilDiv(shape1 - span1, dst.dtype.C0)
     if n_burst is None or burst_len_element is None or src_stride_element is None or dst_stride is None:
@@ -90,16 +92,18 @@ def ub_to_gm_pad(
     span1 = span[1]
     shape0 = dst.shape[0]
     shape1 = src.shape[1]
+    shape1dst = dst.shape[1]
     validate_var_or_int(span0, "dst.span[0]")
     validate_var_or_int(span1, "dst.span[1]")
     validate_var_or_int(shape0, "dst.shape[0]")
     validate_var_or_int(shape1, "src.shape[1]")
+    validate_var_or_int(shape1dst, "dst.shape[1]")
     if n_burst is None:
         n_burst = span0
     if burst_len_element is None:
         burst_len_element = span1
     if dst_stride_element is None:
-        dst_stride_element = shape0 - span0
+        dst_stride_element = shape1dst - shape1
     if src_stride is None:
         src_stride = CeilDiv(shape1 - span1, src.dtype.C0)
     if n_burst is None or burst_len_element is None or src_stride is None or dst_stride_element is None:
@@ -156,16 +160,18 @@ def ub_to_ub(
     span1 = span[1]
     dst_shape0 = dst.shape[0]
     src_shape1 = src.shape[1]
+    dst_shape1 = dst.shape[1]
     validate_var_or_int(span0, "dst.span[0]")
     validate_var_or_int(span1, "dst.span[1]")
     validate_var_or_int(dst_shape0, "dst.shape[0]")
     validate_var_or_int(src_shape1, "src.shape[1]")
+    validate_var_or_int(dst_shape1, "dst.shape[1]")
     if n_burst is None:
         n_burst = span0
     if burst_len is None:
         burst_len = CeilDiv(span1, dst.dtype.C0)
     if dst_stride is None:
-        dst_stride = CeilDiv(dst_shape0 - span0, dst.dtype.C0)
+        dst_stride = CeilDiv(dst_shape1 - span1, dst.dtype.C0)
     if src_stride is None:
         src_stride = CeilDiv(src_shape1 - span1, src.dtype.C0)
     if n_burst is None or burst_len is None or dst_stride is None or src_stride is None:

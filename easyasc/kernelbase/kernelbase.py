@@ -508,9 +508,16 @@ class KernelBase:
             json.dump(preset_data, f, indent=4)
             f.write("\n")
 
-    def generate(self, out_dir: str, cann_path: Optional[str] = None) -> None:
+    def generate(
+        self,
+        out_dir: str,
+        cann_path: Optional[str] = None,
+        profile: bool = False,
+    ) -> None:
         if not isinstance(out_dir, str):
             raise TypeError(f"out_dir必须是str类型，当前类型: {type(out_dir)}")
+        if not isinstance(profile, bool):
+            raise TypeError(f"profile必须是bool类型，当前类型: {type(profile)}")
         if cann_path is None:
             cann_path = os.getenv("ASCEND_HOME_PATH")
             if not cann_path:
@@ -545,6 +552,8 @@ class KernelBase:
         if not os.path.isfile(tensorutils_src):
             raise FileNotFoundError(f"未找到tensorutils.h: {tensorutils_src}")
         shutil.copy2(tensorutils_src, os.path.join(op_kernel_dir, "tensorutils.h"))
+        self.generate_aclnn_test(f"{out_dir}_aclnn_test", cann_path=cann_path, profile=profile)
+        self.generate_bashfiles(out_dir, cann_path)
 
     def generate_aclnn_test(
         self,
@@ -565,6 +574,8 @@ class KernelBase:
 
         abs_path = os.path.abspath(path)
         os.makedirs(abs_path, exist_ok=True)
+        os.makedirs(os.path.join(abs_path, "input"), exist_ok=True)
+        os.makedirs(os.path.join(abs_path, "output"), exist_ok=True)
         resources_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "resources"))
         macros_src = os.path.join(resources_dir, "macros.h")
         if not os.path.isfile(macros_src):
@@ -836,3 +847,29 @@ class KernelBase:
 
         with open(os.path.join(abs_path, "test.cpp"), "w", encoding="utf-8") as f:
             f.write("\n".join(lines))
+
+    def generate_bashfiles(self, path: str, cann_path: str) -> None:
+        if not isinstance(path, str):
+            raise TypeError(f"path必须是str类型，当前类型: {type(path)}")
+        if not isinstance(cann_path, str):
+            raise TypeError(f"cann_path必须是str类型，当前类型: {type(cann_path)}")
+        script_lines = [
+            f"cd {path}",
+            "bash build.sh",
+            "cd build_out",
+            'for f in custom_*.run; do bash "$f"; done',
+            f"export LD_LIBRARY_PATH={cann_path}/opp/vendors/customize/op_api/lib/:${{LD_LIBRARY_PATH}}",
+            f"cd ../../{path}_aclnn_test",
+            "python setup_aclnn.py",
+            "",
+        ]
+        with open("b.sh", "w", encoding="utf-8") as f:
+            f.write("\n".join(script_lines))
+        run_lines = [
+            f"export LD_LIBRARY_PATH={cann_path}/opp/vendors/customize/op_api/lib/:${{LD_LIBRARY_PATH}}",
+            f"cd {path}_aclnn_test",
+            "./aclnn_test",
+            "",
+        ]
+        with open("r.sh", "w", encoding="utf-8") as f:
+            f.write("\n".join(run_lines))
