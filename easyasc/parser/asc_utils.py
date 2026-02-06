@@ -4,7 +4,7 @@ from typing import Dict, Iterable, Set, Tuple
 from ..utils.instruction import Instruction
 from ..utils.positions import POSITION_CPP_MAPPING, Position
 from ..utils.Tensor import DBuff, GMTensor, Tensor
-from ..utils.var import Var
+from ..utils.var import Expr, Var
 
 try:
     import sympy as sp
@@ -124,6 +124,16 @@ def is_tmp_gmtensor(value: object) -> bool:
 def value_to_cpp(value, expr_map: Dict[str, str]) -> str:
     if isinstance(value, bool):
         return "true" if value else "false"
+    if isinstance(value, Expr):
+        expr = str(value)
+        if expr_map:
+            for name, mapped in expr_map.items():
+                if name not in expr:
+                    continue
+                mapped_expr = simplify_expr(mapped)
+                mapped_expr = _wrap_expr(mapped_expr)
+                expr = re.sub(rf"\b{re.escape(name)}\b", mapped_expr, expr)
+        return expr
     if isinstance(value, Var):
         mapped = expr_map.get(value.name)
         if mapped is not None:

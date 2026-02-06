@@ -63,7 +63,8 @@ def cubefunc(x: GMTensor, y: GMTensor, z: GMTensor, M: Var, N: Var, K: Var):
             for i in range(10):
                 xub[cnt] <<= x[m:m + BLK, 0:K]
                 xub[cnt] <<= xub[cnt1] + xub[cnt2]
-            subset_vec(xub, cnt, cnt1, cnt2)
+            if GetSubBlockIdx()==0:
+                subset_vec(xub, cnt, cnt1, cnt2)
             vv[m:m + BLK, 0:K] <<= xub[cnt]
 
     xub[cnt] <<= xub[cnt1] + xub[cnt2]

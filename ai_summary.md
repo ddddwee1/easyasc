@@ -45,7 +45,7 @@
 - `asc.py` classifies instructions into cube/vec sides using stub opnames and handler modules, validates block structure, folds loops/decl-assigns, and emits C++ via handlers.
 - `split_instructions` runs pruning passes per side, and `translate_split` inserts auto-sync and runs memory-usage analysis before translation.
 - `analyze_usage` prints rich tables for L1/L0/UB usage estimates and inserts a reset-cache banner.
-- `asc_utils.py` maps dtype/positions to C++ strings, formats expressions and offsets, simplifies expressions with SymPy when available, and tracks which temporary instructions can be skipped or inlined.
+- `asc_utils.py` maps dtype/positions to C++ strings, formats expressions and offsets, simplifies expressions with SymPy when available, and tracks which temporary instructions can be skipped or inlined; it now substitutes `expr_map` entries inside `Expr` conditions so folded temp vars (e.g., `GetSubBlockIdx`) inline correctly in control flow.
 - `asc_pruning.py` parses instructions into structured blocks, removes empty blocks, prunes unused `create_gm_tensor`/event declarations, and prunes unused vars/assignments using side-specific dependency analysis.
 - `asc_autosync.py` builds pipe-to-op mappings (including explicit vec ops), uses `AutosyncNode` to walk nested loops/ifs and detect buffer reuse, and inserts event set/wait with `preset` hints when names contain `valid`.
 - `asc_handlers/` provide opcode-to-emitter handlers for core creation/slicing, math ops, flow control, cube ops, vec ops, events, pipe barriers/flags, atomics, reinterpret, and reset-cache.
