@@ -9,3 +9,4 @@ test_cust_op
 test_aclnn
 ai_modifications.md
 test_cust_op_aclnn_test
+*.log

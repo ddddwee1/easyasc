@@ -41,13 +41,24 @@ def cubefunc(x: GMTensor, y: GMTensor, z: GMTensor, M: Var, N: Var, K: Var):
 
 
 if __name__ == "__main__":
-    M = Var(64*20)
-    N = Var(64)
-    K = Var(64)
-    x= GMTensor(DT.half, [M, K])
-    y= GMTensor(DT.half, [N, K])
-    z= GMTensor(DT.half, [M, N])
-    cubefunc(x, y, z, M, N, K)
+    import torch 
+    # M = Var(64*20)
+    # N = Var(64)
+    # K = Var(64)
+    # x= GMTensor(DT.half, [M, K])
+    # y= GMTensor(DT.half, [N, K])
+    # z= GMTensor(DT.half, [M, N])
+    # cubefunc(x, y, z, M, N, K)
     out_dir = "test_cust_op"
-    cubefunc.generate(out_dir, profile=True)
+    # cubefunc.generate(out_dir, profile=True)
+
+    M = 64*20 
+    N = 64 
+    K = 128 
+    x = torch.randn(M, K).half()
+    y = torch.randn(N, K).half()
+    z = torch.randn(M, N).half()
+
+    op = OpExec(cubefunc, out_dir)
+    op(x, y, z, M, N, K)
 

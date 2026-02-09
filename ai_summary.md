@@ -3,18 +3,20 @@
 **Overview**
 - `easyasc` is a Python DSL that records tensor/var operations as `Instruction`s and translates them into Ascend C++ code, split into cube (AIC) and vec (AIV) kernels.
 - Typical flow: Python AST transforms normalize syntax, runtime objects append instructions, the parser splits cube/vec, inserts auto-sync, prunes, and emits C++ via handlers, and optional custom op project generation wraps the output.
+- `OpExec` provides a PyTorch-facing wrapper that builds `GMTensor`/`Var` placeholders from torch inputs, triggers code/test generation, and can run the build script.
 
 **Repository Layout**
 - `easyasc/`: Core library (DSL, runtime objects, parser, handlers, resources, shortcuts).
+- `easyasc/torchplutin.py`: PyTorch-facing execution wrapper and build runner (`OpExec`).
 - `testcases/`: Example kernels covering vec ops, autosync patterns, cube/vec mixing, and syntax sugar.
 - `test.py`: End-to-end sample kernel using auto-sync, matmul shortcut, mutex sync, and custom op + ACLNN test generation.
-- `test_cust_op/`: Sample CustomOp build tree with CMake files and a helper build script.
 - `legacy/`: Present but empty.
 - `wsl_setenv.sh`: Environment setup for WSL (LD_LIBRARY_PATH, PYTHONPATH, include paths).
 - `TODO.txt`: Note about merging tensorutils changes for 910b.
 
 **Public API Surface (`easyasc/__init__.py`)**
 - Re-exports datatypes (`DT`), tensors (`Tensor`, `DBuff`, `GMTensor`), `Var`, decorators (`kernel`, `func`, `auto_sync`), positions, pipe/events/mutex types, and a large set of stub functions.
+- Re-exports `OpExec` as the PyTorch execution helper.
 - Re-exports vector helpers `maximum`/`minimum` (from `utils.vecop`) for syntax sugar.
 
 **Decorators and Syntax Transforms**
@@ -29,9 +31,13 @@
 - `dump_kernel` emits cube/vec headers with `__aicore__ inline void {name}_{cube/vec}(...)` wrappers and a `.cpp` entry that loads tiling, dispatches AIC/AIV, and passes GM/workspace/var params.
 - `generate_op_host` writes a tiling data header and op-def `.cpp` with inferred inputs/outputs/attrs, tiling size calculation (including `workspace_shapes`), and block size setup.
 - `generate_op_project` extracts `resources/CustomOp.tar.gz` and updates `CMakePresets.json` for `ASCEND_CANN_PACKAGE_PATH` and device type.
-- `generate` now accepts `cann_path: Optional[str]` (falling back to `ASCEND_HOME_PATH`) plus `profile: bool`, then generates the op project, kernel, ACLNN test at `{out_dir}_aclnn_test`, and helper scripts via `generate_bashfiles`.
+- `generate` accepts `out_dir: str = ""` (empty defaults to kernel name), `cann_path: Optional[str]` (falling back to `ASCEND_HOME_PATH`) and `profile: bool`, then generates the op project, kernel, ACLNN test at `{out_dir}_aclnn_test`, and helper scripts via `generate_bashfiles`.
 - `generate_aclnn_test` creates an ACLNN test scaffold: copies `macros.h`/`parse_prof.py`, writes `setup_aclnn.py` with injected `cann_path` and architecture-specific `x86_64-linux`/`aarch64-linux` paths, ensures `input/` and `output/` subdirs exist, emits `tensorx.h` with `#include "aclnn_{name}.h"`, and generates `test.cpp` from the last bound kernel args/outputs (requires the kernel be called). It maps dtypes to `TensorX<...>` macros, enforces `Var` to be `int`/`float` with values, orders `EXECOP` args as inputs → vars → outputs, uses `aclnn{CamelName}`, and when `profile=True` inserts profiling blocks from `resources/test.cpp` and runs a 100-iteration loop plus a single call.
 - `generate_bashfiles` writes `b.sh` (build/run/install + setup) and `r.sh` (runtime execution) helper scripts in the current directory using the provided `path` and `cann_path`.
+
+**Torch Integration (`easyasc/torchplutin.py`)**
+- `_run_bash_with_progress` runs `b.sh`, prints a simple progress bar to stderr, logs stdout/stderr to `b.sh.log`, and raises on nonzero exit.
+- `OpExec` validates a `KernelBase` instance, requires all `torch.Tensor` args to precede scalar args, maps torch dtypes to `Datatype`, builds `GMTensor`/`Var` placeholders (reusing scalar vars for shape dims), runs the kernel, calls `KernelBase.generate`, writes `input_{name}.bin` into `{out_dir or kernel_name}_aclnn_test/input`, and optionally runs `b.sh` unless `gen_only=True`.
 
 **Runtime Data Model (`easyasc/utils`)**
 - `Tensor`/`DBuff`/`GMTensor` in `utils/Tensor.py` validate types, allocate temp names, emit `create_*`, support slicing via `__getitem__`, and use `__ilshift__` to select the correct data-move operation by position.
@@ -66,7 +72,7 @@
 - `resources/test.cpp` serves as the profiling snippet template for ACLNN test generation.
 
 **Tests and Examples**
-- `test.py` demonstrates auto-sync, matmul shortcut, workspace splitting, mutex sync, cache reset, and custom op generation (`KernelBase.generate`), and now also exercises `generate_aclnn_test`.
+- `test.py` demonstrates auto-sync, matmul shortcut, workspace splitting, mutex sync, cache reset, and custom op generation (`KernelBase.generate`) driven from torch tensors via `OpExec`.
 - `testcases/test_allvec.py` exercises most vector ops, barriers, events, and atomic variants in one kernel.
 - `testcases/test_cube_autosync.py` stresses autosync insertion across nested loops/ifs and mixed cube/vec scopes.
 - `testcases/test_cvmix.py` mixes cube and vec phases with control flow and sync events.

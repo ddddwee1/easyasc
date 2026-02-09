@@ -36,3 +36,4 @@ from .stub_functions import (
     select,                                                                 # stub_functions/vec/select.py
 )
 from .flowcontrol import range, unroll, If, Elif, Else
+from .torchplutin import OpExec

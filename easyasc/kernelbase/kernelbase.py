@@ -510,12 +510,14 @@ class KernelBase:
 
     def generate(
         self,
-        out_dir: str,
+        out_dir: str = "",
         cann_path: Optional[str] = None,
         profile: bool = False,
     ) -> None:
         if not isinstance(out_dir, str):
             raise TypeError(f"out_dir必须是str类型，当前类型: {type(out_dir)}")
+        if out_dir == "":
+            out_dir = self.name
         if not isinstance(profile, bool):
             raise TypeError(f"profile必须是bool类型，当前类型: {type(profile)}")
         if cann_path is None:
