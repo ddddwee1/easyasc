@@ -1,6 +1,8 @@
 from .common import Handler, handle_start_auto_sync, handle_end_auto_sync
 from .core import (
     handle_create_var,
+    handle_create_reg,
+    handle_create_maskreg,
     handle_create_dbuf,
     handle_create_tensor,
     handle_create_gm_tensor,
@@ -108,6 +110,7 @@ from .vec_group import (
 )
 from .vec_sort import handle_vec_sort32, handle_vec_mergesort4, handle_vec_mergesort_2seq
 from .vec_mask import handle_set_mask, handle_reset_mask
+from .vec_micro import handle_call_micro
 from .vec_datamove import handle_vec_gm2ubpad, handle_vec_ub2gmpad, handle_vec_ub2ub
 from .vec_cast import handle_vec_cast
 from .vec_compare import handle_vec_compare, handle_vec_compares, handle_vec_set_cmpmask
@@ -119,6 +122,8 @@ from .misc import handle_reset_cache
 def build_handlers() -> dict[str, Handler]:
     return {
         "create_var": handle_create_var,
+        "create_reg": handle_create_reg,
+        "create_maskreg": handle_create_maskreg,
         "create_dbuf": handle_create_dbuf,
         "create_tensor": handle_create_tensor,
         "create_gm_tensor": handle_create_gm_tensor,
@@ -216,6 +221,7 @@ def build_handlers() -> dict[str, Handler]:
         "mergesort_2seq": handle_vec_mergesort_2seq,
         "set_mask": handle_set_mask,
         "reset_mask": handle_reset_mask,
+        "call_micro": handle_call_micro,
         "gm_to_ub_pad": handle_vec_gm2ubpad,
         "ub_to_gm_pad": handle_vec_ub2gmpad,
         "ub_to_ub": handle_vec_ub2ub,

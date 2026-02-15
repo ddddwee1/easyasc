@@ -1,13 +1,7 @@
-from easyasc.a5 import * 
+from easyasc.a2 import * 
 
 
 BLK = 64
-
-@vf()
-def addmic(x: Tensor, n_rows: Var):
-    r1 = Reg(DT.float)
-    mask1 = MaskReg(DT.float)
-
 
 @kernel()
 def cubefunc(x: GMTensor, y: GMTensor, z: GMTensor, M: Var, N: Var, K: Var):
@@ -39,7 +33,7 @@ def cubefunc(x: GMTensor, y: GMTensor, z: GMTensor, M: Var, N: Var, K: Var):
             z.free()
             
             if GetSubBlockIdx()==0:
-                addmic(xub[0], m_per_core)
+                outub[cnt] <<= xub[cnt] * 2 
                 z[m:m+BLK, :] <<= outub[cnt]
 
     return z 
@@ -47,8 +41,15 @@ def cubefunc(x: GMTensor, y: GMTensor, z: GMTensor, M: Var, N: Var, K: Var):
 
 if __name__ == "__main__":
     import torch 
-
+    # M = Var(64*20)
+    # N = Var(64)
+    # K = Var(64)
+    # x= GMTensor(DT.half, [M, K])
+    # y= GMTensor(DT.half, [N, K])
+    # z= GMTensor(DT.half, [M, N])
+    # cubefunc(x, y, z, M, N, K)
     out_dir = "test_cust_op"
+    # cubefunc.generate(out_dir, profile=True)
 
     M = 64*20 
     N = 64 
@@ -57,6 +58,6 @@ if __name__ == "__main__":
     y = torch.randn(N, K).half()
     z = torch.randn(M, N).half()
 
-    op = OpExec(cubefunc, out_dir, gen_only=True)
+    op = OpExec(cubefunc, out_dir)
     op(x, y, z, M, N, K)
 

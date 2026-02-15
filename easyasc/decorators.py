@@ -2,6 +2,7 @@ from typing import Callable, Any, Optional
 from functools import wraps
 
 from .kernelbase.kernelbase import KernelBase
+from .micro.micromodule import MicroModule
 from .pythonic import transform_kernel
 from .utils.instruction import Instruction
 from . import globvars
@@ -137,3 +138,15 @@ class auto_sync:
         if self._func is not None:
             return getattr(self._func, name)
         raise AttributeError(name)
+
+
+class vf:
+    """Decorator class that creates a MicroModule wrapper."""
+    def __init__(self):
+        pass
+
+    def __call__(self, func: Callable[..., Any]) -> MicroModule:
+        if not callable(func):
+            raise TypeError("vf decorator expects a single callable")
+        transformed = transform_kernel(func)
+        return MicroModule(func.__name__, transformed)

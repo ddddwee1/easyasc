@@ -4,7 +4,7 @@ import os
 import platform
 import shutil
 import tarfile
-from typing import List, Optional, Union
+from typing import List, Optional, Set, Union, TYPE_CHECKING
 
 from ..utils.instruction import Instruction
 from ..utils.Tensor import GMTensor, DBuff
@@ -13,6 +13,9 @@ from ..utils.mutex import CvMutex, VcMutex
 from ..utils.datatype import Datatype
 from ..utils.positions import Position
 from .. import globvars
+
+if TYPE_CHECKING:
+    from ..micro.micromodule import MicroModule
 
 
 class KernelBase:
@@ -23,6 +26,7 @@ class KernelBase:
         self.instructions: List[Instruction] = []
         self.crosscore_mutex: List[Union[CvMutex, VcMutex]] = []
         self.workspace_shapes: List[Union[list, tuple]] = []
+        self.used_micros: Set["MicroModule"] = set()
         self._last_bound_args = {}
         self._last_output_gmtensors = set()
 
@@ -45,6 +49,7 @@ class KernelBase:
         self._last_bound_args = dict(bound.arguments)
         self._last_output_gmtensors = set()
         self.workspace_shapes = []
+        self.used_micros = set()
         for param_name, value in bound.arguments.items():
             if isinstance(value, (GMTensor, Var)):
                 value.name = param_name
@@ -545,6 +550,8 @@ class KernelBase:
         cwd = os.getcwd()
         try:
             os.chdir(op_kernel_dir)
+            for micro in self.used_micros:
+                micro.gen_code(f"{micro.name}.h")
             self.dump_kernel(self.name)
         finally:
             os.chdir(cwd)

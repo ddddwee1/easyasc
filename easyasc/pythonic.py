@@ -79,7 +79,7 @@ class _VarNameAdder(ast.NodeTransformer):
         value.keywords.append(ast.keyword(arg="name", value=ast.Constant(target.id)))
 
 
-_NAME_CALLS = {"Var", "Tensor", "DBuff", "Min", "CeilDiv", "range", "SEvent", "DEvent", "reinterpret", "split_workspace"}
+_NAME_CALLS = {"Var", "Tensor", "DBuff", "Reg", "MaskReg", "Min", "CeilDiv", "range", "SEvent", "DEvent", "reinterpret", "split_workspace"}
 
 
 class _BoolOpRewriter(ast.NodeTransformer):
@@ -216,9 +216,9 @@ def _is_kernel_decorator(node: ast.AST) -> bool:
     if isinstance(node, ast.Call):
         node = node.func
     if isinstance(node, ast.Name):
-        return node.id in {"kernel", "func", "auto_sync"}
+        return node.id in {"kernel", "func", "auto_sync", "vf"}
     if isinstance(node, ast.Attribute):
-        return node.attr in {"kernel", "func", "auto_sync"}
+        return node.attr in {"kernel", "func", "auto_sync", "vf"}
     return False
 
 

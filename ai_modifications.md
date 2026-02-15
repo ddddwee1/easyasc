@@ -1,0 +1,19 @@
+- Added MicroModule with tmp_idx initialized to 0 in easyasc/micro/micromodule.py.
+- Added global active_micro Optional[MicroModule] defaulting to None in easyasc/globvars.py.
+- Updated MicroModule to store func, track instructions list, and manage globvars.active_micro during calls in easyasc/micro/micromodule.py.
+- Added easyasc/utils/mask.py with MaskTypeValue and MaskType mirroring legacy mask constants.
+- Added easyasc/utils/reg.py with Reg and MaskReg classes and basic validation.
+- Auto-generate Reg/MaskReg names from globvars.active_micro.tmp_idx when name is empty in easyasc/utils/reg.py.
+- Added create_reg instruction emission in Reg init and a parser handler that emits MicroAPI::RegTensor declarations, wiring it into handler mapping.
+- Added MicroModule name parameter and vf decorator to create MicroModule instances with function name.
+- Reordered MicroModule init params to (name, func) and updated vf decorator call.
+- Added call_micro instruction emission in MicroModule.__call__ and a vec handler to translate it with UB address/Var expressions.
+- Added MicroModule __call__ arg type/position validation and fixed call_micro handler to use value_to_cpp for Tensor UB address emission.
+- Disallowed kwargs in MicroModule.__call__.
+- Added KernelBase.used_micros set (reset per call) and recorded MicroModule usage during __call__.
+- Typed KernelBase.used_micros as Set[MicroModule] with TYPE_CHECKING import.
+- Added MicroModule.gen_code to translate stored instructions and write to a file path.
+- Emit micro headers via MicroModule.gen_code for each used micro before dump_kernel in KernelBase.generate.
+- Added Reg to pythonic name injection and applied transform_kernel inside vf decorator.
+- Emitted create_maskreg instruction on MaskReg init and added handler to translate MicroAPI::MaskReg creation.
+- Added MaskReg to pythonic name injection list.

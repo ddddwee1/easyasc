@@ -12,6 +12,7 @@ from .common import (
     value_to_cpp,
 )
 from ...utils.datatype import DataTypeValue
+from ...utils.reg import Reg, MaskReg
 
 
 def handle_create_var(inst, helper, expr_map) -> None:
@@ -21,6 +22,25 @@ def handle_create_var(inst, helper, expr_map) -> None:
     dtype = dtype_to_cpp(val.dtype)
     init_expr = value_to_cpp(val.value, expr_map)
     helper(f"{dtype} {val.name} = {init_expr};")
+
+
+def handle_create_reg(inst, helper, expr_map) -> None:
+    reg = inst.kwargs.get("reg", None)
+    if not isinstance(reg, Reg):
+        raise TypeError(f"create_reg需要Reg类型，当前类型: {type(reg)}")
+    dtype = dtype_to_cpp(reg.dtype)
+    helper(f"MicroAPI::RegTensor<{dtype}> {reg.name};")
+
+
+def handle_create_maskreg(inst, helper, expr_map) -> None:
+    reg = inst.kwargs.get("reg", None)
+    if not isinstance(reg, MaskReg):
+        raise TypeError(f"create_maskreg需要MaskReg类型，当前类型: {type(reg)}")
+    dtype = dtype_to_cpp(reg.dtype)
+    helper(
+        f"MicroAPI::MaskReg {reg.name} = "
+        f"MicroAPI::CreateMask<{dtype}, MicroAPI::MaskPattern::{reg.init_mode.name}>();"
+    )
 
 
 def handle_create_dbuf(inst, helper, expr_map) -> None:
