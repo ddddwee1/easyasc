@@ -96,8 +96,12 @@ class Var:
             self.value = cast(Union[int, float, None], value)
         self.idx: int = idx
 
-        if not value_is_var:
-            if globvars.active_kernel is not None and not isinstance(value, Var):
+        if not value_is_var and not isinstance(value, Var):
+            if globvars.active_micro is not None:
+                globvars.active_micro.instructions.append(
+                    Instruction("create_var", val=self)
+                )
+            elif globvars.active_kernel is not None:
                 globvars.active_kernel.instructions.append(
                     Instruction("create_var", val=self)
                 )

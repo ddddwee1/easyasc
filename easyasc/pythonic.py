@@ -79,7 +79,7 @@ class _VarNameAdder(ast.NodeTransformer):
         value.keywords.append(ast.keyword(arg="name", value=ast.Constant(target.id)))
 
 
-_NAME_CALLS = {"Var", "Tensor", "DBuff", "Reg", "MaskReg", "Min", "CeilDiv", "range", "SEvent", "DEvent", "reinterpret", "split_workspace"}
+_NAME_CALLS = {"Var", "Tensor", "DBuff", "Reg", "MaskReg", "Min", "CeilDiv", "range", "SEvent", "DEvent", "reinterpret", "split_workspace", "CastConfig"}
 
 
 class _BoolOpRewriter(ast.NodeTransformer):

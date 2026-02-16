@@ -21,7 +21,7 @@
 
 **Decorators and Syntax Transforms**
 - `decorators.py`: `kernel` and `func` wrap or transform functions using `pythonic.transform_kernel`, and `auto_sync` is a decorator/context manager that injects `start_auto_sync` and `end_auto_sync` instructions.
-- `pythonic.py`: `_VarNameAdder` injects `name=` into `Var/Tensor/DBuff/...` calls and `range` iterators; `_BoolOpRewriter` converts `and/or/not` to `&/|/~`; `_IfRewriter` rewrites `if/elif/else` into `with If/Elif/Else` blocks; `transform_kernel` recompiles and preserves metadata.
+- `pythonic.py`: `_VarNameAdder` injects `name=` into `Var/Tensor/DBuff/Reg/MaskReg/CastConfig/...` calls and `range` iterators; `_BoolOpRewriter` converts `and/or/not` to `&/|/~`; `_IfRewriter` rewrites `if/elif/else` into `with If/Elif/Else` blocks; `transform_kernel` recompiles and preserves metadata.
 - `flowcontrol.py`: `range/unroll` emit `start_loop`/`end_loop` instructions and validate args; `If/Elif/Else` are context managers that emit block instructions and enforce kernel-only usage.
 
 **Kernel Lifecycle (`kernelbase/kernelbase.py`)**
@@ -44,6 +44,8 @@
 - `GMTensor` supports up to 2 sliced dimensions and exposes `bind_cv_mutex/bind_vc_mutex` plus `lock/ready/wait/free` for cross-core sync.
 - `Var` in `utils/var.py` records `create_var`, tracks dtype/value, supports arithmetic via stub functions, and returns `Expr` for comparisons (which intentionally fail Python boolean evaluation).
 - `VecOP` in `utils/vecop.py` captures `dst <<= src1 + src2` style operations and emits the correct vector stub calls, reinterpreting int-only ops when needed.
+- `micro/micromodule.py`: `MicroModule` tracks input arguments for codegen, collects `cast_cfg_list`, and `gen_code` emits a full micro header (pragma/include, `CastTrait` definitions, `__aicore__` wrapper, and `__VEC_SCOPE__` around translated instructions).
+- `CastConfig` (in `utils/castconfig.py`) carries `round_mode`, `reg_layout`, and saturation settings; it auto-registers in the active micro’s `cast_cfg_list`, and pythonic auto-name injection supplies `name=...` when assigned.
 - Type and enum helpers in `datatype.py`, `positions.py`, `pipe.py`, `comparemode.py`, `roundmode.py`, and `selectmode.py` provide small wrapper types and C++ mappings; `Datatype.int64` is now available.
 - `events.py` defines `SEvent`/`DEvent` with `set/wait/setall/release` instruction emission.
 - `mutex.py` defines `CvMutex`/`VcMutex` and registers them with the active kernel for cross-core coordination.
@@ -72,7 +74,7 @@
 - `resources/test.cpp` serves as the profiling snippet template for ACLNN test generation.
 
 **Tests and Examples**
-- `test.py` demonstrates auto-sync, matmul shortcut, workspace splitting, mutex sync, cache reset, and custom op generation (`KernelBase.generate`) driven from torch tensors via `OpExec`.
+- `test.py` demonstrates auto-sync, matmul shortcut, workspace splitting, mutex sync, cache reset, custom op generation (`KernelBase.generate`), and full micro stub coverage via `addmic` (including a preallocated uint8 UB tensor to avoid creating tensors inside loops).
 - `testcases/test_allvec.py` exercises most vector ops, barriers, events, and atomic variants in one kernel.
 - `testcases/test_cube_autosync.py` stresses autosync insertion across nested loops/ifs and mixed cube/vec scopes.
 - `testcases/test_cvmix.py` mixes cube and vec phases with control flow and sync events.

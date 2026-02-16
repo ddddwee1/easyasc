@@ -29,3 +29,5 @@ from .vec import (
     compare, compare_scalar, set_cmpmask,                                          # vec/compare.py
     select,                                                                        # vec/select.py
 )
+
+from . import micro

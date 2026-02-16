@@ -1,7 +1,11 @@
-from typing import Any, Callable, List
+import inspect
+from typing import Any, Callable, Dict, List
 
 from .. import globvars
+from ..utils.datatype import DataTypeValue
 from ..utils.instruction import Instruction
+from ..utils.mask import MaskType
+from ..utils.reg import MaskReg
 from ..utils.Tensor import Tensor
 from ..utils.var import Var
 from ..utils.positions import Position
@@ -12,7 +16,10 @@ class MicroModule:
         self.func = func
         self.name = name
         self.instructions: List[Any] = []
+        self.input_list: List[Any] = []
         self.tmp_idx = 0
+        self.tmp_masks: Dict[str, MaskReg] = {}
+        self.cast_cfg_list: List[Any] = []
 
     def __call__(self, *args: Any, **kwargs: Any) -> Any:
         if kwargs:
@@ -22,19 +29,110 @@ class MicroModule:
                 raise TypeError(f"MicroModule仅支持Tensor或Var入参，当前类型: {type(arg)}")
             if isinstance(arg, Tensor) and arg.position is not Position.UB:
                 raise ValueError(f"MicroModule仅支持UB上的Tensor入参，当前位置: {arg.position}")
+        sig = inspect.signature(self.func)
+        try:
+            bound = sig.bind(*args)
+        except TypeError as exc:
+            raise TypeError(f"MicroModule调用参数不匹配: {exc}") from exc
+        micro_args: List[Any] = []
+        for name, arg in bound.arguments.items():
+            if isinstance(arg, Tensor):
+                cloned = object.__new__(Tensor)
+                cloned.__dict__ = {
+                    k: (v.copy() if isinstance(v, list) else v)
+                    for k, v in arg.__dict__.items()
+                }
+                cloned.name = name
+                micro_args.append(cloned)
+            elif isinstance(arg, Var):
+                cloned = object.__new__(Var)
+                cloned.__dict__ = arg.__dict__.copy()
+                cloned.name = name
+                micro_args.append(cloned)
+            else:
+                raise TypeError(f"MicroModule仅支持Tensor或Var入参，当前类型: {type(arg)}")
+        if not self.input_list:
+            self.input_list = micro_args
         if globvars.active_kernel is not None:
             globvars.active_kernel.used_micros.add(self)
             globvars.active_kernel.instructions.append(
                 Instruction("call_micro", name=self.name, args=list(args))
             )
         globvars.active_micro = self
-        self.func(*args, **kwargs)
+        self.func(*micro_args)
+        for _,v in self.tmp_masks.items():
+            self.instructions.insert(0, Instruction("create_maskreg", reg=v))
         globvars.active_micro = None
+
+    def get_mask(self, dtype: DataTypeValue) -> MaskReg:
+        if not isinstance(dtype, DataTypeValue):
+            raise TypeError(f"dtype必须是DataTypeValue类型，当前类型: {type(dtype)}")
+        key = dtype.name
+        if key not in self.tmp_masks:
+            mask = object.__new__(MaskReg)
+            mask.dtype = dtype
+            mask.init_mode = MaskType.ALL
+            idx = self.tmp_idx
+            self.tmp_idx += 1
+            mask.name = f"_tmp_maskreg_{idx}"
+            self.tmp_masks[key] = mask
+        return self.tmp_masks[key]
 
     def gen_code(self, path: str) -> None:
         if not isinstance(path, str):
             raise TypeError(f"path必须是str类型，当前类型: {type(path)}")
         from ..parser.asc import translate
+        from ..parser.asc_utils import dtype_to_cpp
+        from ..parser.helper import CodeHelper
+        from ..utils.castconfig import CastConfig
+
+        helper = CodeHelper()
+        helper("#pragma once")
+        helper('#include "tensorutils.h"')
+        helper()
+
+        for cfg in self.cast_cfg_list:
+            if not isinstance(cfg, CastConfig):
+                continue
+            sat = "SAT" if cfg.saturate else "NO_SAT"
+            helper(
+                "static constexpr MicroAPI::CastTrait "
+                f"{cfg.name} = {{ MicroAPI::RegLayout::{cfg.reg_layout}, "
+                f"MicroAPI::SatMode::{sat}, MicroAPI::MaskMergeMode::ZEROING, "
+                f"RoundMode::{cfg.round_mode} }};"
+            )
+        if self.cast_cfg_list:
+            helper()
+
+        args = []
+        for arg in self.input_list:
+            if isinstance(arg, Tensor):
+                args.append(
+                    f"__ubuf__ {dtype_to_cpp(arg.dtype)}* {arg.name}"
+                )
+            elif isinstance(arg, Var):
+                args.append(
+                    f"const {dtype_to_cpp(arg.dtype)} &{arg.name}"
+                )
+            else:
+                raise TypeError(f"MicroModule仅支持Tensor或Var入参，当前类型: {type(arg)}")
+        args_str = ", ".join(args)
+
+        helper(f"__aicore__ inline void {self.name}({args_str}){{")
+        helper.ir()
+        helper("__VEC_SCOPE__")
+        helper("{")
+        helper.ir()
+
         code = translate(self.instructions)
+        for line in code.splitlines():
+            helper(line)
+
+        helper.il()
+        helper("}")
+        helper.il()
+        helper("}")
+        helper()
+
         with open(path, "w", encoding="utf-8") as f:
-            f.write(code)
+            f.write(str(helper))
