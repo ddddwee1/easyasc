@@ -175,7 +175,10 @@ class KernelBase:
         arg_list = ", ".join(gmtensor_args + ["workspace"] + var_args)
 
         def _wrap(code: str, suffix: str) -> str:
-            header = '#pragma once\n#include "tensorutils.h"\n\n'
+            header = '#pragma once\n#include "tensorutils.h"\n'
+            for i in self.used_micros:
+                header += f'#include "{i.name}.h"\n'
+            header += '\n'
             fn_name = f"{self.name}_{suffix}"
             body = code.strip("\n")
             if body:
