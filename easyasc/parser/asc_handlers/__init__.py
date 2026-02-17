@@ -3,6 +3,7 @@ from .core import (
     handle_create_var,
     handle_create_reg,
     handle_create_maskreg,
+    handle_create_reglist,
     handle_create_dbuf,
     handle_create_tensor,
     handle_create_gm_tensor,
@@ -10,6 +11,7 @@ from .core import (
     handle_get_buf,
     handle_slice_gm_tensor,
     handle_slice_tensor,
+    handle_micro_slice_tensor,
 )
 from .math_ops import (
     handle_get_cube_num,
@@ -126,6 +128,7 @@ def build_handlers() -> dict[str, Handler]:
         "create_var": handle_create_var,
         "create_reg": handle_create_reg,
         "create_maskreg": handle_create_maskreg,
+        "create_reglist": handle_create_reglist,
         "create_dbuf": handle_create_dbuf,
         "create_tensor": handle_create_tensor,
         "create_gm_tensor": handle_create_gm_tensor,
@@ -151,6 +154,7 @@ def build_handlers() -> dict[str, Handler]:
         "get_buf": handle_get_buf,
         "slice_gm_tensor": handle_slice_gm_tensor,
         "slice_tensor": handle_slice_tensor,
+        "micro_slice_tensor": handle_micro_slice_tensor,
         "l1_to_l0": handle_l1_to_l0,
         "start_loop": handle_start_loop,
         "start_micro_loop": handle_start_micro_loop,
@@ -238,5 +242,5 @@ def build_handlers() -> dict[str, Handler]:
         "start_auto_sync": handle_start_auto_sync,
         "end_auto_sync": handle_end_auto_sync,
     }
-    handlers.update(MICRO_OP_HANDLERS)
+    handlers.update(MICRO_OP_HANDLERS) # type: ignore
     return handlers

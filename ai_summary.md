@@ -40,7 +40,7 @@
 - `OpExec` validates a `KernelBase` instance, requires all `torch.Tensor` args to precede scalar args, maps torch dtypes to `Datatype`, builds `GMTensor`/`Var` placeholders (reusing scalar vars for shape dims), runs the kernel, calls `KernelBase.generate`, writes `input_{name}.bin` into `{out_dir or kernel_name}_aclnn_test/input`, and optionally runs `b.sh` unless `gen_only=True`.
 
 **Runtime Data Model (`easyasc/utils`)**
-- `Tensor`/`DBuff`/`GMTensor` in `utils/Tensor.py` validate types, allocate temp names, emit `create_*`, support slicing via `__getitem__`, and use `__ilshift__` to select the correct data-move operation by position. `Tensor` now accepts `Reg`/`RegOP` stores to UB, supports scalar shorthand indexing (`x[i]`) for last-dimension offset updates, and carries `vec_copy_mode` plus helpers (`downsample/upsample/unpack/unpack4/brcb/single`) to influence UB->Reg loads.
+- `Tensor`/`DBuff`/`GMTensor` in `utils/Tensor.py` validate types, allocate temp names, emit `create_*`, support slicing via `__getitem__`, and use `__ilshift__` to select the correct data-move operation by position. `Tensor` now accepts `Reg`/`RegList`/`RegOP` stores to UB; for `RegList` stores, it emits lane-wise writes using block stride `256 // dtype.size`. It also supports scalar shorthand indexing (`x[i]`) for last-dimension offset updates, carries `vec_copy_mode` plus helpers (`downsample/upsample/unpack/unpack4/brcb/single`) to influence UB->Reg loads, and emits `micro_slice_tensor` when slicing inside `active_micro`.
 - `GMTensor` supports up to 2 sliced dimensions and exposes `bind_cv_mutex/bind_vc_mutex` plus `lock/ready/wait/free` for cross-core sync.
 - `Var` in `utils/var.py` records `create_var`, tracks dtype/value, supports arithmetic via stub functions, and returns `Expr` for comparisons (which intentionally fail Python boolean evaluation).
 - `Reg`/`MaskReg` in `utils/reg.py` now expose RegOP-based operators, casting helpers, mask ops, and `<<=` assignment that can emit micro ops or perform UB<->Reg moves via RegOP, including dtype-mismatch Tensor assignment via temp-reg cast path.
@@ -56,10 +56,10 @@
 - `asc.py` classifies instructions into cube/vec sides using stub opnames and handler modules, validates block structure, folds loops/decl-assigns, supports micro-loop starts (`start_micro_loop`) in loop-depth validation/folding, and emits C++ via handlers.
 - `split_instructions` runs pruning passes per side, and `translate_split` inserts auto-sync and runs memory-usage analysis before translation.
 - `analyze_usage` prints rich tables for L1/L0/UB usage estimates and inserts a reset-cache banner.
-- `asc_utils.py` maps dtype/positions to C++ strings, formats expressions and offsets, simplifies expressions with SymPy when available, and tracks which temporary instructions can be skipped or inlined; it now substitutes `expr_map` entries inside `Expr` conditions so folded temp vars (e.g., `GetSubBlockIdx`) inline correctly in control flow.
-- `asc_pruning.py` parses instructions into structured blocks, removes empty blocks, prunes unused `create_gm_tensor`/event declarations, structurally recognizes `start_micro_loop` as a loop block marker, and prunes unused vars/assignments using side-specific dependency analysis.
+- `asc_utils.py` maps dtype/positions to C++ strings, formats expressions and offsets, simplifies expressions with SymPy when available, and tracks which temporary instructions can be skipped or inlined; it substitutes `expr_map` entries inside `Expr` conditions so folded temp vars (e.g., `GetSubBlockIdx`) inline correctly in control flow, folds `micro_slice_tensor` into pointer-arithmetic expressions (so generated micro code can avoid `_tmp_tensor` declarations), and drops zero-multiplied terms when building linear offsets.
+- `asc_pruning.py` parses instructions into structured blocks, removes empty blocks, prunes unused `create_gm_tensor`/event declarations, structurally recognizes `start_micro_loop` as a loop block marker, and prunes unused vars/assignments using side-specific dependency analysis; dependency propagation now treats `micro_slice_tensor` like other tensor view defs/sources.
 - `asc_autosync.py` builds pipe-to-op mappings (including explicit vec ops), uses `AutosyncNode` to walk nested loops/ifs and detect buffer reuse, and inserts event set/wait with `preset` hints when names contain `valid`.
-- `asc_handlers/` provide opcode-to-emitter handlers for core creation/slicing, math ops, flow control (including `start_micro_loop` loop syntax), cube ops, vec ops, events, pipe barriers/flags, atomics, reinterpret, and reset-cache.
+- `asc_handlers/` provide opcode-to-emitter handlers for core creation/slicing, math ops, flow control (including `start_micro_loop` loop syntax), cube ops, vec ops, events, pipe barriers/flags, atomics, reinterpret, and reset-cache; core handlers now include `micro_slice_tensor` emission as `__ubuf__ {dtype}* out = src + offset`.
 
 **Stub Functions (`easyasc/stub_functions`)**
 - Thin Python APIs that validate inputs and append `Instruction`s for cube/vec ops.
@@ -76,7 +76,7 @@
 - `resources/test.cpp` serves as the profiling snippet template for ACLNN test generation.
 
 **Tests and Examples**
-- `test.py` demonstrates auto-sync, matmul shortcut, workspace splitting, mutex sync, cache reset, custom op generation (`KernelBase.generate`), and RegOP `<<=` syntax coverage via `addmic` (using only RegOP-based operations with a preallocated uint8 UB tensor).
+- `test.py` demonstrates auto-sync, matmul shortcut, workspace splitting, mutex sync, cache reset, and custom op generation (`KernelBase.generate`), while `addmic` provides RegList/RegOP `<<=` coverage including binary, unary, unary-scalar, reduce, and `Tensor <<= RegList` paths; generated `addmic.h` now folds micro slice views into inline pointer arithmetic without `_tmp_tensor` temporaries.
 - `testcases/test_allvec.py` exercises most vector ops, barriers, events, and atomic variants in one kernel.
 - `testcases/test_cube_autosync.py` stresses autosync insertion across nested loops/ifs and mixed cube/vec scopes.
 - `testcases/test_cvmix.py` mixes cube and vec phases with control flow and sync events.

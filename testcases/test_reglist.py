@@ -1,4 +1,5 @@
 from easyasc.a5 import *
+from easyasc.parser.asc import translate
 
 
 BLK = 128
@@ -18,6 +19,65 @@ def addmic(x: Tensor, y: Tensor, out: Tensor):
 
     src <<= x
     rhs <<= y
+
+    # binary: reglist <op> reglist
+    dst <<= src + rhs
+    dst <<= src - rhs
+    dst <<= src * rhs
+    dst <<= src / rhs
+    dst <<= src.vmax(rhs)
+    dst <<= src.vmin(rhs)
+    dst <<= src.vand(rhs)
+    dst <<= src.vor(rhs)
+    dst <<= src.vxor(rhs)
+    dst <<= src.prelu(rhs)
+
+    # binary: reglist <op> reg
+    base = Reg(x.dtype)
+    base <<= x[0]
+    dst <<= src + base
+    dst <<= src - base
+    dst <<= src * base
+    dst <<= src / base
+
+    # binary: reglist <op> scalar
+    dst <<= src + 2.0
+    dst <<= src - 2.0
+    dst <<= src * 2.0
+    dst <<= src / 2.0
+
+    # unary
+    dst <<= src.exp()
+    dst <<= src.abs()
+    dst <<= src.sqrt()
+    dst <<= src.relu()
+    dst <<= src.ln()
+    dst <<= src.log()
+    dst <<= src.log2()
+    dst <<= src.log10()
+    dst <<= src.neg()
+    dst <<= src.vnot()
+    dst <<= src.vcopy()
+
+    # unary + scalar
+    dst <<= src.shiftls(1)
+    dst <<= src.shiftrs(1)
+    dst <<= src.axpy(scale)
+    dst <<= src.lrelu(0.1)
+    dst <<= src.vmaxs(1.0)
+    dst <<= src.vmins(scale)
+
+    # reduce
+    r_add = Reg(x.dtype)
+    r_max = Reg(x.dtype)
+    r_min = Reg(x.dtype)
+    r_add <<= src.cadd()
+    r_max <<= src.cmax()
+    r_min <<= src.cmin()
+
+    out[0] <<= r_add
+    out[1] <<= r_max
+    out[2] <<= r_min
 
     out <<= src 
     out[10] <<= f32_reglist

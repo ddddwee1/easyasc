@@ -10,7 +10,7 @@ from .utils.selectmode import SelectMode, SelectModeType
 from .utils.pipe import Pipe, PipeType
 from .utils.events import SEvent, DEvent
 from .utils.mutex import CvMutex, VcMutex
-from .utils.reg import Reg, MaskReg, MaskType
+from .utils.reg import Reg, RegList, MaskReg, MaskType
 from .utils.castconfig import CastConfig
 from .stub_functions import (
     CeilDiv, GetCubeNum, GetCubeIdx, GetVecNum, GetVecIdx, GetSubBlockIdx,  # stub_functions/var_op.py

@@ -245,7 +245,7 @@ def _build_tmp_tensor_sources(
             out = inst.kwargs.get("out", None)
             if isinstance(out, Tensor) and out.name in tmp_tensor_names:
                 sources[out.name] = inst.kwargs.get("buf", None)
-        elif inst.opname == "slice_tensor":
+        elif inst.opname in ("slice_tensor", "micro_slice_tensor"):
             out = inst.kwargs.get("out", None)
             if isinstance(out, Tensor) and out.name in tmp_tensor_names:
                 sources[out.name] = inst.kwargs.get("src", None)
@@ -459,10 +459,10 @@ def _collect_seed_usage(
 
 
 def _build_tensor_defs(instructions: List[Instruction]) -> dict[int, Instruction]:
-    """Map Tensor id -> defining instruction (get_buf / slice_tensor / reinterpret)."""
+    """Map Tensor id -> defining instruction (get_buf / slice_tensor / micro_slice_tensor / reinterpret)."""
     defs: dict[int, Instruction] = {}
     for inst in instructions:
-        if inst.opname in ("get_buf", "slice_tensor"):
+        if inst.opname in ("get_buf", "slice_tensor", "micro_slice_tensor"):
             out = inst.kwargs.get("out", None)
             if isinstance(out, Tensor):
                 defs[id(out)] = inst
@@ -520,7 +520,7 @@ def prune_unused_vars(
             continue
         if inst.opname == "get_buf":
             _extract_var_names_from_value(inst.kwargs.get("index", None), known_names, seed_vars)
-        elif inst.opname == "slice_tensor":
+        elif inst.opname in ("slice_tensor", "micro_slice_tensor"):
             _extract_var_names_from_value(inst.kwargs.get("offset", None), known_names, seed_vars)
             _extract_var_names_from_value(inst.kwargs.get("span", None), known_names, seed_vars)
             _extract_var_names_from_value(inst.kwargs.get("step", None), known_names, seed_vars)
@@ -589,7 +589,7 @@ def prune_unused_vars(
             out = inst.kwargs.get("out", None)
             if isinstance(out, Var) and out.name in pruned_vars:
                 continue
-        if inst.opname in ("get_buf", "slice_tensor"):
+        if inst.opname in ("get_buf", "slice_tensor", "micro_slice_tensor"):
             out = inst.kwargs.get("out", None)
             if isinstance(out, Tensor) and id(out) not in used_tensors:
                 continue

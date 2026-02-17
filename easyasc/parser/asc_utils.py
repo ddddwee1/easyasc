@@ -105,6 +105,13 @@ def _wrap_expr(expr: str) -> str:
     return expr
 
 
+def _is_zero_literal(expr: str) -> bool:
+    text = expr.strip()
+    if text.startswith("(") and text.endswith(")"):
+        text = text[1:-1].strip()
+    return text == "0"
+
+
 def format_binop(op: str, left: str, right: str) -> str:
     return f"{_wrap_expr(left)} {op} {_wrap_expr(right)}"
 
@@ -168,14 +175,21 @@ def build_offset_expr(shape, offset, expr_map: Dict[str, str]) -> str:
     terms = []
     dim = len(shape)
     for idx in range(dim - 1):
-        off = _wrap_expr(value_to_cpp(offset[idx], expr_map))
+        off_raw = value_to_cpp(offset[idx], expr_map)
+        if _is_zero_literal(off_raw):
+            continue
+        off = _wrap_expr(off_raw)
         if dim - idx - 1 == 1:
             stride_expr = _wrap_expr(value_to_cpp(shape[idx + 1], expr_map))
         else:
             strides = [_wrap_expr(value_to_cpp(shape[j], expr_map)) for j in range(idx + 1, dim)]
             stride_expr = " * ".join(strides)
         terms.append(f"{off} * {stride_expr}")
-    terms.append(_wrap_expr(value_to_cpp(offset[-1], expr_map)))
+    tail = value_to_cpp(offset[-1], expr_map)
+    if not _is_zero_literal(tail):
+        terms.append(_wrap_expr(tail))
+    if not terms:
+        return "0"
     return " + ".join(terms)
 
 
@@ -386,6 +400,21 @@ def build_expr_state(
                 expr_map[out.name] = f"{src_expr}[{offset_expr}]"
             tmp_tensor_names.add(out.name)
             continue
+        if inst.opname == "micro_slice_tensor":
+            out = inst.kwargs.get("out", None)
+            if not isinstance(out, Tensor) or not is_tmp_tensor(out):
+                continue
+            src = inst.kwargs.get("src", None)
+            shape = getattr(out, "shape", None)
+            offset = getattr(out, "offset", None)
+            offset_expr = simplify_expr(build_offset_expr(shape, offset, expr_map))
+            src_expr = value_to_cpp(src, expr_map)
+            if offset_expr == "0":
+                expr_map[out.name] = f"{src_expr}"
+            else:
+                expr_map[out.name] = f"{src_expr} + {offset_expr}"
+            tmp_tensor_names.add(out.name)
+            continue
 
     tmp_gmtensor_names: Set[str] = set()
     for inst in instructions:
@@ -439,7 +468,7 @@ def should_skip_inst(
     ):
         out = inst.kwargs.get("out", None)
         return isinstance(out, Var) and out.name in tmp_var_names
-    if inst.opname in ("get_buf", "slice_tensor", "create_tensor"):
+    if inst.opname in ("get_buf", "slice_tensor", "micro_slice_tensor", "create_tensor"):
         out = inst.kwargs.get("out", None)
         return isinstance(out, Tensor) and is_tmp_tensor(out) and out.name in tmp_tensor_names
     if inst.opname == "slice_gm_tensor":

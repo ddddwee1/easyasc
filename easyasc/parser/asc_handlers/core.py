@@ -12,7 +12,7 @@ from .common import (
     value_to_cpp,
 )
 from ...utils.datatype import DataTypeValue
-from ...utils.reg import Reg, MaskReg
+from ...utils.reg import Reg, MaskReg, RegList
 
 
 def handle_create_var(inst, helper, expr_map) -> None:
@@ -41,6 +41,14 @@ def handle_create_maskreg(inst, helper, expr_map) -> None:
         f"MicroAPI::MaskReg {reg.name} = "
         f"MicroAPI::CreateMask<{dtype}, MicroAPI::MaskPattern::{reg.init_mode.name}>();"
     )
+
+
+def handle_create_reglist(inst, helper, expr_map) -> None:
+    reglist = inst.kwargs.get("reglist", None)
+    if not isinstance(reglist, RegList):
+        raise TypeError(f"create_reglist需要RegList类型，当前类型: {type(reglist)}")
+    dtype = dtype_to_cpp(reglist.dtype)
+    helper(f"MicroAPI::RegTensor<{dtype}> {reglist.name}[{reglist.length}];")
 
 
 def handle_create_dbuf(inst, helper, expr_map) -> None:
@@ -151,3 +159,18 @@ def handle_slice_tensor(inst, helper, expr_map) -> None:
     src_expr = value_to_cpp(src, expr_map)
     dtype = dtype_to_cpp(out.dtype)
     helper(f"Tensor<{dtype}> {out.name} = {src_expr}[{offset_expr}];")
+
+
+def handle_micro_slice_tensor(inst, helper, expr_map) -> None:
+    out = inst.kwargs.get("out", None)
+    if not isinstance(out, Tensor):
+        raise TypeError(f"micro_slice_tensor需要Tensor类型，当前类型: {type(out)}")
+    src = inst.kwargs.get("src", None)
+    if not isinstance(src, Tensor):
+        raise TypeError(f"micro_slice_tensor需要Tensor类型，当前类型: {type(src)}")
+    shape = getattr(out, "shape", None)
+    offset = getattr(out, "offset", None)
+    offset_expr = build_offset_expr(shape, offset, expr_map)
+    src_expr = value_to_cpp(src, expr_map)
+    dtype = dtype_to_cpp(out.dtype)
+    helper(f"__ubuf__ {dtype}* {out.name} = {src_expr} + {offset_expr};")

@@ -16,6 +16,13 @@ if TYPE_CHECKING:
 Scalar = Union[int, float, Var]
 
 
+def _make_reg_proxy(dtype: DataTypeValue, name: str) -> "Reg":
+    reg = object.__new__(Reg)
+    reg.dtype = dtype
+    reg.name = name
+    return reg
+
+
 class Reg:
     def __init__(self, dtype: DataTypeValue, name: str = "") -> None:
         if not isinstance(dtype, DataTypeValue):
@@ -365,6 +372,293 @@ class Reg:
     def gather_mask(self, src: "Reg", mask: Optional["MaskReg"] = None) -> None:
         from ..stub_functions.micro.datamove import gather_mask
         gather_mask(self, src, mask=mask)
+
+
+class RegList:
+    def __init__(self, dtype: DataTypeValue, length: int, name: str = "") -> None:
+        if not isinstance(dtype, DataTypeValue):
+            raise TypeError(f"dtype必须是DataTypeValue类型，当前类型: {type(dtype)}")
+        if not isinstance(length, int):
+            raise TypeError(f"length必须是int类型，当前类型: {type(length)}")
+        if length <= 0:
+            raise ValueError(f"length必须大于0，当前值: {length}")
+        if not isinstance(name, str):
+            raise TypeError(f"name必须是str类型，当前类型: {type(name)}")
+
+        if name == "":
+            module = globvars.active_micro
+            if module is None:
+                raise RuntimeError("active_micro为None，无法自动生成RegList名称")
+            idx = module.tmp_idx
+            module.tmp_idx += 1
+            name = f"_reglist_{idx}"
+
+        self.dtype = dtype
+        self.length = length
+        self.name = name
+
+        if globvars.active_micro is not None:
+            globvars.active_micro.instructions.append(
+                Instruction("create_reglist", reglist=self)
+            )
+
+    def __repr__(self) -> str:
+        return (
+            f"RegList(name={self.name!r}, dtype={self.dtype!r}, "
+            f"length={self.length!r})"
+        )
+
+    def __str__(self) -> str:
+        return self.name
+
+    def __getitem__(self, idx):
+        if not isinstance(idx, (Var, int)):
+            raise TypeError(f"RegList索引仅支持Var/int，当前类型: {type(idx)}")
+        reg_name = f"{self.name}[{idx}]"
+        return _make_reg_proxy(self.dtype, reg_name)
+
+    def __setitem__(self, idx, value) -> None:
+        # `self[i] <<= ...` triggers a follow-up `__setitem__` in Python's
+        # augmented-assignment protocol. RegList elements are proxy regs, so
+        # there is nothing to store back into the container.
+        _ = idx
+        _ = value
+
+    def _copy_mask(self, src: "RegOP", dst: "RegOP") -> None:
+        if src.mask is not None:
+            dst.setmask(src.mask)
+
+    def _emit_unary(self, op: "RegOP") -> None:
+        from .regop import RegOP
+
+        if len(op.inputs) < 1:
+            raise TypeError(f"{op.opname}至少需要1个输入")
+        src = op.inputs[0]
+        if not isinstance(src, RegList):
+            raise TypeError(f"{op.opname}的输入必须是RegList，当前类型: {type(src)}")
+        if src.length != self.length:
+            raise ValueError(f"RegList长度不一致: {self.length} vs {src.length}")
+
+        for i in range(self.length):
+            item_op = RegOP(op.opname, src[i])
+            self._copy_mask(op, item_op)
+            self[i] <<= item_op
+
+    def _emit_unary_scalar(self, op: "RegOP") -> None:
+        from .regop import RegOP
+
+        if len(op.inputs) < 2:
+            raise TypeError(f"{op.opname}至少需要2个输入")
+        src = op.inputs[0]
+        value = op.inputs[1]
+        if not isinstance(src, RegList):
+            raise TypeError(f"{op.opname}的输入必须是RegList，当前类型: {type(src)}")
+        if src.length != self.length:
+            raise ValueError(f"RegList长度不一致: {self.length} vs {src.length}")
+        if not isinstance(value, (Var, int, float)):
+            raise TypeError(f"{op.opname}的value必须是Var/int/float，当前类型: {type(value)}")
+
+        for i in range(self.length):
+            item_op = RegOP(op.opname, src[i], value)
+            self._copy_mask(op, item_op)
+            self[i] <<= item_op
+
+    def _emit_binary(self, op: "RegOP") -> None:
+        from .regop import RegOP
+
+        if len(op.inputs) < 2:
+            raise TypeError(f"{op.opname}至少需要2个输入")
+        src1 = op.inputs[0]
+        src2 = op.inputs[1]
+        if not isinstance(src1, RegList):
+            raise TypeError(f"{op.opname}的src1必须是RegList，当前类型: {type(src1)}")
+        if src1.length != self.length:
+            raise ValueError(f"RegList长度不一致: {self.length} vs {src1.length}")
+
+        if isinstance(src2, RegList):
+            if src2.length != self.length:
+                raise ValueError(f"RegList长度不一致: {self.length} vs {src2.length}")
+            for i in range(self.length):
+                item_op = RegOP(op.opname, src1[i], src2[i])
+                self._copy_mask(op, item_op)
+                self[i] <<= item_op
+            return
+
+        if isinstance(src2, Reg):
+            for i in range(self.length):
+                item_op = RegOP(op.opname, src1[i], src2)
+                self._copy_mask(op, item_op)
+                self[i] <<= item_op
+            return
+
+        if isinstance(src2, (Var, int, float)):
+            if op.opname not in ("add", "sub", "mul", "div"):
+                raise TypeError(f"{op.opname}不支持RegList与标量/Var计算")
+            for i in range(self.length):
+                if op.opname == "add":
+                    item_op = src1[i] + src2
+                elif op.opname == "sub":
+                    item_op = src1[i] - src2
+                elif op.opname == "mul":
+                    item_op = src1[i] * src2
+                else:
+                    item_op = src1[i] / src2
+                self._copy_mask(op, item_op)
+                self[i] <<= item_op
+            return
+
+        raise TypeError(f"{op.opname}的src2类型不支持: {type(src2)}")
+
+    def __ilshift__(self, other):
+        from .Tensor import Tensor
+        from .regop import RegOP
+
+        if isinstance(other, Tensor):
+            block = 256 // self.dtype.size
+            for i in range(self.length):
+                self[i] <<= other[block * i]
+            return self
+
+        if isinstance(other, RegOP):
+            binary_ops = ("add", "sub", "mul", "div", "vmax", "vmin", "vand", "vor", "vxor", "prelu")
+            unary_ops = ("exp", "abs", "sqrt", "relu", "ln", "log", "log2", "log10", "neg", "vnot", "vcopy")
+            unary_scalar_ops = ("shiftls", "shiftrs", "axpy", "lrelu", "vmaxs", "vmins", "adds", "muls")
+            if other.opname in binary_ops:
+                self._emit_binary(other)
+                return self
+            if other.opname in unary_ops:
+                self._emit_unary(other)
+                return self
+            if other.opname in unary_scalar_ops:
+                self._emit_unary_scalar(other)
+                return self
+            raise ValueError(f"RegList不支持该RegOP赋值: {other.opname}")
+
+        raise TypeError(f"RegList赋值仅支持Tensor/RegOP，当前类型: {type(other)}")
+
+    def cmax(self):
+        from .regop import RegOP
+        return RegOP("cmax", self)
+
+    def cmin(self):
+        from .regop import RegOP
+        return RegOP("cmin", self)
+
+    def cadd(self):
+        from .regop import RegOP
+        return RegOP("cadd", self)
+
+    def __add__(self, other):
+        from .regop import RegOP
+        return RegOP("add", self, other)
+
+    def __sub__(self, other):
+        from .regop import RegOP
+        return RegOP("sub", self, other)
+
+    def __mul__(self, other):
+        from .regop import RegOP
+        return RegOP("mul", self, other)
+
+    def __truediv__(self, other):
+        from .regop import RegOP
+        return RegOP("div", self, other)
+
+    def exp(self):
+        from .regop import RegOP
+        return RegOP("exp", self)
+
+    def abs(self):
+        from .regop import RegOP
+        return RegOP("abs", self)
+
+    def sqrt(self):
+        from .regop import RegOP
+        return RegOP("sqrt", self)
+
+    def relu(self):
+        from .regop import RegOP
+        return RegOP("relu", self)
+
+    def ln(self):
+        from .regop import RegOP
+        return RegOP("ln", self)
+
+    def log(self):
+        from .regop import RegOP
+        return RegOP("log", self)
+
+    def log2(self):
+        from .regop import RegOP
+        return RegOP("log2", self)
+
+    def log10(self):
+        from .regop import RegOP
+        return RegOP("log10", self)
+
+    def neg(self):
+        from .regop import RegOP
+        return RegOP("neg", self)
+
+    def vnot(self):
+        from .regop import RegOP
+        return RegOP("vnot", self)
+
+    def vcopy(self):
+        from .regop import RegOP
+        return RegOP("vcopy", self)
+
+    def shiftls(self, value: Union[Var, int]):
+        from .regop import RegOP
+        return RegOP("shiftls", self, value)
+
+    def shiftrs(self, value: Union[Var, int]):
+        from .regop import RegOP
+        return RegOP("shiftrs", self, value)
+
+    def axpy(self, value: Scalar):
+        from .regop import RegOP
+        return RegOP("axpy", self, value)
+
+    def lrelu(self, value: Scalar):
+        from .regop import RegOP
+        return RegOP("lrelu", self, value)
+
+    def vmaxs(self, value: Scalar):
+        from .regop import RegOP
+        return RegOP("vmaxs", self, value)
+
+    def vmins(self, value: Scalar):
+        from .regop import RegOP
+        return RegOP("vmins", self, value)
+
+    def vand(self, other):
+        from .regop import RegOP
+        return RegOP("vand", self, other)
+
+    def vor(self, other):
+        from .regop import RegOP
+        return RegOP("vor", self, other)
+
+    def vxor(self, other):
+        from .regop import RegOP
+        return RegOP("vxor", self, other)
+
+    def prelu(self, other):
+        from .regop import RegOP
+        return RegOP("prelu", self, other)
+
+    def vmax(self, other):
+        from .regop import RegOP
+        return RegOP("vmax", self, other)
+
+    def vmin(self, other):
+        from .regop import RegOP
+        return RegOP("vmin", self, other)
+
+    def fill(self, value: Scalar) -> None:
+        for i in range(self.length):
+            self[i] <<= value
 
 
 class MaskReg:

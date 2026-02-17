@@ -9,7 +9,7 @@ from .instruction import Instruction
 if TYPE_CHECKING:
     from .vecop import VecOP
     from .mutex import CvMutex, VcMutex
-    from .reg import Reg 
+    from .reg import Reg, RegList
     from .regop import RegOP
 
 
@@ -101,9 +101,9 @@ class Tensor:
         out.is_transpose = True
         return out
 
-    def __ilshift__(self, other: Union["GMTensor", "Tensor", "VecOP", "Reg", "RegOP"]) -> "Tensor":
+    def __ilshift__(self, other: Union["GMTensor", "Tensor", "VecOP", "Reg", "RegList", "RegOP"]) -> "Tensor":
         from .vecop import VecOP
-        from .reg import Reg
+        from .reg import Reg, RegList
         from .regop import RegOP
         if isinstance(other, VecOP):
             if self.position is not Position.UB:
@@ -150,6 +150,11 @@ class Tensor:
                       (self.dtype.size==2 and other.dtype.size==4)):
                     reg_to_ub_downsample(self, tmp)
                 micro.release_reg(tmp)
+            return self
+        if isinstance(other, RegList):
+            block = 256 // other.dtype.size
+            for i in range(other.length):
+                self[block * i] <<= other[i]
             return self
         if isinstance(other, RegOP):
             other.release_inputs()
@@ -201,7 +206,7 @@ class Tensor:
             if micro is not None and tmp.name.startswith("_tmp_reg_"):
                 micro.release_reg(tmp)
             return self
-        raise TypeError(f"other必须是GMTensor/Tensor/Reg/RegOP类型，当前类型: {type(other)}")
+        raise TypeError(f"other必须是GMTensor/Tensor/VecOP/Reg/RegList/RegOP类型，当前类型: {type(other)}")
 
     def _vecop(self, op: str, other: object = None) -> "VecOP":
         if self.position is not Position.UB:
@@ -421,9 +426,10 @@ class Tensor:
         out.is_transpose = self.is_transpose
         target = globvars.active_micro if globvars.active_micro is not None else globvars.active_kernel
         if target is not None:
+            opname = "micro_slice_tensor" if globvars.active_micro is not None else "slice_tensor"
             target.instructions.append(
                 Instruction(
-                    "slice_tensor",
+                    opname,
                     src=self,
                     out=out,
                     offset=offsets,

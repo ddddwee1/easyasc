@@ -12,7 +12,7 @@ if TYPE_CHECKING:
     from ..micro.micromodule import MicroModule
     from ..stub_functions.micro.datamove import LoadDistValue, StoreDistValue
     from .Tensor import Tensor
-    from .reg import Reg, MaskReg
+    from .reg import Reg, MaskReg, RegList
 
 
 Scalar = Union[int, float, Var]
@@ -51,6 +51,14 @@ def _as_reg(value: object, arg: str, op: str) -> "Reg":
 
     if not isinstance(value, Reg):
         raise TypeError(f"{op}的{arg}必须是Reg类型，当前类型: {type(value)}")
+    return value
+
+
+def _as_reglist(value: object, arg: str, op: str) -> "RegList":
+    from .reg import RegList
+
+    if not isinstance(value, RegList):
+        raise TypeError(f"{op}的{arg}必须是RegList类型，当前类型: {type(value)}")
     return value
 
 
@@ -147,17 +155,57 @@ class RegOP:
             _release_temp_reg(value)
 
     def _output_dtype(self) -> DataTypeValue:
-        from .reg import Reg
+        from .reg import Reg, RegList
 
         if self.opname == "cast":
             if len(self.inputs) >= 3 and isinstance(self.inputs[2], DataTypeValue):
                 return self.inputs[2]
-        if not self.inputs or not isinstance(self.inputs[0], Reg):
+        if self.inputs and isinstance(self.inputs[0], Reg):
+            return self.inputs[0].dtype
+        if self.inputs and isinstance(self.inputs[0], RegList):
+            if self.opname in ("cadd", "cmax", "cmin"):
+                return self.inputs[0].dtype
+            raise TypeError(f"无法推断RegList算子{self.opname}的输出dtype")
+        if not self.inputs:
             raise TypeError("无法推断RegOP输出dtype")
-        return self.inputs[0].dtype
+        raise TypeError("无法推断RegOP输出dtype")
+
+    def _emit_reglist_reduce(
+        self,
+        dst: "Reg",
+        src: "RegList",
+        op: str,
+        mask: Optional["MaskReg"],
+    ) -> None:
+        from ..stub_functions import micro
+
+        if src.length <= 0:
+            raise ValueError("RegList长度必须大于0")
+
+        if op == "cmax":
+            pair_func = micro.vmax
+            reduce_func = micro.cmax
+        elif op == "cmin":
+            pair_func = micro.vmin
+            reduce_func = micro.cmin
+        elif op == "cadd":
+            pair_func = micro.add
+            reduce_func = micro.cadd
+        else:
+            raise ValueError(f"RegList不支持{op}规约")
+
+        if src.length == 1:
+            reduce_func(dst, src[0], mask=mask)
+            return
+
+        pair_func(dst, src[0], src[1], mask=mask)
+        for i in range(2, src.length):
+            pair_func(dst, dst, src[i], mask=mask)
+        reduce_func(dst, dst, mask=mask)
 
     def emit(self, dst: MicroDst) -> None:
         from ..stub_functions import micro
+        from .reg import RegList
 
         op = self.opname
         mask = _normalize_mask(self._mask, op)
@@ -191,7 +239,19 @@ class RegOP:
             micro_func(dst_reg, src, value, mask=mask)
             return
 
-        if op in ("cmax", "cgmax", "cmin", "cgmin", "cadd", "cgadd", "cpadd"):
+        if op in ("cmax", "cmin", "cadd"):
+            _require_arity(self.inputs, 1, op)
+            dst_reg = _as_reg(dst, "dst", op)
+            src0 = self.inputs[0]
+            if isinstance(src0, RegList):
+                self._emit_reglist_reduce(dst_reg, src0, op, mask)
+                return
+            src = _as_reg(src0, "src", op)
+            micro_func = getattr(micro, op)
+            micro_func(dst_reg, src, mask=mask)
+            return
+
+        if op in ("cgmax", "cgmin", "cgadd", "cpadd"):
             _require_arity(self.inputs, 1, op)
             dst_reg = _as_reg(dst, "dst", op)
             src = _as_reg(self.inputs[0], "src", op)
@@ -412,7 +472,7 @@ class RegOP:
         raise ValueError(f"Unsupported RegOP: {op}")
 
     def run_regop(self) -> "Reg":
-        from .reg import Reg
+        from .reg import Reg, RegList
 
         if self.opname in (
             "compare",
@@ -436,6 +496,10 @@ class RegOP:
             "reg_to_ub_scatter",
         ):
             raise ValueError("该RegOP不支持直接生成Reg结果")
+
+        if self.inputs and isinstance(self.inputs[0], RegList):
+            if self.opname not in ("cadd", "cmax", "cmin"):
+                raise ValueError("RegList仅支持cadd/cmax/cmin直接生成Reg结果")
 
         self.release_inputs()
         dtype = self._output_dtype()
