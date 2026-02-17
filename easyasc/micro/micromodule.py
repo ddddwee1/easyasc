@@ -1,14 +1,27 @@
 import inspect
-from typing import Any, Callable, Dict, List
+from typing import Any, Callable, Dict, List, Tuple
 
 from .. import globvars
 from ..utils.datatype import DataTypeValue
 from ..utils.instruction import Instruction
 from ..utils.mask import MaskType
-from ..utils.reg import MaskReg
+from ..utils.reg import MaskReg, Reg
 from ..utils.Tensor import Tensor
 from ..utils.var import Var
 from ..utils.positions import Position
+
+
+class TempRegStatus:
+    def __init__(self, idx: int):
+        self.reg = object.__new__(Reg)
+        self.reg.name = f'_tmp_reg_{idx}'
+        self.valid = True 
+    
+    def lock(self):
+        self.valid = False 
+    
+    def release(self):
+        self.valid = True 
 
 
 class MicroModule:
@@ -20,6 +33,25 @@ class MicroModule:
         self.tmp_idx = 0
         self.tmp_masks: Dict[str, MaskReg] = {}
         self.cast_cfg_list: List[Any] = []
+        self.tmp_regs: Dict[str, List[TempRegStatus]] = {}
+
+    def get_reg(self, dtype: DataTypeValue):
+        if dtype not in self.tmp_regs:
+            self.tmp_regs[dtype.name] = []
+        for i in self.tmp_regs[dtype.name]:
+            if i.valid:
+                i.lock()
+                return i.reg 
+        new_stat = TempRegStatus(self.tmp_idx)
+        self.tmp_idx += 1 
+        self.tmp_regs[dtype.name].append(new_stat)
+        new_stat.lock()
+        return new_stat
+
+    def release_reg(self, reg: Reg):
+        for i in self.tmp_regs[reg.dtype.name]:
+            if i.reg.name == reg.name:
+                i.release()
 
     def __call__(self, *args: Any, **kwargs: Any) -> Any:
         if kwargs:

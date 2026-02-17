@@ -9,6 +9,8 @@ from .instruction import Instruction
 if TYPE_CHECKING:
     from .vecop import VecOP
     from .mutex import CvMutex, VcMutex
+    from .reg import Reg 
+    from .regop import RegOP
 
 
 class Tensor:
@@ -60,6 +62,7 @@ class Tensor:
         self.source_buf: Union[None, 'DBuff'] = None
         self.source_index: Union[None, 'Var', int] = None
         self.is_transpose = False
+        self.vec_copy_mode = ""
 
         if globvars.active_kernel is not None:
             globvars.active_kernel.instructions.append(
@@ -89,8 +92,10 @@ class Tensor:
         out.is_transpose = True
         return out
 
-    def __ilshift__(self, other: Union["GMTensor", "Tensor", "VecOP"]) -> "Tensor":
+    def __ilshift__(self, other: Union["GMTensor", "Tensor", "VecOP", "Reg", "RegOP"]) -> "Tensor":
         from .vecop import VecOP
+        from .reg import Reg
+        from .regop import RegOP
         if isinstance(other, VecOP):
             if self.position is not Position.UB:
                 raise ValueError(f"VecOP仅支持UB位置，当前位置: {self.position}")
@@ -120,13 +125,81 @@ class Tensor:
             from ..stub_functions.cube import l1_to_l0
             l1_to_l0(self, other)
             return self
-        raise TypeError(f"other必须是GMTensor或Tensor类型，当前类型: {type(other)}")
+        if isinstance(other, Reg):
+            from ..stub_functions.micro.datamove import reg_to_ub
+            reg_to_ub(self, other)
+            return self
+        if isinstance(other, RegOP):
+            other.release_inputs()
+            if other.opname in (
+                "reg_to_ub",
+                "reg_to_ub_continuous",
+                "reg_to_ub_downsample",
+                "reg_to_ub_pack4",
+                "reg_to_ub_single",
+                "reg_to_ub_scatter",
+            ):
+                other.emit(self)
+                return self
+            from ..stub_functions.micro.datamove import (
+                reg_to_ub_downsample,
+                reg_to_ub_pack4,
+                reg_to_ub_single,
+                reg_to_ub,
+            )
+            if other.opname == "reg_to_ub_downsample":
+                src = other.inputs[0]
+                reg_to_ub_downsample(self, src, mask=other.mask)
+                return self
+            if other.opname == "reg_to_ub_pack4":
+                src = other.inputs[0]
+                reg_to_ub_pack4(self, src, mask=other.mask)
+                return self
+            if other.opname == "reg_to_ub_single":
+                src = other.inputs[0]
+                reg_to_ub_single(self, src, mask=other.mask)
+                return self
+            if other.opname == "vcopy":
+                src = other.inputs[0]
+                reg_to_ub(self, src, mask=other.mask)
+                return self
+            tmp = other.run_regop()
+            reg_to_ub(self, tmp)
+            micro = globvars.active_micro
+            if micro is not None and tmp.name.startswith("_tmp_reg_"):
+                micro.release_reg(tmp)
+            return self
+        raise TypeError(f"other必须是GMTensor/Tensor/Reg/RegOP类型，当前类型: {type(other)}")
 
     def _vecop(self, op: str, other: object = None) -> "VecOP":
         if self.position is not Position.UB:
             raise ValueError(f"VecOP仅支持UB位置，当前位置: {self.position}")
         from .vecop import VecOP
         return VecOP(op, self, other)  # type: ignore[arg-type]
+
+    def _with_vec_copy_mode(self, mode: str) -> "Tensor":
+        out = object.__new__(Tensor)
+        out.__dict__ = self.__dict__.copy()
+        out.vec_copy_mode = mode
+        return out
+
+    def downsample(self) -> "Tensor":
+        return self._with_vec_copy_mode("downsample")
+
+    def upsample(self) -> "Tensor":
+        return self._with_vec_copy_mode("upsample")
+
+    def unpack(self) -> "Tensor":
+        return self._with_vec_copy_mode("unpack")
+
+    def unpack4(self) -> "Tensor":
+        return self._with_vec_copy_mode("unpack4")
+
+    def brcb(self) -> "Tensor":
+        return self._with_vec_copy_mode("brcb")
+
+    def single(self) -> "Tensor":
+        return self._with_vec_copy_mode("single")
 
     def __add__(self, other):
         if isinstance(other, Tensor):
