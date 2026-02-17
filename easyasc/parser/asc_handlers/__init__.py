@@ -33,6 +33,7 @@ from .math_ops import (
 )
 from .flow import (
     handle_start_loop,
+    handle_start_micro_loop,
     handle_end_loop,
     handle_start_if,
     handle_start_elif,
@@ -152,6 +153,7 @@ def build_handlers() -> dict[str, Handler]:
         "slice_tensor": handle_slice_tensor,
         "l1_to_l0": handle_l1_to_l0,
         "start_loop": handle_start_loop,
+        "start_micro_loop": handle_start_micro_loop,
         "end_loop": handle_end_loop,
         "start_if": handle_start_if,
         "start_elif": handle_start_elif,

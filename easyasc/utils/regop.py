@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import Optional, Sequence, TYPE_CHECKING, Union
+from typing import Optional, Tuple, TYPE_CHECKING, Union
 
 from .. import globvars
 from .castconfig import CastConfig
@@ -9,14 +9,17 @@ from .datatype import DataTypeValue
 from .var import Var
 
 if TYPE_CHECKING:
+    from ..micro.micromodule import MicroModule
+    from ..stub_functions.micro.datamove import LoadDistValue, StoreDistValue
     from .Tensor import Tensor
     from .reg import Reg, MaskReg
 
 
 Scalar = Union[int, float, Var]
+MicroDst = Union["Reg", "MaskReg", "Tensor"]
 
 
-def _require_micro():
+def _require_micro() -> "MicroModule":
     micro = globvars.active_micro
     if micro is None:
         raise RuntimeError("RegOP只能在MicroModule中使用")
@@ -38,9 +41,94 @@ def _release_temp_reg(reg: object) -> None:
         micro.release_reg(reg)
 
 
+def _require_arity(inputs: Tuple[object, ...], expected: int, op: str) -> None:
+    if len(inputs) < expected:
+        raise TypeError(f"{op}需要至少{expected}个输入，当前数量: {len(inputs)}")
+
+
+def _as_reg(value: object, arg: str, op: str) -> "Reg":
+    from .reg import Reg
+
+    if not isinstance(value, Reg):
+        raise TypeError(f"{op}的{arg}必须是Reg类型，当前类型: {type(value)}")
+    return value
+
+
+def _as_maskreg(value: object, arg: str, op: str) -> "MaskReg":
+    from .reg import MaskReg
+
+    if not isinstance(value, MaskReg):
+        raise TypeError(f"{op}的{arg}必须是MaskReg类型，当前类型: {type(value)}")
+    return value
+
+
+def _as_tensor(value: object, arg: str, op: str) -> "Tensor":
+    from .Tensor import Tensor
+
+    if not isinstance(value, Tensor):
+        raise TypeError(f"{op}的{arg}必须是Tensor类型，当前类型: {type(value)}")
+    return value
+
+
+def _as_scalar(value: object, arg: str, op: str) -> Scalar:
+    if not isinstance(value, (Var, int, float)):
+        raise TypeError(f"{op}的{arg}必须是Var/int/float，当前类型: {type(value)}")
+    return value
+
+
+def _as_scalar_or_reg(value: object, arg: str, op: str) -> Union[Scalar, "Reg"]:
+    from .reg import Reg
+
+    if not isinstance(value, (Reg, Var, int, float)):
+        raise TypeError(f"{op}的{arg}必须是Reg/Var/int/float，当前类型: {type(value)}")
+    return value
+
+
+def _as_bool(value: object, arg: str, op: str) -> bool:
+    if not isinstance(value, bool):
+        raise TypeError(f"{op}的{arg}必须是bool类型，当前类型: {type(value)}")
+    return value
+
+
+def _as_compare_mode(value: object, op: str) -> CompareModeType:
+    if not isinstance(value, CompareModeType):
+        raise TypeError(f"{op}需要CompareModeType，当前类型: {type(value)}")
+    return value
+
+
+def _as_blk_stride(value: object, arg: str, op: str) -> Union[int, Var]:
+    if not isinstance(value, (int, Var)):
+        raise TypeError(f"{op}的{arg}必须是int或Var类型，当前类型: {type(value)}")
+    return value
+
+
+def _as_loaddist(value: object, op: str) -> "LoadDistValue":
+    from ..stub_functions.micro.datamove import LoadDistValue
+
+    if not isinstance(value, LoadDistValue):
+        raise TypeError(f"{op}需要LoadDistValue，当前类型: {type(value)}")
+    return value
+
+
+def _as_storedist(value: object, op: str) -> "StoreDistValue":
+    from ..stub_functions.micro.datamove import StoreDistValue
+
+    if not isinstance(value, StoreDistValue):
+        raise TypeError(f"{op}需要StoreDistValue，当前类型: {type(value)}")
+    return value
+
+
+def _normalize_mask(mask: Optional["MaskReg"], op: str) -> Optional["MaskReg"]:
+    from .reg import MaskReg
+
+    if mask is not None and not isinstance(mask, MaskReg):
+        raise TypeError(f"{op}的mask必须是MaskReg类型，当前类型: {type(mask)}")
+    return mask
+
+
 class RegOP:
     def __init__(self, opname: str, *inputs: object) -> None:
-        self.inputs: Sequence[object] = inputs
+        self.inputs: Tuple[object, ...] = inputs
         self.opname: str = opname
         self._mask: Optional["MaskReg"] = None
 
@@ -68,151 +156,211 @@ class RegOP:
             raise TypeError("无法推断RegOP输出dtype")
         return self.inputs[0].dtype
 
-    def emit(self, dst: object) -> None:
-        from .reg import Reg, MaskReg
+    def emit(self, dst: MicroDst) -> None:
         from ..stub_functions import micro
 
         op = self.opname
-        mask = self._mask
+        mask = _normalize_mask(self._mask, op)
 
         if op in ("add", "sub", "mul", "div", "vmax", "vmin", "vand", "vor", "vxor", "prelu"):
-            src1, src2 = self.inputs[:2]
+            _require_arity(self.inputs, 2, op)
+            dst_reg = _as_reg(dst, "dst", op)
+            src1 = _as_reg(self.inputs[0], "src1", op)
+            src2 = _as_reg(self.inputs[1], "src2", op)
             micro_func = getattr(micro, op)
-            micro_func(dst, src1, src2, mask=mask)
+            micro_func(dst_reg, src1, src2, mask=mask)
             return
 
         if op in ("exp", "abs", "relu", "sqrt", "ln", "log", "log2", "log10", "neg", "vnot", "vcopy"):
-            src = self.inputs[0]
+            _require_arity(self.inputs, 1, op)
+            dst_reg = _as_reg(dst, "dst", op)
+            src = _as_reg(self.inputs[0], "src", op)
             micro_func = getattr(micro, op)
-            micro_func(dst, src, mask=mask)
+            micro_func(dst_reg, src, mask=mask)
             return
 
         if op in ("vmaxs", "vmins", "adds", "muls", "lrelu", "shiftls", "shiftrs", "axpy"):
-            src, value = self.inputs[:2]
+            _require_arity(self.inputs, 2, op)
+            dst_reg = _as_reg(dst, "dst", op)
+            src = _as_reg(self.inputs[0], "src", op)
+            if op in ("shiftls", "shiftrs"):
+                value = _as_blk_stride(self.inputs[1], "value", op)
+            else:
+                value = _as_scalar(self.inputs[1], "value", op)
             micro_func = getattr(micro, op)
-            micro_func(dst, src, value, mask=mask)
+            micro_func(dst_reg, src, value, mask=mask)
             return
 
         if op in ("cmax", "cgmax", "cmin", "cgmin", "cadd", "cgadd", "cpadd"):
-            src = self.inputs[0]
+            _require_arity(self.inputs, 1, op)
+            dst_reg = _as_reg(dst, "dst", op)
+            src = _as_reg(self.inputs[0], "src", op)
             micro_func = getattr(micro, op)
-            micro_func(dst, src, mask=mask)
+            micro_func(dst_reg, src, mask=mask)
             return
 
         if op == "dup":
-            src = self.inputs[0]
-            micro.dup(dst, src, mask=mask)
+            _require_arity(self.inputs, 1, op)
+            dst_reg = _as_reg(dst, "dst", op)
+            src = _as_scalar_or_reg(self.inputs[0], "src", op)
+            micro.dup(dst_reg, src, mask=mask)
             return
 
         if op == "arange":
-            start = self.inputs[0]
+            _require_arity(self.inputs, 1, op)
+            dst_reg = _as_reg(dst, "dst", op)
+            start = _as_scalar(self.inputs[0], "start", op)
             increase = True
             if len(self.inputs) >= 2:
-                increase = bool(self.inputs[1])
-            micro.arange(dst, start, increase=increase)
+                increase = _as_bool(self.inputs[1], "increase", op)
+            micro.arange(dst_reg, start, increase=increase)
             return
 
         if op == "cast":
-            src = self.inputs[0]
+            _require_arity(self.inputs, 2, op)
+            dst_reg = _as_reg(dst, "dst", op)
+            src = _as_reg(self.inputs[0], "src", op)
             cfg = self.inputs[1]
-            if not isinstance(cfg, CastConfig):
-                raise TypeError(f"cast需要CastConfig，当前类型: {type(cfg)}")
-            if mask is None:
-                if not isinstance(dst, Reg):
-                    raise TypeError("cast目标必须是Reg")
-                mask = _default_mask(dst.dtype)
-            micro.cast(dst, src, cfg, mask)
+            if cfg is not None and not isinstance(cfg, CastConfig):
+                raise TypeError(f"{op}的config必须是CastConfig或None，当前类型: {type(cfg)}")
+            micro.cast(dst_reg, src, cfg, mask)
             return
 
         if op == "compare":
-            src1, src2, mode = self.inputs[:3]
-            if not isinstance(mode, CompareModeType):
-                raise TypeError(f"compare需要CompareModeType，当前类型: {type(mode)}")
-            micro.compare(dst, src1, src2, mode, mask=mask)
+            _require_arity(self.inputs, 3, op)
+            dst_mask = _as_maskreg(dst, "dst", op)
+            src1 = _as_reg(self.inputs[0], "src1", op)
+            src2 = _as_scalar_or_reg(self.inputs[1], "src2", op)
+            mode = _as_compare_mode(self.inputs[2], op)
+            micro.compare(dst_mask, src1, src2, mode, mask=mask)
             return
 
         if op == "select":
-            src1, src2 = self.inputs[:2]
-            micro.select(dst, src1, src2, mask=mask)
+            _require_arity(self.inputs, 2, op)
+            dst_reg = _as_reg(dst, "dst", op)
+            src1 = _as_reg(self.inputs[0], "src1", op)
+            src2 = _as_reg(self.inputs[1], "src2", op)
+            micro.select(dst_reg, src1, src2, mask=mask)
             return
 
         if op == "mask_not":
-            src = self.inputs[0]
-            micro.mask_not(dst, src, mask=mask)
+            _require_arity(self.inputs, 1, op)
+            dst_mask = _as_maskreg(dst, "dst", op)
+            src = _as_maskreg(self.inputs[0], "src", op)
+            micro.mask_not(dst_mask, src, mask=mask)
             return
 
         if op in ("mask_and", "mask_or", "mask_xor"):
-            src1, src2 = self.inputs[:2]
+            _require_arity(self.inputs, 2, op)
+            dst_mask = _as_maskreg(dst, "dst", op)
+            src1 = _as_maskreg(self.inputs[0], "src1", op)
+            src2 = _as_maskreg(self.inputs[1], "src2", op)
             micro_func = getattr(micro, op)
-            micro_func(dst, src1, src2, mask=mask)
+            micro_func(dst_mask, src1, src2, mask=mask)
             return
 
         if op == "mask_mov":
-            src = self.inputs[0]
-            micro.mask_mov(dst, src, mask=mask)
+            _require_arity(self.inputs, 1, op)
+            dst_mask = _as_maskreg(dst, "dst", op)
+            src = _as_maskreg(self.inputs[0], "src", op)
+            micro.mask_mov(dst_mask, src, mask=mask)
             return
 
         if op == "mask_sel":
-            src1, src2 = self.inputs[:2]
-            micro.mask_sel(dst, src1, src2, mask=mask)
+            _require_arity(self.inputs, 2, op)
+            dst_mask = _as_maskreg(dst, "dst", op)
+            src1 = _as_maskreg(self.inputs[0], "src1", op)
+            src2 = _as_maskreg(self.inputs[1], "src2", op)
+            micro.mask_sel(dst_mask, src1, src2, mask=mask)
             return
 
         if op in ("mask_pack", "mask_unpack"):
-            src = self.inputs[0]
+            _require_arity(self.inputs, 1, op)
+            dst_mask = _as_maskreg(dst, "dst", op)
+            src = _as_maskreg(self.inputs[0], "src", op)
             low_part = True
             if len(self.inputs) >= 2:
-                low_part = bool(self.inputs[1])
+                low_part = _as_bool(self.inputs[1], "low_part", op)
             micro_func = getattr(micro, op)
-            micro_func(dst, src, low_part=low_part)
+            micro_func(dst_mask, src, low_part=low_part)
             return
 
         if op in ("mask_interleave", "mask_deinterleave"):
-            src0, src1, dst1 = self.inputs[:3]
+            _require_arity(self.inputs, 3, op)
+            dst0 = _as_maskreg(dst, "dst0", op)
+            src0 = _as_maskreg(self.inputs[0], "src0", op)
+            src1 = _as_maskreg(self.inputs[1], "src1", op)
+            dst1 = _as_maskreg(self.inputs[2], "dst1", op)
             micro_func = getattr(micro, op)
-            micro_func(dst, dst1, src0, src1)
+            micro_func(dst0, dst1, src0, src1)
             return
 
         if op == "move_mask_spr":
-            micro.move_mask_spr(dst)
+            dst_mask = _as_maskreg(dst, "dst", op)
+            micro.move_mask_spr(dst_mask)
             return
 
         if op == "update_mask":
+            _require_arity(self.inputs, 1, op)
+            dst_mask = _as_maskreg(dst, "dst", op)
             cnt = self.inputs[0]
-            micro.update_mask(dst, cnt)
+            if not isinstance(cnt, Var):
+                raise TypeError(f"{op}的cnt必须是Var类型，当前类型: {type(cnt)}")
+            micro.update_mask(dst_mask, cnt)
             return
 
         if op in ("interleave", "deinterleave"):
-            src0, src1, dst1 = self.inputs[:3]
+            _require_arity(self.inputs, 3, op)
+            dst0 = _as_reg(dst, "dst0", op)
+            src0 = _as_reg(self.inputs[0], "src0", op)
+            src1 = _as_reg(self.inputs[1], "src1", op)
+            dst1 = _as_reg(self.inputs[2], "dst1", op)
             micro_func = getattr(micro, op)
-            micro_func(dst, dst1, src0, src1)
+            micro_func(dst0, dst1, src0, src1)
             return
 
         if op == "ub_to_reg":
-            src = self.inputs[0]
-            blk_stride = 1 if len(self.inputs) < 2 else self.inputs[1]
-            micro.ub_to_reg(dst, src, blk_stride=blk_stride, mask=mask)
+            _require_arity(self.inputs, 1, op)
+            dst_reg = _as_reg(dst, "dst", op)
+            src = _as_tensor(self.inputs[0], "src", op)
+            blk_stride = 1
+            if len(self.inputs) >= 2:
+                blk_stride = _as_blk_stride(self.inputs[1], "blk_stride", op)
+            micro.ub_to_reg(dst_reg, src, blk_stride=blk_stride, mask=mask)
             return
 
         if op == "reg_to_ub":
-            src = self.inputs[0]
-            blk_stride = 1 if len(self.inputs) < 2 else self.inputs[1]
-            micro.reg_to_ub(dst, src, blk_stride=blk_stride, mask=mask)
+            _require_arity(self.inputs, 1, op)
+            dst_tensor = _as_tensor(dst, "dst", op)
+            src = _as_reg(self.inputs[0], "src", op)
+            blk_stride = 1
+            if len(self.inputs) >= 2:
+                blk_stride = _as_blk_stride(self.inputs[1], "blk_stride", op)
+            micro.reg_to_ub(dst_tensor, src, blk_stride=blk_stride, mask=mask)
             return
 
         if op == "ub_to_reg_continuous":
-            src, loaddist = self.inputs[:2]
-            micro.ub_to_reg_continuous(dst, src, loaddist)
+            _require_arity(self.inputs, 2, op)
+            dst_reg = _as_reg(dst, "dst", op)
+            src = _as_tensor(self.inputs[0], "src", op)
+            loaddist = _as_loaddist(self.inputs[1], op)
+            micro.ub_to_reg_continuous(dst_reg, src, loaddist)
             return
 
         if op == "reg_to_ub_continuous":
-            src, storedist = self.inputs[:2]
-            micro.reg_to_ub_continuous(dst, src, mask, storedist)
+            _require_arity(self.inputs, 2, op)
+            dst_tensor = _as_tensor(dst, "dst", op)
+            src = _as_reg(self.inputs[0], "src", op)
+            storedist = _as_storedist(self.inputs[1], op)
+            micro.reg_to_ub_continuous(dst_tensor, src, mask, storedist)
             return
 
         if op in ("reg_to_ub_downsample", "reg_to_ub_pack4", "reg_to_ub_single"):
-            src = self.inputs[0]
+            _require_arity(self.inputs, 1, op)
+            dst_tensor = _as_tensor(dst, "dst", op)
+            src = _as_reg(self.inputs[0], "src", op)
             micro_func = getattr(micro, op)
-            micro_func(dst, src, mask=mask)
+            micro_func(dst_tensor, src, mask=mask)
             return
 
         if op in (
@@ -223,29 +371,42 @@ class RegOP:
             "ub_to_reg_unpack4",
             "ub_to_reg_brcb",
         ):
-            src = self.inputs[0]
+            _require_arity(self.inputs, 1, op)
+            dst_reg = _as_reg(dst, "dst", op)
+            src = _as_tensor(self.inputs[0], "src", op)
             micro_func = getattr(micro, op)
-            micro_func(dst, src)
+            micro_func(dst_reg, src)
             return
 
         if op == "ub_to_reg_gather":
-            src, index = self.inputs[:2]
-            micro.ub_to_reg_gather(dst, src, index, mask=mask)
+            _require_arity(self.inputs, 2, op)
+            dst_reg = _as_reg(dst, "dst", op)
+            src = _as_tensor(self.inputs[0], "src", op)
+            index = _as_reg(self.inputs[1], "index", op)
+            micro.ub_to_reg_gather(dst_reg, src, index, mask=mask)
             return
 
         if op == "reg_to_ub_scatter":
-            src, index = self.inputs[:2]
-            micro.reg_to_ub_scatter(dst, src, index, mask=mask)
+            _require_arity(self.inputs, 2, op)
+            dst_tensor = _as_tensor(dst, "dst", op)
+            src = _as_reg(self.inputs[0], "src", op)
+            index = _as_reg(self.inputs[1], "index", op)
+            micro.reg_to_ub_scatter(dst_tensor, src, index, mask=mask)
             return
 
         if op == "gather":
-            src, index = self.inputs[:2]
-            micro.gather(dst, src, index)
+            _require_arity(self.inputs, 2, op)
+            dst_reg = _as_reg(dst, "dst", op)
+            src = _as_reg(self.inputs[0], "src", op)
+            index = _as_reg(self.inputs[1], "index", op)
+            micro.gather(dst_reg, src, index)
             return
 
         if op == "gather_mask":
-            src = self.inputs[0]
-            micro.gather_mask(dst, src, mask=mask)
+            _require_arity(self.inputs, 1, op)
+            dst_reg = _as_reg(dst, "dst", op)
+            src = _as_reg(self.inputs[0], "src", op)
+            micro.gather_mask(dst_reg, src, mask=mask)
             return
 
         raise ValueError(f"Unsupported RegOP: {op}")

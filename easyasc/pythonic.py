@@ -1,7 +1,7 @@
 import ast
 import inspect
 import textwrap
-from typing import Any, Optional, cast
+from typing import Any, Optional, Tuple, cast
 
 
 class _VarNameAdder(ast.NodeTransformer):
@@ -223,9 +223,10 @@ def _is_kernel_decorator(node: ast.AST) -> bool:
 
 
 def transform_kernel(func):
-    source = _get_source(func)
-    if source is None:
+    source_info = _get_source(func)
+    if source_info is None:
         return func
+    source, start_lineno = source_info
     tree = ast.parse(source)
     transformer = _VarNameAdder(func.__name__)
     tree = transformer.visit(tree)
@@ -234,6 +235,9 @@ def transform_kernel(func):
     if_rewriter = _IfRewriter(func.__name__)
     tree = if_rewriter.visit(tree)
     ast.fix_missing_locations(tree)
+    line_offset = start_lineno - 1
+    if line_offset > 0:
+        ast.increment_lineno(tree, n=line_offset)
     filename = inspect.getsourcefile(func) or "<ast>"
     code = compile(tree, filename=filename, mode="exec")
     temp_ns = {}
@@ -248,9 +252,10 @@ def transform_kernel(func):
     return new_func
 
 
-def _get_source(func) -> Optional[str]:
+def _get_source(func) -> Optional[Tuple[str, int]]:
     try:
-        source = inspect.getsource(func)
+        lines, start_lineno = inspect.getsourcelines(func)
     except OSError:
         return None
-    return textwrap.dedent(source)
+    source = textwrap.dedent("".join(lines))
+    return source, start_lineno

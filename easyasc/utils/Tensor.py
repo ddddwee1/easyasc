@@ -1,4 +1,4 @@
-from typing import TYPE_CHECKING, Optional, Union
+from typing import TYPE_CHECKING, List, Optional, Sequence, Tuple, Union, cast
 from .datatype import DataTypeValue
 from .var import Var
 from .positions import Position, PositionType
@@ -13,12 +13,20 @@ if TYPE_CHECKING:
     from .regop import RegOP
 
 
+ShapeDim = Union[int, Var]
+Shape2D = Sequence[ShapeDim]
+ScalarIndex = Union[Var, int]
+TensorIndex = Union[ScalarIndex, slice, Tuple[slice, ...]]
+GMTensorDimIndex = Union[ScalarIndex, slice]
+GMTensorIndex = Union[GMTensorDimIndex, Tuple[GMTensorDimIndex, ...]]
+
+
 class Tensor:
     """张量类"""
     def __init__(
         self,
         dtype: DataTypeValue,
-        shape: Union[list, tuple],
+        shape: Shape2D,
         position: PositionType = Position.L1,
         name: str = "",
     ):
@@ -64,8 +72,9 @@ class Tensor:
         self.is_transpose = False
         self.vec_copy_mode = ""
 
-        if globvars.active_kernel is not None:
-            globvars.active_kernel.instructions.append(
+        target = globvars.active_micro if globvars.active_micro is not None else globvars.active_kernel
+        if target is not None:
+            target.instructions.append(
                 Instruction("create_tensor", val=self, shape=list(self.shape))
             )
 
@@ -75,7 +84,7 @@ class Tensor:
             f"position={self.position!r}, idx={self.idx!r})"
         )
 
-    def set_shape(self, shape: Union[list, tuple]) -> None:
+    def set_shape(self, shape: Shape2D) -> None:
         if not isinstance(shape, (list, tuple)):
             raise TypeError(f"shape必须是list或tuple类型，当前类型: {type(shape)}")
         if len(shape) != 2:
@@ -126,8 +135,21 @@ class Tensor:
             l1_to_l0(self, other)
             return self
         if isinstance(other, Reg):
-            from ..stub_functions.micro.datamove import reg_to_ub
-            reg_to_ub(self, other)
+            from ..stub_functions.micro.datamove import reg_to_ub, reg_to_ub_pack4, reg_to_ub_downsample
+            if self.dtype == other.dtype:
+                reg_to_ub(self, other)
+            else:
+                micro = globvars.active_micro
+                if micro is None:
+                    raise ValueError('Register related datamove must be called within vf')
+                tmp = micro.get_reg(self.dtype)
+                tmp <<= other.astype(self.dtype)
+                if self.dtype.size==1 and other.dtype.size==4:
+                    reg_to_ub_pack4(self, tmp)
+                elif ((self.dtype.size==1 and other.dtype.size==2) or 
+                      (self.dtype.size==2 and other.dtype.size==4)):
+                    reg_to_ub_downsample(self, tmp)
+                micro.release_reg(tmp)
             return self
         if isinstance(other, RegOP):
             other.release_inputs()
@@ -149,18 +171,28 @@ class Tensor:
             )
             if other.opname == "reg_to_ub_downsample":
                 src = other.inputs[0]
+                if not isinstance(src, Reg):
+                    raise TypeError(f"src必须是Reg类型，当前类型: {type(src)}")
+                # if src.dtype!=self.dtype:
+                #     # TODO: finish this 
                 reg_to_ub_downsample(self, src, mask=other.mask)
                 return self
             if other.opname == "reg_to_ub_pack4":
                 src = other.inputs[0]
+                if not isinstance(src, Reg):
+                    raise TypeError(f"src必须是Reg类型，当前类型: {type(src)}")
                 reg_to_ub_pack4(self, src, mask=other.mask)
                 return self
             if other.opname == "reg_to_ub_single":
                 src = other.inputs[0]
+                if not isinstance(src, Reg):
+                    raise TypeError(f"src必须是Reg类型，当前类型: {type(src)}")
                 reg_to_ub_single(self, src, mask=other.mask)
                 return self
             if other.opname == "vcopy":
                 src = other.inputs[0]
+                if not isinstance(src, Reg):
+                    raise TypeError(f"src必须是Reg类型，当前类型: {type(src)}")
                 reg_to_ub(self, src, mask=other.mask)
                 return self
             tmp = other.run_regop()
@@ -323,18 +355,31 @@ class Tensor:
     def __ror__(self, other):
         return NotImplemented
 
-    def __getitem__(self, index: Union[slice, tuple]) -> "Tensor":
-        if not isinstance(index, tuple):
-            index = (index,)
-        if len(index) != len(self.shape):
-            raise TypeError(f"Tensor索引维度必须与shape一致，当前长度: {len(index)}")
+    def __setitem__(self, *args, **kwargs):
+        ...
 
-        def _parse_dim(dim_index: slice, dim_size, label: str):
+    def __getitem__(self, index: TensorIndex) -> "Tensor":
+        scalar_last_dim_offset: Optional[ScalarIndex] = None
+        if isinstance(index, (Var, int)):
+            scalar_last_dim_offset = index
+            normalized_index: Tuple[slice, ...] = tuple(
+                slice(None, None, None) for _ in self.shape
+            )
+        elif isinstance(index, slice):
+            normalized_index = (index,)
+        elif isinstance(index, tuple):
+            normalized_index = index
+        else:
+            raise TypeError(f"index类型错误: {type(index)}")
+        if len(normalized_index) != len(self.shape):
+            raise TypeError(f"Tensor索引维度必须与shape一致，当前长度: {len(normalized_index)}")
+
+        def _parse_dim(dim_index: slice, dim_size: ShapeDim, label: str) -> Tuple[ShapeDim, ShapeDim, int]:
             if not isinstance(dim_index, slice):
                 raise TypeError(f"{label}索引必须是slice类型，当前类型: {type(dim_index)}")
 
-            start = dim_index.start if dim_index.start is not None else 0
-            stop = dim_index.stop if dim_index.stop is not None else dim_size
+            start: ShapeDim = dim_index.start if dim_index.start is not None else 0
+            stop: ShapeDim = dim_index.stop if dim_index.stop is not None else dim_size
             step = dim_index.step
 
             if not isinstance(start, (Var, int)):
@@ -344,18 +389,20 @@ class Tensor:
             if step is not None and step != 1:
                 raise ValueError("slice step must be None or 1")
 
-            span = stop - start
+            span = cast(ShapeDim, stop - start)
             return start, span, 1
 
-        offsets = []
-        spans = []
-        steps = []
-        for dim_idx, dim_index in enumerate(index):
+        offsets: List[ShapeDim] = []
+        spans: List[ShapeDim] = []
+        steps: List[int] = []
+        for dim_idx, dim_index in enumerate(normalized_index):
             dim_size = self.span[dim_idx] if hasattr(self, "span") else self.shape[dim_idx]
             off, span, step = _parse_dim(dim_index, dim_size, f"dim{dim_idx}")
             offsets.append(off)
             spans.append(span)
             steps.append(step)
+        if scalar_last_dim_offset is not None:
+            offsets[-1] = scalar_last_dim_offset
 
         idx = globvars.tmp_idx
         globvars.tmp_idx += 1
@@ -372,8 +419,9 @@ class Tensor:
         out.source_buf = self.source_buf
         out.source_index = self.source_index
         out.is_transpose = self.is_transpose
-        if globvars.active_kernel is not None:
-            globvars.active_kernel.instructions.append(
+        target = globvars.active_micro if globvars.active_micro is not None else globvars.active_kernel
+        if target is not None:
+            target.instructions.append(
                 Instruction(
                     "slice_tensor",
                     src=self,
@@ -391,7 +439,7 @@ class DBuff:
     def __init__(
         self,
         dtype: DataTypeValue,
-        shape: Union[list, tuple],
+        shape: Shape2D,
         position: PositionType = Position.L1,
         name: str = "",
     ):
@@ -442,7 +490,7 @@ class DBuff:
         )
 
     # DBuff代表两个Tensor的double buffer，索引返回其中一个Tensor视图
-    def __getitem__(self, index: Union[Var, int]) -> "Tensor":
+    def __getitem__(self, index: ScalarIndex) -> "Tensor":
         if not isinstance(index, (Var, int)):
             raise TypeError(f"index必须是Var或int类型，当前类型: {type(index)}")
 
@@ -469,7 +517,7 @@ class DBuff:
             )
         return out
 
-    def __setitem__(self, index: Union[Var, int], value: "Tensor") -> None:
+    def __setitem__(self, index: ScalarIndex, value: "Tensor") -> None:
         if not isinstance(index, (Var, int)):
             raise TypeError(f"index必须是Var或int类型，当前类型: {type(index)}")
         if not isinstance(value, Tensor):
@@ -478,7 +526,7 @@ class DBuff:
 
 class GMTensor:
     """全局内存张量类"""
-    def __init__(self, dtype: DataTypeValue, shape: Union[list, tuple], name: str = ""):
+    def __init__(self, dtype: DataTypeValue, shape: Shape2D, name: str = ""):
         """
         初始化全局内存张量
         
@@ -611,20 +659,22 @@ class GMTensor:
             raise ValueError(f"Tensor位置必须为L0C或UB，当前位置: {other.position}")
         raise TypeError(f"other必须是Tensor类型，当前类型: {type(other)}")
 
-    def __getitem__(self, index: Union[Var, int, slice, tuple]) -> "GMTensor":
-        if not isinstance(index, tuple):
-            index = (index,)
-        if len(index) != len(self.shape):
-            raise TypeError(f"GMTensor索引维度必须与shape一致，当前长度: {len(index)}")
+    def __getitem__(self, index: GMTensorIndex) -> "GMTensor":
+        if isinstance(index, tuple):
+            normalized_index = index
+        else:
+            normalized_index = (index,)
+        if len(normalized_index) != len(self.shape):
+            raise TypeError(f"GMTensor索引维度必须与shape一致，当前长度: {len(normalized_index)}")
 
-        def _parse_dim(dim_index: Union[Var, int, slice], dim_size, label: str):
+        def _parse_dim(dim_index: GMTensorDimIndex, dim_size: ShapeDim, label: str) -> Tuple[ShapeDim, ShapeDim, int]:
             if isinstance(dim_index, (Var, int)):
                 return dim_index, 1, 1
             if not isinstance(dim_index, slice):
                 raise TypeError(f"{label}索引必须是Var、int或slice类型，当前类型: {type(dim_index)}")
 
-            start = dim_index.start if dim_index.start is not None else 0
-            stop = dim_index.stop if dim_index.stop is not None else dim_size
+            start: ShapeDim = dim_index.start if dim_index.start is not None else 0
+            stop: ShapeDim = dim_index.stop if dim_index.stop is not None else dim_size
             step = dim_index.step
 
             if not isinstance(start, (Var, int)):
@@ -634,15 +684,15 @@ class GMTensor:
             if step is not None and step != 1:
                 raise ValueError("slice step must be None or 1")
 
-            span = stop - start
+            span = cast(ShapeDim, stop - start)
             return start, span, 1
 
         slice_count = 0
-        offsets = []
-        spans = []
-        steps = []
-        slice_mask = []
-        for dim_idx, dim_index in enumerate(index):
+        offsets: List[ShapeDim] = []
+        spans: List[ShapeDim] = []
+        steps: List[int] = []
+        slice_mask: List[bool] = []
+        for dim_idx, dim_index in enumerate(normalized_index):
             dim_size = self.span[dim_idx] if hasattr(self, "span") else self.shape[dim_idx]
             is_slice = isinstance(dim_index, slice)
             if is_slice:
@@ -682,7 +732,7 @@ class GMTensor:
             )
         return out
 
-    def __setitem__(self, index: Union[Var, int, slice, tuple], value: object) -> None:
+    def __setitem__(self, index: GMTensorIndex, value: object) -> None:
         if isinstance(value, Tensor):
             if value.position is not Position.L0C:
                 raise ValueError(f"Tensor位置必须为L0C，当前位置: {value.position}")

@@ -31,87 +31,25 @@ def addmic(x: Tensor, y: Tensor, n_rows: Var, u8_buf: Tensor):
     r_f = Reg(DT.float)
     ub_u8 = u8_buf
 
-    # Arithmetic (RegOP via operators)
-    r_out <<= r_x + r_y
-    r_out <<= r_x - r_y
-    r_out <<= r_x * r_y
-    r_out <<= r_x / r_y
-    r_out <<= r_x + 5.0
-    r_out <<= r_x - 3.0
-    r_out <<= r_x * 1.2
-    r_out <<= r_x / 2.0
-    r_out <<= r_x * t
-
-    # Binary ops
-    r1 <<= r_x.vmax(r_y)
-    r2 <<= r_x.vmin(r_y)
-    r3 <<= r_x.vand(r_y)
-    r4 <<= r_x.vor(r_y)
-    r5 <<= r_x.vxor(r_y)
-    r6 <<= r_x.prelu(r_y)
-
-    # Unary ops
-    r1 <<= r_x.exp()
-    r2 <<= r_x.abs()
-    r3 <<= r_x.relu()
-    r4 <<= r_x.sqrt()
-    r5 <<= r_x.ln()
-    r6 <<= r_x.log()
-    r1 <<= r_x.log2()
-    r2 <<= r_x.log10()
-    r3 <<= r_x.neg()
-    r4 <<= r_x.vnot()
-    r5 <<= r_x.vcopy()
-
-    # Scalar ops
-    r1 <<= r_x.vmaxs(1.1)
-    r2 <<= r_x.vmins(n_rows)
-    r5 <<= r_x.lrelu(0.1)
-    r6 <<= r_x.shiftls(1)
-    r1 <<= r_x.shiftrs(1)
-    r2 <<= r_x.axpy(2.0)
-
-    # Group ops
-    r1 <<= r_x.cmax()
-    r2 <<= r_x.cgmax()
-    r3 <<= r_x.cmin()
-    r4 <<= r_x.cgmin()
-    r5 <<= r_x.cadd()
-    r6 <<= r_x.cgadd()
-    r1 <<= r_x.cpadd()
-
-    # Dup + arange
-    r2 <<= 3.0 
-    r3 <<= r_x.dup()
-    idx_u16.arange(1, True)
-
     # Cast
-    r_f <<= r_x.astype(DT.float, cfg_f32)
+    r1 <<= ((r2 + r3) * (r4 - r1)).exp().sqrt()
+    r_f <<= x[10]
 
-    # Compare + select
-    mask2 <<= r_x < r_y
-    mask3 <<= r_x > 0.0
-    r4 <<= mask2.select(r_x, r_y)
+    r_x <<= x[8]
+    r_y <<= y[8]
+    if n_rows > 64:
+        r_out <<= r_x + r_y
+    elif n_rows > 0:
+        r_out <<= r_x - r_y
+    else:
+        r_out <<= r_x * r_y
+    y[8] <<= r_out
 
-    # Mask ops
-    mask4 <<= ~mask2
-    mask2 <<= mask2 & mask3
-    mask3 <<= mask2 | mask4
-    mask4 <<= mask2 ^ mask3
-    mask2 <<= mask2.mov(mask3)
-    mask3 <<= mask2.sel(mask3, mask4)
-    mask2 <<= mask2.pack(True)
-    mask3 <<= mask2.unpack(False)
+    for i in range(0, n_rows):
+        r1 <<= x[i]
+        y[i] <<= r1
 
-    # Datamove variants (RegOP + lshift)
-    y <<= r_x
-    y <<= r_x.downsample()
-    y <<= r_x.single_value()
-    ub_u8 <<= r_u8.pack4()
-
-    r_u8_b <<= u8_buf
-    r1 <<= x.single()
-    r1 <<= x.upsample()
+    x[12] <<= r_f
 
 
 @kernel()

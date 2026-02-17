@@ -11,6 +11,7 @@ from ..utils.events import DEvent, SEvent
 ClassifyFn = Callable[[Instruction], str]
 
 _IDENT_RE = re.compile(r"[A-Za-z_][A-Za-z0-9_]*")
+_LOOP_STARTS = ("start_loop", "start_micro_loop")
 
 
 # ---------------------------
@@ -42,7 +43,7 @@ def _parse_loop_node(
     idx += 1
     body, idx = _parse_block(instructions, idx, {"end_loop"})
     if idx >= len(instructions) or instructions[idx].opname != "end_loop":
-        raise ValueError("start_loop缺少end_loop")
+        raise ValueError("start_loop/start_micro_loop缺少end_loop")
     end = instructions[idx]
     idx += 1
     return {
@@ -86,14 +87,14 @@ def _parse_block(
     while idx < len(instructions) and (stop_ops is None or instructions[idx].opname not in stop_ops):
         inst = instructions[idx]
         # A loop may be preceded by a loop var declaration; keep that with the loop.
-        if inst.opname == "create_var" and idx + 1 < len(instructions) and instructions[idx + 1].opname == "start_loop":
+        if inst.opname == "create_var" and idx + 1 < len(instructions) and instructions[idx + 1].opname in _LOOP_STARTS:
             loop_var = instructions[idx + 1].kwargs.get("var", None)
             val = inst.kwargs.get("val", None)
             if _same_var(loop_var, val):
                 node, idx = _parse_loop_node(instructions, idx, True)
                 nodes.append(node)
                 continue
-        if inst.opname == "start_loop":
+        if inst.opname in _LOOP_STARTS:
             node, idx = _parse_loop_node(instructions, idx, False)
             nodes.append(node)
             continue
@@ -139,7 +140,7 @@ def _is_emitting_inst(
     tmp_gmtensor_names: Set[str],
 ) -> bool:
     """Check whether an instruction would produce output code."""
-    if inst.opname in ("start_loop", "end_loop", "start_if", "start_elif", "start_else", "end_if"):
+    if inst.opname in ("start_loop", "start_micro_loop", "end_loop", "start_if", "start_elif", "start_else", "end_if"):
         return False
     return not should_skip_inst(inst, tmp_var_names, tmp_tensor_names, tmp_gmtensor_names)
 

@@ -21,8 +21,8 @@
 
 **Decorators and Syntax Transforms**
 - `decorators.py`: `kernel` and `func` wrap or transform functions using `pythonic.transform_kernel`, and `auto_sync` is a decorator/context manager that injects `start_auto_sync` and `end_auto_sync` instructions.
-- `pythonic.py`: `_VarNameAdder` injects `name=` into `Var/Tensor/DBuff/Reg/MaskReg/CastConfig/...` calls and `range` iterators; `_BoolOpRewriter` converts `and/or/not` to `&/|/~`; `_IfRewriter` rewrites `if/elif/else` into `with If/Elif/Else` blocks; `transform_kernel` recompiles and preserves metadata.
-- `flowcontrol.py`: `range/unroll` emit `start_loop`/`end_loop` instructions and validate args; `If/Elif/Else` are context managers that emit block instructions and enforce kernel-only usage.
+- `pythonic.py`: `_VarNameAdder` injects `name=` into `Var/Tensor/DBuff/Reg/MaskReg/CastConfig/...` calls and `range` iterators; `_BoolOpRewriter` converts `and/or/not` to `&/|/~`; `_IfRewriter` rewrites `if/elif/else` into `with If/Elif/Else` blocks; `transform_kernel` uses `inspect.getsourcelines` plus `ast.increment_lineno` so transformed traceback line numbers match original source files.
+- `flowcontrol.py`: `range/unroll` validate args and emit loop instructions to the active context (`start_loop` in kernel scope, `start_micro_loop` in micro scope, both closed by `end_loop`); `If/Elif/Else` emit branch markers to the same active target (kernel or micro).
 
 **Kernel Lifecycle (`kernelbase/kernelbase.py`)**
 - `KernelBase` stores kernel name, transformed function, instruction list, cross-core mutexes, and `workspace_shapes` for split workspaces.
@@ -40,30 +40,30 @@
 - `OpExec` validates a `KernelBase` instance, requires all `torch.Tensor` args to precede scalar args, maps torch dtypes to `Datatype`, builds `GMTensor`/`Var` placeholders (reusing scalar vars for shape dims), runs the kernel, calls `KernelBase.generate`, writes `input_{name}.bin` into `{out_dir or kernel_name}_aclnn_test/input`, and optionally runs `b.sh` unless `gen_only=True`.
 
 **Runtime Data Model (`easyasc/utils`)**
-- `Tensor`/`DBuff`/`GMTensor` in `utils/Tensor.py` validate types, allocate temp names, emit `create_*`, support slicing via `__getitem__`, and use `__ilshift__` to select the correct data-move operation by position. `Tensor` now accepts `Reg`/`RegOP` stores to UB, and carries `vec_copy_mode` plus helpers (`downsample/upsample/unpack/unpack4/brcb/single`) to influence UB->Reg loads.
+- `Tensor`/`DBuff`/`GMTensor` in `utils/Tensor.py` validate types, allocate temp names, emit `create_*`, support slicing via `__getitem__`, and use `__ilshift__` to select the correct data-move operation by position. `Tensor` now accepts `Reg`/`RegOP` stores to UB, supports scalar shorthand indexing (`x[i]`) for last-dimension offset updates, and carries `vec_copy_mode` plus helpers (`downsample/upsample/unpack/unpack4/brcb/single`) to influence UB->Reg loads.
 - `GMTensor` supports up to 2 sliced dimensions and exposes `bind_cv_mutex/bind_vc_mutex` plus `lock/ready/wait/free` for cross-core sync.
 - `Var` in `utils/var.py` records `create_var`, tracks dtype/value, supports arithmetic via stub functions, and returns `Expr` for comparisons (which intentionally fail Python boolean evaluation).
-- `Reg`/`MaskReg` in `utils/reg.py` now expose RegOP-based operators, casting helpers, mask ops, and `<<=` assignment that can emit micro ops or perform UB<->Reg moves via RegOP.
+- `Reg`/`MaskReg` in `utils/reg.py` now expose RegOP-based operators, casting helpers, mask ops, and `<<=` assignment that can emit micro ops or perform UB<->Reg moves via RegOP, including dtype-mismatch Tensor assignment via temp-reg cast path.
 - `RegOP` in `utils/regop.py` records micro operations and materializes them through `<<=`; it covers arithmetic, unary/scalar, group, cast, compare/select, mask ops (including interleave/deinterleave), and datamove/gather/scatter variants.
 - `VecOP` in `utils/vecop.py` captures `dst <<= src1 + src2` style operations and emits the correct vector stub calls, reinterpreting int-only ops when needed.
-- `micro/micromodule.py`: `MicroModule` tracks input arguments for codegen, collects `cast_cfg_list`, and `gen_code` emits a full micro header (pragma/include, `CastTrait` definitions, `__aicore__` wrapper, and `__VEC_SCOPE__` around translated instructions).
+- `micro/micromodule.py`: `MicroModule` tracks input arguments for codegen, caches a default cast config, collects `cast_cfg_list`, and `gen_code` emits a full micro header (pragma/include, `CastTrait` definitions, `__aicore__` wrapper, and `__VEC_SCOPE__` around translated instructions).
 - `CastConfig` (in `utils/castconfig.py`) carries `round_mode`, `reg_layout`, and saturation settings; it auto-registers in the active micro’s `cast_cfg_list`, and pythonic auto-name injection supplies `name=...` when assigned.
 - Type and enum helpers in `datatype.py`, `positions.py`, `pipe.py`, `comparemode.py`, `roundmode.py`, and `selectmode.py` provide small wrapper types and C++ mappings; `Datatype.int64` is now available.
 - `events.py` defines `SEvent`/`DEvent` with `set/wait/setall/release` instruction emission.
 - `mutex.py` defines `CvMutex`/`VcMutex` and registers them with the active kernel for cross-core coordination.
 
 **Parser and Translation (`easyasc/parser`)**
-- `asc.py` classifies instructions into cube/vec sides using stub opnames and handler modules, validates block structure, folds loops/decl-assigns, and emits C++ via handlers.
+- `asc.py` classifies instructions into cube/vec sides using stub opnames and handler modules, validates block structure, folds loops/decl-assigns, supports micro-loop starts (`start_micro_loop`) in loop-depth validation/folding, and emits C++ via handlers.
 - `split_instructions` runs pruning passes per side, and `translate_split` inserts auto-sync and runs memory-usage analysis before translation.
 - `analyze_usage` prints rich tables for L1/L0/UB usage estimates and inserts a reset-cache banner.
 - `asc_utils.py` maps dtype/positions to C++ strings, formats expressions and offsets, simplifies expressions with SymPy when available, and tracks which temporary instructions can be skipped or inlined; it now substitutes `expr_map` entries inside `Expr` conditions so folded temp vars (e.g., `GetSubBlockIdx`) inline correctly in control flow.
-- `asc_pruning.py` parses instructions into structured blocks, removes empty blocks, prunes unused `create_gm_tensor`/event declarations, and prunes unused vars/assignments using side-specific dependency analysis.
+- `asc_pruning.py` parses instructions into structured blocks, removes empty blocks, prunes unused `create_gm_tensor`/event declarations, structurally recognizes `start_micro_loop` as a loop block marker, and prunes unused vars/assignments using side-specific dependency analysis.
 - `asc_autosync.py` builds pipe-to-op mappings (including explicit vec ops), uses `AutosyncNode` to walk nested loops/ifs and detect buffer reuse, and inserts event set/wait with `preset` hints when names contain `valid`.
-- `asc_handlers/` provide opcode-to-emitter handlers for core creation/slicing, math ops, flow control, cube ops, vec ops, events, pipe barriers/flags, atomics, reinterpret, and reset-cache.
+- `asc_handlers/` provide opcode-to-emitter handlers for core creation/slicing, math ops, flow control (including `start_micro_loop` loop syntax), cube ops, vec ops, events, pipe barriers/flags, atomics, reinterpret, and reset-cache.
 
 **Stub Functions (`easyasc/stub_functions`)**
 - Thin Python APIs that validate inputs and append `Instruction`s for cube/vec ops.
-- `var_op.py` includes `CeilDiv`, `Min/Max`, alignment helpers, scalar sqrt, and arithmetic with constant folding when possible.
+- `var_op.py` includes `CeilDiv`, `Min/Max`, alignment helpers, scalar sqrt, and arithmetic with constant folding when possible; var-op instructions now route to `active_micro` first when inside micro scope.
 - `cube.py`, `vec/`, `atomic.py`, `barrier.py`, `flags.py`, `crosscore.py`, and `misc.py` cover data movement, math, atomics, barriers, flag sync, cross-core ready/wait, reinterpret, split workspace, and cache reset.
 
 **Shortcuts (`easyasc/shortcuts`)**

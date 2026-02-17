@@ -145,8 +145,9 @@ class Var:
         if dtype is not None:
             self.dtype = dtype
 
-        if globvars.active_kernel is not None:
-            globvars.active_kernel.instructions.append(
+        target = globvars.active_micro if globvars.active_micro is not None else globvars.active_kernel
+        if target is not None:
+            target.instructions.append(
                 Instruction("var_add", a=self, b=other, out=self)
             )
         return self

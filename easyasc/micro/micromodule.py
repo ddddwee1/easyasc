@@ -9,12 +9,14 @@ from ..utils.reg import MaskReg, Reg
 from ..utils.Tensor import Tensor
 from ..utils.var import Var
 from ..utils.positions import Position
+from ..utils.castconfig import CastConfig
 
 
 class TempRegStatus:
-    def __init__(self, idx: int):
+    def __init__(self, idx: int, dtype: DataTypeValue):
         self.reg = object.__new__(Reg)
         self.reg.name = f'_tmp_reg_{idx}'
+        self.reg.dtype = dtype
         self.valid = True 
     
     def lock(self):
@@ -32,21 +34,29 @@ class MicroModule:
         self.input_list: List[Any] = []
         self.tmp_idx = 0
         self.tmp_masks: Dict[str, MaskReg] = {}
+        self.default_cast_cfg = None 
         self.cast_cfg_list: List[Any] = []
         self.tmp_regs: Dict[str, List[TempRegStatus]] = {}
 
+    def get_default_cast_cfg(self):
+        if self.default_cast_cfg is not None:
+            return self.default_cast_cfg
+        self.default_cast_cfg = CastConfig(name='default_castcfg')
+        self.cast_cfg_list
+        return self.default_cast_cfg
+
     def get_reg(self, dtype: DataTypeValue):
-        if dtype not in self.tmp_regs:
+        if dtype.name not in self.tmp_regs:
             self.tmp_regs[dtype.name] = []
         for i in self.tmp_regs[dtype.name]:
             if i.valid:
                 i.lock()
                 return i.reg 
-        new_stat = TempRegStatus(self.tmp_idx)
+        new_stat = TempRegStatus(self.tmp_idx, dtype)
         self.tmp_idx += 1 
         self.tmp_regs[dtype.name].append(new_stat)
         new_stat.lock()
-        return new_stat
+        return new_stat.reg
 
     def release_reg(self, reg: Reg):
         for i in self.tmp_regs[reg.dtype.name]:

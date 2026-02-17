@@ -149,20 +149,46 @@ class Reg:
             return self
         if isinstance(other, Tensor):
             mode = getattr(other, "vec_copy_mode", "")
-            if mode == "brcb":
-                ub_to_reg_brcb(self, other)
-            elif mode == "upsample":
-                ub_to_reg_upsample(self, other)
-            elif mode == "unpack":
-                ub_to_reg_unpack(self, other)
-            elif mode == "unpack4":
-                ub_to_reg_unpack4(self, other)
-            elif mode == "downsample":
-                ub_to_reg_downsample(self, other)
-            elif mode == "single":
-                ub_to_reg_single(self, other)
+            if other.dtype!=self.dtype:
+                from ..stub_functions.micro.cast import cast
+
+                micro = globvars.active_micro
+                if micro is None:
+                    raise RuntimeError("active_micro为None，Reg和Tensor赋值仅可在MicroModule中使用")
+
+                tmp_reg = micro.get_reg(other.dtype)
+
+                dst_size = self.dtype.size
+                src_size = other.dtype.size
+                if mode == "single":
+                    ub_to_reg_single(tmp_reg, other)
+                elif dst_size == 4 and src_size == 2:
+                    ub_to_reg_unpack(tmp_reg, other)
+                elif dst_size == 2 and src_size == 1:
+                    ub_to_reg_unpack(tmp_reg, other)
+                elif dst_size == 4 and src_size == 1:
+                    ub_to_reg_unpack4(tmp_reg, other)
+                elif dst_size < src_size:
+                    ub_to_reg(tmp_reg, other)
+                else:
+                    raise TypeError(f"Dataload+Cast does not support from {other.dtype} to {self.dtype}")
+                cast(self, tmp_reg)
+                micro.release_reg(tmp_reg)
             else:
-                ub_to_reg(self, other)
+                if mode == "brcb":
+                    ub_to_reg_brcb(self, other)
+                elif mode == "upsample":
+                    ub_to_reg_upsample(self, other)
+                elif mode == "unpack":
+                    ub_to_reg_unpack(self, other)
+                elif mode == "unpack4":
+                    ub_to_reg_unpack4(self, other)
+                elif mode == "downsample":
+                    ub_to_reg_downsample(self, other)
+                elif mode == "single":
+                    ub_to_reg_single(self, other)
+                else:
+                    ub_to_reg(self, other)
             return self
         if isinstance(other, Reg):
             from ..stub_functions.micro.unary import vcopy
@@ -182,8 +208,6 @@ class Reg:
 
     def astype(self, dtype: DataTypeValue, cfg: Optional[CastConfig] = None):
         from .regop import RegOP
-        if cfg is None:
-            cfg = CastConfig()
         return RegOP("cast", self, cfg, dtype)
 
     def exp(self):

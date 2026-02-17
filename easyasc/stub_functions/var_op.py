@@ -17,6 +17,12 @@ def _value_of(value: Union[Var, int, float]) -> Optional[Union[int, float]]:
     return None
 
 
+def _append_instruction(inst: Instruction) -> None:
+    target = globvars.active_micro if globvars.active_micro is not None else globvars.active_kernel
+    if target is not None:
+        target.instructions.append(inst)
+
+
 def CeilDiv(a: Union[Var, int], b: Union[Var, int], *, name: str = "") -> Var:
     if not isinstance(a, (Var, int)):
         raise TypeError(f"a必须是Var或int类型，当前类型: {type(a)}")
@@ -30,10 +36,7 @@ def CeilDiv(a: Union[Var, int], b: Union[Var, int], *, name: str = "") -> Var:
     b_val = _value_of(b)
     if a_val is not None and b_val is not None and b_val != 0:
         out.value = (a_val + b_val - 1) // b_val
-    if globvars.active_kernel is not None:
-        globvars.active_kernel.instructions.append(
-            Instruction("CeilDiv", a=a, b=b, out=out)
-        )
+    _append_instruction(Instruction("CeilDiv", a=a, b=b, out=out))
     return out
 
 
@@ -41,10 +44,7 @@ def GetCubeNum(*, name: str = "") -> Var:
     if not isinstance(name, str):
         raise TypeError(f"name必须是str类型，当前类型: {type(name)}")
     out = Var(name=name)
-    if globvars.active_kernel is not None:
-        globvars.active_kernel.instructions.append(
-            Instruction("GetCubeNum", out=out)
-        )
+    _append_instruction(Instruction("GetCubeNum", out=out))
     return out
 
 
@@ -52,10 +52,7 @@ def GetCubeIdx(*, name: str = "") -> Var:
     if not isinstance(name, str):
         raise TypeError(f"name必须是str类型，当前类型: {type(name)}")
     out = Var(name=name)
-    if globvars.active_kernel is not None:
-        globvars.active_kernel.instructions.append(
-            Instruction("GetCubeIdx", out=out)
-        )
+    _append_instruction(Instruction("GetCubeIdx", out=out))
     return out
 
 
@@ -63,10 +60,7 @@ def GetVecNum(*, name: str = "") -> Var:
     if not isinstance(name, str):
         raise TypeError(f"name必须是str类型，当前类型: {type(name)}")
     out = Var(dtype=Datatype.int, name=name)
-    if globvars.active_kernel is not None:
-        globvars.active_kernel.instructions.append(
-            Instruction("GetVecNum", out=out)
-        )
+    _append_instruction(Instruction("GetVecNum", out=out))
     return out
 
 
@@ -74,10 +68,7 @@ def GetVecIdx(*, name: str = "") -> Var:
     if not isinstance(name, str):
         raise TypeError(f"name必须是str类型，当前类型: {type(name)}")
     out = Var(dtype=Datatype.int, name=name)
-    if globvars.active_kernel is not None:
-        globvars.active_kernel.instructions.append(
-            Instruction("GetVecIdx", out=out)
-        )
+    _append_instruction(Instruction("GetVecIdx", out=out))
     return out
 
 
@@ -85,10 +76,7 @@ def GetSubBlockIdx(*, name: str = "") -> Var:
     if not isinstance(name, str):
         raise TypeError(f"name必须是str类型，当前类型: {type(name)}")
     out = Var(dtype=Datatype.int, name=name)
-    if globvars.active_kernel is not None:
-        globvars.active_kernel.instructions.append(
-            Instruction("GetSubBlockIdx", out=out)
-        )
+    _append_instruction(Instruction("GetSubBlockIdx", out=out))
     return out
 
 
@@ -103,10 +91,7 @@ def scalar_sqrt(a: Union[Var, float], *, name: str = "") -> Var:
     a_val = _value_of(a)
     if isinstance(a_val, (int, float)):
         out.value = math.sqrt(a_val)
-    if globvars.active_kernel is not None:
-        globvars.active_kernel.instructions.append(
-            Instruction("scalar_sqrt", a=a, out=out)
-        )
+    _append_instruction(Instruction("scalar_sqrt", a=a, out=out))
     return out
 
 
@@ -128,10 +113,7 @@ def Align16(a: Union[Var, int], *, name: str = "") -> Var:
     aligned = _align_value(a, 16)
     if aligned is not None:
         out.value = aligned
-    if globvars.active_kernel is not None:
-        globvars.active_kernel.instructions.append(
-            Instruction("Align16", a=a, out=out)
-        )
+    _append_instruction(Instruction("Align16", a=a, out=out))
     return out
 
 
@@ -146,10 +128,7 @@ def Align32(a: Union[Var, int], *, name: str = "") -> Var:
     aligned = _align_value(a, 32)
     if aligned is not None:
         out.value = aligned
-    if globvars.active_kernel is not None:
-        globvars.active_kernel.instructions.append(
-            Instruction("Align32", a=a, out=out)
-        )
+    _append_instruction(Instruction("Align32", a=a, out=out))
     return out
 
 
@@ -164,10 +143,7 @@ def Align64(a: Union[Var, int], *, name: str = "") -> Var:
     aligned = _align_value(a, 64)
     if aligned is not None:
         out.value = aligned
-    if globvars.active_kernel is not None:
-        globvars.active_kernel.instructions.append(
-            Instruction("Align64", a=a, out=out)
-        )
+    _append_instruction(Instruction("Align64", a=a, out=out))
     return out
 
 
@@ -182,10 +158,7 @@ def Align128(a: Union[Var, int], *, name: str = "") -> Var:
     aligned = _align_value(a, 128)
     if aligned is not None:
         out.value = aligned
-    if globvars.active_kernel is not None:
-        globvars.active_kernel.instructions.append(
-            Instruction("Align128", a=a, out=out)
-        )
+    _append_instruction(Instruction("Align128", a=a, out=out))
     return out
 
 
@@ -200,10 +173,7 @@ def Align256(a: Union[Var, int], *, name: str = "") -> Var:
     aligned = _align_value(a, 256)
     if aligned is not None:
         out.value = aligned
-    if globvars.active_kernel is not None:
-        globvars.active_kernel.instructions.append(
-            Instruction("Align256", a=a, out=out)
-        )
+    _append_instruction(Instruction("Align256", a=a, out=out))
     return out
 
 
@@ -234,10 +204,7 @@ def var_mul(a: Union[Var, int, float], b: Union[Var, int, float], *, name: str =
     b_val = _value_of(b)
     if a_val is not None and b_val is not None:
         out.value = a_val * b_val
-    if globvars.active_kernel is not None:
-        globvars.active_kernel.instructions.append(
-            Instruction("var_mul", a=a, b=b, out=out)
-        )
+    _append_instruction(Instruction("var_mul", a=a, b=b, out=out))
     return out
 
 
@@ -268,10 +235,7 @@ def var_add(a: Union[Var, int, float], b: Union[Var, int, float], *, name: str =
     b_val = _value_of(b)
     if a_val is not None and b_val is not None:
         out.value = a_val + b_val
-    if globvars.active_kernel is not None:
-        globvars.active_kernel.instructions.append(
-            Instruction("var_add", a=a, b=b, out=out)
-        )
+    _append_instruction(Instruction("var_add", a=a, b=b, out=out))
     return out
 
 
@@ -302,10 +266,7 @@ def var_sub(a: Union[Var, int, float], b: Union[Var, int, float], *, name: str =
     b_val = _value_of(b)
     if a_val is not None and b_val is not None:
         out.value = a_val - b_val
-    if globvars.active_kernel is not None:
-        globvars.active_kernel.instructions.append(
-            Instruction("var_sub", a=a, b=b, out=out)
-        )
+    _append_instruction(Instruction("var_sub", a=a, b=b, out=out))
     return out
 
 
@@ -341,10 +302,7 @@ def var_div(a: Union[Var, int, float], b: Union[Var, int, float], *, name: str =
             out.value = a_val // b_val
         else:
             out.value = a_val / b_val
-    if globvars.active_kernel is not None:
-        globvars.active_kernel.instructions.append(
-            Instruction("var_div", a=a, b=b, out=out)
-        )
+    _append_instruction(Instruction("var_div", a=a, b=b, out=out))
     return out
 
 
@@ -375,10 +333,7 @@ def Min(a: Union[Var, int, float], b: Union[Var, int, float], *, name: str = "")
     b_val = _value_of(b)
     if a_val is not None and b_val is not None:
         out.value = min(a_val, b_val)
-    if globvars.active_kernel is not None:
-        globvars.active_kernel.instructions.append(
-            Instruction("Min", a=a, b=b, out=out)
-        )
+    _append_instruction(Instruction("Min", a=a, b=b, out=out))
     return out
 
 
@@ -409,8 +364,5 @@ def Max(a: Union[Var, int, float], b: Union[Var, int, float], *, name: str = "")
     b_val = _value_of(b)
     if a_val is not None and b_val is not None:
         out.value = max(a_val, b_val)
-    if globvars.active_kernel is not None:
-        globvars.active_kernel.instructions.append(
-            Instruction("Max", a=a, b=b, out=out)
-        )
+    _append_instruction(Instruction("Max", a=a, b=b, out=out))
     return out

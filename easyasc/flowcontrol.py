@@ -1,8 +1,7 @@
-from typing import Iterator, Union, Optional
+from typing import Iterator, Union, Optional, Any
 
 from .utils.var import Var
 from .utils.instruction import Instruction
-from .kernelbase.kernelbase import KernelBase
 from . import globvars
 
 
@@ -46,29 +45,53 @@ def range(*args: Union[Var, int], name: str = "") -> Iterator[Var]:
     else:
         loop_var = Var(value=start, name=name)
 
-    if globvars.active_kernel is not None:
-        globvars.active_kernel.instructions.append(
-            Instruction("start_loop", var=loop_var, start=start, stop=stop, step=step)
+    target = None
+    start_opname = "start_loop"
+    if globvars.active_micro is not None:
+        target = globvars.active_micro
+        start_opname = "start_micro_loop"
+    elif globvars.active_kernel is not None:
+        target = globvars.active_kernel
+
+    if target is not None:
+        target.instructions.append(
+            Instruction(start_opname, var=loop_var, start=start, stop=stop, step=step)
         )
 
     try:
         yield loop_var
     finally:
-        if globvars.active_kernel is not None:
-            globvars.active_kernel.instructions.append(
+        if target is not None:
+            target.instructions.append(
                 Instruction("end_loop", var=loop_var)
             )
 
 
 def _pop_last_end_if() -> None:
-    if globvars.active_kernel is None:
-        raise RuntimeError("If/Elif/Else只能在kernel内使用")
-    if not globvars.active_kernel.instructions:
+    target = _get_flow_target()
+    if target is None:
+        raise RuntimeError("If/Elif/Else只能在kernel或micro内使用")
+    if not target.instructions:
         raise RuntimeError("Elif/Else必须跟在If/Elif之后")
-    last = globvars.active_kernel.instructions[-1]
+    last = target.instructions[-1]
     if last.opname != "end_if":
         raise RuntimeError("Elif/Else必须跟在If/Elif之后")
-    globvars.active_kernel.instructions.pop()
+    target.instructions.pop()
+
+
+def _get_flow_target() -> Optional[Any]:
+    if globvars.active_micro is not None:
+        return globvars.active_micro
+    if globvars.active_kernel is not None:
+        return globvars.active_kernel
+    return None
+
+
+def _append_flow_instruction(opname: str, **kwargs: Any) -> None:
+    target = _get_flow_target()
+    if target is None:
+        raise RuntimeError("If/Elif/Else只能在kernel或micro内使用")
+    target.instructions.append(Instruction(opname, **kwargs))
 
 
 class If:
@@ -76,20 +99,12 @@ class If:
         self.cond = cond
 
     def __enter__(self):
-        if globvars.active_kernel is None:
-            raise RuntimeError("If只能在kernel内使用")
-        globvars.active_kernel.instructions.append(
-            Instruction("start_if", cond=self.cond)
-        )
+        _append_flow_instruction("start_if", cond=self.cond)
 
     def __exit__(self, exc_type, exc_val, exc_tb):
         if exc_type:
             return False
-        if globvars.active_kernel is None:
-            raise RuntimeError("If只能在kernel内使用")
-        globvars.active_kernel.instructions.append(
-            Instruction("end_if")
-        )
+        _append_flow_instruction("end_if")
         return True
 
 
@@ -98,39 +113,27 @@ class Elif:
         self.cond = cond
 
     def __enter__(self):
-        if not isinstance(globvars.active_kernel, KernelBase):
-            raise RuntimeError("Elif can only be used inside kernel")
+        if _get_flow_target() is None:
+            raise RuntimeError("Elif只能在kernel或micro内使用")
         _pop_last_end_if()
-        globvars.active_kernel.instructions.append(
-            Instruction("start_elif", cond=self.cond)
-        )
+        _append_flow_instruction("start_elif", cond=self.cond)
 
     def __exit__(self, exc_type, exc_val, exc_tb):
         if exc_type:
             return False
-        if globvars.active_kernel is None:
-            raise RuntimeError("Elif只能在kernel内使用")
-        globvars.active_kernel.instructions.append(
-            Instruction("end_if")
-        )
+        _append_flow_instruction("end_if")
         return True
 
 
 class Else:
     def __enter__(self):
-        if not isinstance(globvars.active_kernel, KernelBase):
-            raise RuntimeError("Else can only be used inside kernel")
+        if _get_flow_target() is None:
+            raise RuntimeError("Else只能在kernel或micro内使用")
         _pop_last_end_if()
-        globvars.active_kernel.instructions.append(
-            Instruction("start_else")
-        )
+        _append_flow_instruction("start_else")
 
     def __exit__(self, exc_type, exc_val, exc_tb):
         if exc_type:
             return False
-        if globvars.active_kernel is None:
-            raise RuntimeError("Else只能在kernel内使用")
-        globvars.active_kernel.instructions.append(
-            Instruction("end_if")
-        )
+        _append_flow_instruction("end_if")
         return True

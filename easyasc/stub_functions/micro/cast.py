@@ -1,11 +1,15 @@
 from ...utils.reg import Reg, MaskReg
 from ...utils.instruction import Instruction
 from ...utils.castconfig import CastConfig
-from .microutils import require_micro
+from .microutils import require_micro, ensure_mask
+from typing import Optional
 
 
-def cast(dst: Reg, src: Reg, config: CastConfig, mask: MaskReg) -> None:
+def cast(dst: Reg, src: Reg, config: Optional[CastConfig] = None, mask: Optional[MaskReg] = None) -> None:
     micro = require_micro()
+    mask = ensure_mask(mask, dst.dtype, micro)
+    if config is None:
+        config = micro.get_default_cast_cfg()
     if not isinstance(dst, Reg):
         raise TypeError(f"dst必须是Reg类型，当前类型: {type(dst)}")
     if not isinstance(src, Reg):

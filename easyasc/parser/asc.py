@@ -49,6 +49,7 @@ _BLOCK_FORBIDDEN_OPS = {
     "create_sevent",
 }
 _IF_STARTS = ("start_if", "start_elif", "start_else")
+_LOOP_STARTS = ("start_loop", "start_micro_loop")
 
 
 def _collect_opnames_from_file(path: str) -> Set[str]:
@@ -236,17 +237,22 @@ def _try_fold_loop(
     if next_idx >= len(instructions):
         return -1
     next_inst = instructions[next_idx]
-    if next_inst.opname != "start_loop":
+    if next_inst.opname not in _LOOP_STARTS:
         return -1
     loop_var = next_inst.kwargs.get("var", None)
     if not isinstance(loop_var, Var) or loop_var.name != val.name:
         return -1
-    dtype = dtype_to_cpp(val.dtype)
-    init_expr = value_to_cpp(val.value, expr_map)
     start = value_to_cpp(next_inst.kwargs.get("start", None), expr_map)
     stop = value_to_cpp(next_inst.kwargs.get("stop", None), expr_map)
     step = value_to_cpp(next_inst.kwargs.get("step", None), expr_map)
-    helper(f"for ({dtype} {val.name} = {start}; {val.name} < {stop}; {val.name} += {step}) {{")
+    if next_inst.opname == "start_micro_loop":
+        helper(
+            f"for (uint16_t {val.name} = (uint16_t){start}; "
+            f"{val.name} < (uint16_t){stop}; {val.name} += (uint16_t){step}) {{"
+        )
+    else:
+        dtype = dtype_to_cpp(val.dtype)
+        helper(f"for ({dtype} {val.name} = {start}; {val.name} < {stop}; {val.name} += {step}) {{")
     helper.ir()
     return next_idx + 1
 
@@ -294,7 +300,7 @@ def validate(instructions: Iterable[Instruction]) -> None:
     if_depth = 0
     for idx, inst in enumerate(instructions):
         op = inst.opname
-        if op == "start_loop":
+        if op in _LOOP_STARTS:
             loop_depth += 1
         elif op == "end_loop":
             if loop_depth > 0:

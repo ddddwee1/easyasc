@@ -9,6 +9,9 @@ class DataTypeValue:
     def __str__(self):
         return self.name
     
+    def __hash__(self):
+        return hash(self.name)
+    
     def __eq__(self, other):
         """判断两个数据类型是否一致"""
         if self is other:
