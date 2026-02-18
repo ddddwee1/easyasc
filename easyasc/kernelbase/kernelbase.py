@@ -270,7 +270,7 @@ class KernelBase:
                 "int16_t": "ge::DT_INT16",
                 "uint16_t": "ge::DT_UINT16",
             }
-            return mapping.get(name, "ge::DT_FLOAT16")
+            return mapping.get(name, "ge::DT_FLOAT16")   # type: ignore
 
         def _attr_method(dtype) -> str:
             name = getattr(dtype, "name", None)
@@ -516,10 +516,20 @@ class KernelBase:
             json.dump(preset_data, f, indent=4)
             f.write("\n")
 
+    @staticmethod
+    def _resolve_custom_opp_path(custom_op_path: str) -> str:
+        normalized_path = custom_op_path.rstrip("/")
+        if normalized_path.endswith("/opp"):
+            return normalized_path
+        if normalized_path == "":
+            return "/opp"
+        return f"{normalized_path}/opp"
+
     def generate(
         self,
         out_dir: str = "",
         cann_path: Optional[str] = None,
+        custom_op_path: Optional[str] = None,
         profile: bool = False,
     ) -> None:
         if not isinstance(out_dir, str):
@@ -534,6 +544,10 @@ class KernelBase:
                 raise ValueError("cann_path为None且环境变量ASCEND_HOME_PATH未设置，请手动指定cann_path")
         if not isinstance(cann_path, str):
             raise TypeError(f"cann_path必须是str类型，当前类型: {type(cann_path)}")
+        if custom_op_path is None:
+            custom_op_path = cann_path
+        if not isinstance(custom_op_path, str):
+            raise TypeError(f"custom_op_path必须是str类型，当前类型: {type(custom_op_path)}")
 
         self.generate_op_project(out_dir, cann_path)
 
@@ -564,13 +578,19 @@ class KernelBase:
         if not os.path.isfile(tensorutils_src):
             raise FileNotFoundError(f"未找到tensorutils.h: {tensorutils_src}")
         shutil.copy2(tensorutils_src, os.path.join(op_kernel_dir, "tensorutils.h"))
-        self.generate_aclnn_test(f"{out_dir}_aclnn_test", cann_path=cann_path, profile=profile)
-        self.generate_bashfiles(out_dir, cann_path)
+        self.generate_aclnn_test(
+            f"{out_dir}_aclnn_test",
+            cann_path=cann_path,
+            custom_op_path=custom_op_path,
+            profile=profile,
+        )
+        self.generate_bashfiles(out_dir, cann_path, custom_op_path=custom_op_path)
 
     def generate_aclnn_test(
         self,
         path: str,
         cann_path: Optional[str] = None,
+        custom_op_path: Optional[str] = None,
         profile: bool = False,
     ) -> None:
         if not isinstance(path, str):
@@ -581,8 +601,13 @@ class KernelBase:
                 raise ValueError("cann_path为None且环境变量ASCEND_HOME_PATH未设置，请手动指定cann_path")
         if not isinstance(cann_path, str):
             raise TypeError(f"cann_path必须是str类型，当前类型: {type(cann_path)}")
+        if custom_op_path is None:
+            custom_op_path = cann_path
+        if not isinstance(custom_op_path, str):
+            raise TypeError(f"custom_op_path必须是str类型，当前类型: {type(custom_op_path)}")
         if not isinstance(profile, bool):
             raise TypeError(f"profile必须是bool类型，当前类型: {type(profile)}")
+        resolved_custom_op_path = self._resolve_custom_opp_path(custom_op_path)
 
         abs_path = os.path.abspath(path)
         os.makedirs(abs_path, exist_ok=True)
@@ -603,14 +628,22 @@ class KernelBase:
         with open(setup_aclnn_src, "r", encoding="utf-8") as f:
             setup_lines = f.readlines()
         cann_path_literal = repr(cann_path)
-        replaced = False
+        custom_op_path_literal = repr(resolved_custom_op_path)
+        replaced_cann_path = False
+        replaced_custom_op_path = False
         for idx, line in enumerate(setup_lines):
-            if line.lstrip().startswith("ascend_toolkit_install_path="):
+            stripped = line.lstrip()
+            if stripped.startswith("ascend_toolkit_install_path="):
                 setup_lines[idx] = f"ascend_toolkit_install_path={cann_path_literal}\n"
-                replaced = True
-                break
-        if not replaced:
+                replaced_cann_path = True
+                continue
+            if stripped.startswith("custom_op_path=") or stripped.startswith("custom_op_path ="):
+                setup_lines[idx] = f"custom_op_path = {custom_op_path_literal}\n"
+                replaced_custom_op_path = True
+        if not replaced_cann_path:
             raise ValueError("setup_aclnn.py中未找到ascend_toolkit_install_path配置项")
+        if not replaced_custom_op_path:
+            raise ValueError("setup_aclnn.py中未找到custom_op_path配置项")
         machine = platform.machine().lower()
         if machine in ("x86_64", "amd64"):
             arch_tag = "x86_64"
@@ -860,17 +893,27 @@ class KernelBase:
         with open(os.path.join(abs_path, "test.cpp"), "w", encoding="utf-8") as f:
             f.write("\n".join(lines))
 
-    def generate_bashfiles(self, path: str, cann_path: str) -> None:
+    def generate_bashfiles(
+        self,
+        path: str,
+        cann_path: str,
+        custom_op_path: Optional[str] = None,
+    ) -> None:
         if not isinstance(path, str):
             raise TypeError(f"path必须是str类型，当前类型: {type(path)}")
         if not isinstance(cann_path, str):
             raise TypeError(f"cann_path必须是str类型，当前类型: {type(cann_path)}")
+        if custom_op_path is None:
+            custom_op_path = cann_path
+        if not isinstance(custom_op_path, str):
+            raise TypeError(f"custom_op_path必须是str类型，当前类型: {type(custom_op_path)}")
+        resolved_custom_op_path = self._resolve_custom_opp_path(custom_op_path)
         script_lines = [
             f"cd {path}",
             "bash build.sh",
             "cd build_out",
             'for f in custom_*.run; do bash "$f"; done',
-            f"export LD_LIBRARY_PATH={cann_path}/opp/vendors/customize/op_api/lib/:${{LD_LIBRARY_PATH}}",
+            f"export LD_LIBRARY_PATH={resolved_custom_op_path}/vendors/customize/op_api/lib/:${{LD_LIBRARY_PATH}}",
             f"cd ../../{path}_aclnn_test",
             "python setup_aclnn.py",
             "",
@@ -878,7 +921,7 @@ class KernelBase:
         with open("b.sh", "w", encoding="utf-8") as f:
             f.write("\n".join(script_lines))
         run_lines = [
-            f"export LD_LIBRARY_PATH={cann_path}/opp/vendors/customize/op_api/lib/:${{LD_LIBRARY_PATH}}",
+            f"export LD_LIBRARY_PATH={resolved_custom_op_path}/vendors/customize/op_api/lib/:${{LD_LIBRARY_PATH}}",
             f"cd {path}_aclnn_test",
             "./aclnn_test",
             "",

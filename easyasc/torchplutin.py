@@ -47,12 +47,14 @@ class OpExec:
         op_func: Union["KernelBase", Callable[..., Any]],
         out_dir: str = "",
         cann_path: Optional[str] = None,
+        custom_op_path: Optional[str] = None,
         profile: bool = False,
         gen_only: bool = False,
     ) -> None:
         self.op_func = op_func
         self.out_dir = out_dir
         self.cann_path = cann_path
+        self.custom_op_path = custom_op_path
         self.profile = profile
         self.gen_only = gen_only 
 
@@ -123,7 +125,12 @@ class OpExec:
             gm_tensors.append(GMTensor(dtype, inferred_shape))
 
         self.op_func(*(gm_tensors + scalar_vars))
-        self.op_func.generate(self.out_dir, cann_path=self.cann_path, profile=self.profile)
+        self.op_func.generate(
+            self.out_dir,
+            cann_path=self.cann_path,
+            custom_op_path=self.custom_op_path,
+            profile=self.profile,
+        )
 
         if not self.op_func._last_bound_args:
             raise ValueError("op_func未执行，无法从KernelBase提取输入输出信息")
