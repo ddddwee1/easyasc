@@ -3,3 +3,4 @@
 - When asked to update ai_summary.md, always consider the contents in ai_modifications.md. After updating, clear all contents in ai_modifications.md 
 - Always use torch210npu conda environment if it exists
 - Typehints should be compatible with python3.8
+- All codes, error messages, and readme files should be written in English 

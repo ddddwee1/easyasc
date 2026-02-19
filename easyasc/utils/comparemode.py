@@ -1,5 +1,5 @@
 class CompareModeType:
-    """比较模式值类，用于表示具体的比较模式"""
+    """Compare mode value class representing a concrete compare mode."""
     def __init__(self, name: str):
         self.name = name
 
@@ -13,12 +13,12 @@ class CompareModeType:
         if self is other:
             return True
         if not isinstance(other, CompareModeType):
-            raise TypeError(f"无法比较CompareModeType与{type(other)}")
+            raise TypeError(f"Cannot compare CompareModeType with {type(other)}")
         return self.name == other.name
 
 
 class CompareMode:
-    """比较模式枚举类"""
+    """Compare mode enum-like class."""
     LT = CompareModeType("LT")
     GT = CompareModeType("GT")
     GE = CompareModeType("GE")

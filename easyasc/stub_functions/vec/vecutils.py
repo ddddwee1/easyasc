@@ -7,13 +7,11 @@ from ..var_op import CeilDiv
 
 def validate_var_or_int(value: object, label: str) -> None:
     if not isinstance(value, (Var, int)):
-        raise TypeError(f"{label}必须是Var或int类型，当前类型: {type(value)}")
-
+        raise TypeError(f"{label} must be Var or int type, current type: {type(value)}") 
 
 def validate_scalar(value: object, label: str) -> None:
     if not isinstance(value, (Var, int, float)):
-        raise TypeError(f"{label}必须是Var或数值类型，当前类型: {type(value)}")
-
+        raise TypeError(f"{label} must be Var or numeric value type, current type: {type(value)}") 
 
 def infer_repeat(tensor: Tensor) -> Union[int, Var]:
     span = tensor.span if hasattr(tensor, "span") else tensor.shape
@@ -27,7 +25,7 @@ def infer_repeat(tensor: Tensor) -> Union[int, Var]:
     if isinstance(count, Var):
         return CeilDiv(count, denom)
     if not isinstance(count, int):
-        raise TypeError(f"repeat无法由shape推断，当前count类型: {type(count)}")
+        raise TypeError(f"repeat cannot be inferred from shape, current count type: {type(count)}")
     return count // denom
 
 
@@ -42,7 +40,7 @@ def infer_repeat_brcb(src: Tensor) -> Union[int, Var]:
     if isinstance(count, Var):
         return CeilDiv(count, 8)
     if not isinstance(count, int):
-        raise TypeError(f"repeat无法由shape推断，当前count类型: {type(count)}")
+        raise TypeError(f"repeat cannot be inferred from shape, current count type: {type(count)}")
     return count // 8
 
 
@@ -51,8 +49,7 @@ def infer_rep_stride(shape1: object, c0: int) -> Union[int, Var]:
         return CeilDiv(shape1, c0)
     if isinstance(shape1, int):
         return shape1 // c0
-    raise TypeError(f"rep_stride无法由shape推断，当前shape[1]类型: {type(shape1)}")
-
+    raise TypeError(f"rep_stride cannot be inferred from shape, current shape[1] type: {type(shape1)}")
 
 def infer_strides(tensor: Tensor) -> Tuple[Union[int, Var], Union[int, Var]]:
     span = tensor.span if hasattr(tensor, "span") else tensor.shape

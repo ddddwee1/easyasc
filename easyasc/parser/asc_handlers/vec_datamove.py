@@ -4,10 +4,10 @@ from .common import GMTensor, Tensor, value_to_cpp
 def handle_vec_gm2ubpad(inst, helper, expr_map) -> None:
     dst = inst.kwargs.get("dst", None)
     if not isinstance(dst, Tensor):
-        raise TypeError(f"gm_to_ub_pad需要Tensor类型，当前类型: {type(dst)}")
+        raise TypeError(f"gm_to_ub_pad requires Tensor type, current type: {type(dst)}")
     src = inst.kwargs.get("src", None)
     if not isinstance(src, GMTensor):
-        raise TypeError(f"gm_to_ub_pad需要GMTensor类型，当前类型: {type(src)}")
+        raise TypeError(f"gm_to_ub_pad requires GMTensor type, current type: {type(src)}")
     dst_expr = value_to_cpp(dst, expr_map)
     src_expr = value_to_cpp(src, expr_map)
     n_burst = value_to_cpp(inst.kwargs.get("n_burst", None), expr_map)
@@ -20,10 +20,10 @@ def handle_vec_gm2ubpad(inst, helper, expr_map) -> None:
 def handle_vec_ub2gmpad(inst, helper, expr_map) -> None:
     dst = inst.kwargs.get("dst", None)
     if not isinstance(dst, GMTensor):
-        raise TypeError(f"ub_to_gm_pad需要GMTensor类型，当前类型: {type(dst)}")
+        raise TypeError(f"ub_to_gm_pad requires GMTensor type, current type: {type(dst)}")
     src = inst.kwargs.get("src", None)
     if not isinstance(src, Tensor):
-        raise TypeError(f"ub_to_gm_pad需要Tensor类型，当前类型: {type(src)}")
+        raise TypeError(f"ub_to_gm_pad requires Tensor type, current type: {type(src)}")
     dst_expr = value_to_cpp(dst, expr_map)
     src_expr = value_to_cpp(src, expr_map)
     n_burst = value_to_cpp(inst.kwargs.get("n_burst", None), expr_map)
@@ -36,10 +36,10 @@ def handle_vec_ub2gmpad(inst, helper, expr_map) -> None:
 def handle_vec_ub2ub(inst, helper, expr_map) -> None:
     dst = inst.kwargs.get("dst", None)
     if not isinstance(dst, Tensor):
-        raise TypeError(f"ub_to_ub需要Tensor类型，当前类型: {type(dst)}")
+        raise TypeError(f"ub_to_ub requires Tensor type, current type: {type(dst)}")
     src = inst.kwargs.get("src", None)
     if not isinstance(src, Tensor):
-        raise TypeError(f"ub_to_ub需要Tensor类型，当前类型: {type(src)}")
+        raise TypeError(f"ub_to_ub requires Tensor type, current type: {type(src)}")
     dst_expr = value_to_cpp(dst, expr_map)
     src_expr = value_to_cpp(src, expr_map)
     n_burst = value_to_cpp(inst.kwargs.get("n_burst", None), expr_map)

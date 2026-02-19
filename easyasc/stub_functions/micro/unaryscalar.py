@@ -15,14 +15,13 @@ def _unary_scalar_op(
 ) -> None:
     micro = require_micro()
     if not isinstance(dst, Reg):
-        raise TypeError(f"dst必须是Reg类型，当前类型: {type(dst)}")
+        raise TypeError(f"dst must be Reg type, current type: {type(dst)}")
     if not isinstance(src, Reg):
-        raise TypeError(f"src必须是Reg类型，当前类型: {type(src)}")
+        raise TypeError(f"src must be Reg type, current type: {type(src)}")
     if not isinstance(value, (Var, int, float)):
-        raise TypeError(f"value必须是Var或数值类型，当前类型: {type(value)}")
+        raise TypeError(f"value must be Var or numeric value type, current type: {type(value)}")
     if dst.dtype != src.dtype:
-        raise ValueError("dst/src的数据类型必须一致")
-
+        raise ValueError("dst/src data types must match") 
     mask = ensure_mask(mask, dst.dtype, micro)
     v = format_scalar(value, src.dtype)
     micro.instructions.append(Instruction(opname, dst=dst, src=src, v=v, mask=mask))
@@ -50,13 +49,13 @@ def lrelu(dst: Reg, src: Reg, value: Union[Var, int, float], mask: Optional[Mask
 
 def shiftls(dst: Reg, src: Reg, value: Union[Var, int], mask: Optional[MaskReg] = None) -> None:
     if not isinstance(value, (Var, int)):
-        raise TypeError(f"value必须是Var或int类型，当前类型: {type(value)}")
+        raise TypeError(f"value must be Var or int type, current type: {type(value)}")
     _unary_scalar_op("micro_shiftls", dst, src, value, mask)
 
 
 def shiftrs(dst: Reg, src: Reg, value: Union[Var, int], mask: Optional[MaskReg] = None) -> None:
     if not isinstance(value, (Var, int)):
-        raise TypeError(f"value必须是Var或int类型，当前类型: {type(value)}")
+        raise TypeError(f"value must be Var or int type, current type: {type(value)}")
     _unary_scalar_op("micro_shiftrs", dst, src, value, mask)
 
 

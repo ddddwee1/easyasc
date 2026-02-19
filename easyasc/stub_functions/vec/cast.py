@@ -21,7 +21,7 @@ def _infer_cast_repeat(dst: Tensor, src: Tensor) -> Union[int, Var]:
     if isinstance(count, Var):
         return count // denom
     if not isinstance(count, int):
-        raise TypeError(f"repeat无法由shape推断，当前count类型: {type(count)}")
+        raise TypeError(f"repeat cannot be inferred from shape, current count type: {type(count)}")
     return count // denom
 
 
@@ -32,7 +32,7 @@ def _resolve_cast_rep_strides(
     src_rep_stride: Union[int, Var, None],
 ) -> tuple[Union[int, Var], Union[int, Var]]:
     if (dst_rep_stride is None) != (src_rep_stride is None):
-        raise ValueError("src_rep_stride和dst_rep_stride必须同时为None或同时指定")
+        raise ValueError("src_rep_stride and dst_rep_stride must all be None or simultaneously specified")
     if dst_rep_stride is not None and src_rep_stride is not None:
         return dst_rep_stride, src_rep_stride
 
@@ -61,15 +61,15 @@ def cast(
     round_mode: RoundModeType = RoundMode.AWAY_FROM_ZERO,
 ) -> None:
     if not isinstance(dst, Tensor):
-        raise TypeError(f"dst必须是Tensor类型，当前类型: {type(dst)}")
+        raise TypeError(f"dst must be Tensor type, current type: {type(dst)}")
     if not isinstance(src, Tensor):
-        raise TypeError(f"src必须是Tensor类型，当前类型: {type(src)}")
+        raise TypeError(f"src must be Tensor type, current type: {type(src)}")
     if dst.position is not Position.UB:
-        raise ValueError(f"dst必须在UB位置，当前位置: {dst.position}")
+        raise ValueError(f"dst must be at UB position, current position: {dst.position}")
     if src.position is not Position.UB:
-        raise ValueError(f"src必须在UB位置，当前位置: {src.position}")
+        raise ValueError(f"src must be at UB position, current position: {src.position}")
     if not isinstance(round_mode, RoundModeType):
-        raise TypeError(f"round_mode必须是RoundModeType类型，当前类型: {type(round_mode)}")
+        raise TypeError(f"round_mode must be RoundModeTypetype, current type: {type(round_mode)}")
 
     if repeat is None:
         repeat = _infer_cast_repeat(dst, src)

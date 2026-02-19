@@ -37,18 +37,17 @@ def _warn_vcp() -> None:
 
 def _validate_group_tensors(dst: Tensor, src: Tensor) -> None:
     if not isinstance(dst, Tensor):
-        raise TypeError(f"dst必须是Tensor类型，当前类型: {type(dst)}")
+        raise TypeError(f"dst must be Tensor type, current type: {type(dst)}")
     if not isinstance(src, Tensor):
-        raise TypeError(f"src必须是Tensor类型，当前类型: {type(src)}")
+        raise TypeError(f"src must be Tensor type, current type: {type(src)}")
     if dst.position is not Position.UB:
-        raise ValueError(f"dst必须在UB位置，当前位置: {dst.position}")
+        raise ValueError(f"dst must be at UB position, current position: {dst.position}")
     if src.position is not Position.UB:
-        raise ValueError(f"src必须在UB位置，当前位置: {src.position}")
+        raise ValueError(f"src must be at UB position, current position: {src.position}")
     if dst.dtype != src.dtype:
-        raise ValueError("dst/src的数据类型必须一致")
+        raise ValueError("dst/src data types must match")
     if dst.dtype not in (Datatype.float, Datatype.half):
-        raise ValueError(f"不支持的数据类型: {dst.dtype}")
-
+        raise ValueError(f"does not support data type: {dst.dtype}") 
 
 def _resolve_group_strides(
     dst: Tensor,
@@ -58,7 +57,7 @@ def _resolve_group_strides(
     src_rep_stride: Union[int, Var, None],
 ) -> Tuple[Union[int, Var], Union[int, Var], Union[int, Var]]:
     if dst_rep_stride is None:
-        raise ValueError("dst_rep_stride不支持None，请显式传入")
+        raise ValueError("dst_rep_stride does not support None, please provide explicitly")
     if src_blk_stride is None or src_rep_stride is None:
         auto_blk, auto_rep = resolve_strides(src, None, None)
         if src_blk_stride is None:

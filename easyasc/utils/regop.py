@@ -22,7 +22,7 @@ MicroDst = Union["Reg", "MaskReg", "Tensor"]
 def _require_micro() -> "MicroModule":
     micro = globvars.active_micro
     if micro is None:
-        raise RuntimeError("RegOP只能在MicroModule中使用")
+        raise RuntimeError("RegOP can only be used inside MicroModule")
     return micro
 
 
@@ -43,14 +43,14 @@ def _release_temp_reg(reg: object) -> None:
 
 def _require_arity(inputs: Tuple[object, ...], expected: int, op: str) -> None:
     if len(inputs) < expected:
-        raise TypeError(f"{op}需要至少{expected}个输入，当前数量: {len(inputs)}")
+        raise TypeError(f"{op} requires at least {expected} inputs, current count: {len(inputs)}")
 
 
 def _as_reg(value: object, arg: str, op: str) -> "Reg":
     from .reg import Reg
 
     if not isinstance(value, Reg):
-        raise TypeError(f"{op}的{arg}必须是Reg类型，当前类型: {type(value)}")
+        raise TypeError(f"{op} argument {arg} must be Reg, got: {type(value)}")
     return value
 
 
@@ -58,7 +58,7 @@ def _as_reglist(value: object, arg: str, op: str) -> "RegList":
     from .reg import RegList
 
     if not isinstance(value, RegList):
-        raise TypeError(f"{op}的{arg}必须是RegList类型，当前类型: {type(value)}")
+        raise TypeError(f"{op} argument {arg} must be RegList, got: {type(value)}")
     return value
 
 
@@ -66,7 +66,7 @@ def _as_maskreg(value: object, arg: str, op: str) -> "MaskReg":
     from .reg import MaskReg
 
     if not isinstance(value, MaskReg):
-        raise TypeError(f"{op}的{arg}必须是MaskReg类型，当前类型: {type(value)}")
+        raise TypeError(f"{op} argument {arg} must be MaskReg, got: {type(value)}")
     return value
 
 
@@ -74,13 +74,13 @@ def _as_tensor(value: object, arg: str, op: str) -> "Tensor":
     from .Tensor import Tensor
 
     if not isinstance(value, Tensor):
-        raise TypeError(f"{op}的{arg}必须是Tensor类型，当前类型: {type(value)}")
+        raise TypeError(f"{op} argument {arg} must be Tensor, got: {type(value)}")
     return value
 
 
 def _as_scalar(value: object, arg: str, op: str) -> Scalar:
     if not isinstance(value, (Var, int, float)):
-        raise TypeError(f"{op}的{arg}必须是Var/int/float，当前类型: {type(value)}")
+        raise TypeError(f"{op} argument {arg} must be Var/int/float, got: {type(value)}")
     return value
 
 
@@ -88,25 +88,25 @@ def _as_scalar_or_reg(value: object, arg: str, op: str) -> Union[Scalar, "Reg"]:
     from .reg import Reg
 
     if not isinstance(value, (Reg, Var, int, float)):
-        raise TypeError(f"{op}的{arg}必须是Reg/Var/int/float，当前类型: {type(value)}")
+        raise TypeError(f"{op} argument {arg} must be Reg/Var/int/float, got: {type(value)}")
     return value
 
 
 def _as_bool(value: object, arg: str, op: str) -> bool:
     if not isinstance(value, bool):
-        raise TypeError(f"{op}的{arg}必须是bool类型，当前类型: {type(value)}")
+        raise TypeError(f"{op} argument {arg} must be bool, got: {type(value)}")
     return value
 
 
 def _as_compare_mode(value: object, op: str) -> CompareModeType:
     if not isinstance(value, CompareModeType):
-        raise TypeError(f"{op}需要CompareModeType，当前类型: {type(value)}")
+        raise TypeError(f"{op} requires CompareModeType, got: {type(value)}")
     return value
 
 
 def _as_blk_stride(value: object, arg: str, op: str) -> Union[int, Var]:
     if not isinstance(value, (int, Var)):
-        raise TypeError(f"{op}的{arg}必须是int或Var类型，当前类型: {type(value)}")
+        raise TypeError(f"{op} argument {arg} must be int or Var, got: {type(value)}")
     return value
 
 
@@ -114,7 +114,7 @@ def _as_loaddist(value: object, op: str) -> "LoadDistValue":
     from ..stub_functions.micro.datamove import LoadDistValue
 
     if not isinstance(value, LoadDistValue):
-        raise TypeError(f"{op}需要LoadDistValue，当前类型: {type(value)}")
+        raise TypeError(f"{op} requires LoadDistValue, got: {type(value)}")
     return value
 
 
@@ -122,7 +122,7 @@ def _as_storedist(value: object, op: str) -> "StoreDistValue":
     from ..stub_functions.micro.datamove import StoreDistValue
 
     if not isinstance(value, StoreDistValue):
-        raise TypeError(f"{op}需要StoreDistValue，当前类型: {type(value)}")
+        raise TypeError(f"{op} requires StoreDistValue, got: {type(value)}")
     return value
 
 
@@ -130,7 +130,7 @@ def _normalize_mask(mask: Optional["MaskReg"], op: str) -> Optional["MaskReg"]:
     from .reg import MaskReg
 
     if mask is not None and not isinstance(mask, MaskReg):
-        raise TypeError(f"{op}的mask必须是MaskReg类型，当前类型: {type(mask)}")
+        raise TypeError(f"{op} mask must be MaskReg, got: {type(mask)}")
     return mask
 
 
@@ -165,10 +165,10 @@ class RegOP:
         if self.inputs and isinstance(self.inputs[0], RegList):
             if self.opname in ("cadd", "cmax", "cmin"):
                 return self.inputs[0].dtype
-            raise TypeError(f"无法推断RegList算子{self.opname}的输出dtype")
+            raise TypeError(f"Cannot infer output dtype for RegList op {self.opname}")
         if not self.inputs:
-            raise TypeError("无法推断RegOP输出dtype")
-        raise TypeError("无法推断RegOP输出dtype")
+            raise TypeError("Cannot infer RegOP output dtype")
+        raise TypeError("Cannot infer RegOP output dtype")
 
     def _emit_reglist_reduce(
         self,
@@ -180,7 +180,7 @@ class RegOP:
         from ..stub_functions import micro
 
         if src.length <= 0:
-            raise ValueError("RegList长度必须大于0")
+            raise ValueError("RegList length must be greater than 0")
 
         if op == "cmax":
             pair_func = micro.vmax
@@ -192,7 +192,7 @@ class RegOP:
             pair_func = micro.add
             reduce_func = micro.cadd
         else:
-            raise ValueError(f"RegList不支持{op}规约")
+            raise ValueError(f"RegList does not support {op} reduction")
 
         if src.length == 1:
             reduce_func(dst, src[0], mask=mask)
@@ -282,7 +282,7 @@ class RegOP:
             src = _as_reg(self.inputs[0], "src", op)
             cfg = self.inputs[1]
             if cfg is not None and not isinstance(cfg, CastConfig):
-                raise TypeError(f"{op}的config必须是CastConfig或None，当前类型: {type(cfg)}")
+                raise TypeError(f"{op} config must be CastConfig or None, got: {type(cfg)}")
             micro.cast(dst_reg, src, cfg, mask)
             return
 
@@ -365,7 +365,7 @@ class RegOP:
             dst_mask = _as_maskreg(dst, "dst", op)
             cnt = self.inputs[0]
             if not isinstance(cnt, Var):
-                raise TypeError(f"{op}的cnt必须是Var类型，当前类型: {type(cnt)}")
+                raise TypeError(f"{op} cnt must be Var, got: {type(cnt)}")
             micro.update_mask(dst_mask, cnt)
             return
 
@@ -495,11 +495,11 @@ class RegOP:
             "reg_to_ub_single",
             "reg_to_ub_scatter",
         ):
-            raise ValueError("该RegOP不支持直接生成Reg结果")
+            raise ValueError("This RegOP does not support direct Reg result generation")
 
         if self.inputs and isinstance(self.inputs[0], RegList):
             if self.opname not in ("cadd", "cmax", "cmin"):
-                raise ValueError("RegList仅支持cadd/cmax/cmin直接生成Reg结果")
+                raise ValueError("RegList only supports direct Reg result for cadd/cmax/cmin")
 
         self.release_inputs()
         dtype = self._output_dtype()
@@ -643,7 +643,7 @@ class RegOP:
         if isinstance(other, (int, float, Var)):
             src1 = self.run_regop()
             return RegOP("adds", src1, other)
-        raise TypeError(f"RegOP不支持与{type(other)}相加")
+        raise TypeError(f"RegOP does not support addition with {type(other)}")
 
     def __sub__(self, other: Union[int, float, Var, "Reg", "RegOP"]) -> "RegOP":
         from .reg import Reg
@@ -658,7 +658,7 @@ class RegOP:
         if isinstance(other, (int, float, Var)):
             src1 = self.run_regop()
             return RegOP("adds", src1, -1 * other)
-        raise TypeError(f"RegOP不支持与{type(other)}相减")
+        raise TypeError(f"RegOP does not support subtraction with {type(other)}")
 
     def __mul__(self, other: Union[int, float, Var, "Reg", "RegOP", "MaskReg"]) -> "RegOP":
         from .reg import Reg, MaskReg
@@ -676,7 +676,7 @@ class RegOP:
         if isinstance(other, (int, float, Var)):
             src1 = self.run_regop()
             return RegOP("muls", src1, other)
-        raise TypeError(f"RegOP不支持与{type(other)}相乘")
+        raise TypeError(f"RegOP does not support multiplication with {type(other)}")
 
     def __truediv__(self, other: Union[int, float, Var, "Reg", "RegOP"]) -> "RegOP":
         from .reg import Reg
@@ -691,4 +691,4 @@ class RegOP:
         if isinstance(other, (int, float, Var)):
             src1 = self.run_regop()
             return RegOP("muls", src1, 1 / other)
-        raise TypeError(f"RegOP不支持与{type(other)}相除")
+        raise TypeError(f"RegOP does not support division with {type(other)}")

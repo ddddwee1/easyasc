@@ -23,13 +23,12 @@ def dup(
     dst_rep_stride: Union[int, Var, None] = None,
 ) -> None:
     if not isinstance(dst, Tensor):
-        raise TypeError(f"dst必须是Tensor类型，当前类型: {type(dst)}")
+        raise TypeError(f"dst must be Tensor type, current type: {type(dst)}")
     if dst.position is not Position.UB:
-        raise ValueError(f"dst必须在UB位置，当前位置: {dst.position}")
+        raise ValueError(f"dst must be at UB position, current position: {dst.position}")
     validate_scalar(value, "value")
     if dst.dtype not in (Datatype.float, Datatype.half, Datatype.int):
-        raise ValueError(f"不支持的数据类型: {dst.dtype}")
-
+        raise ValueError(f"does not support data type: {dst.dtype}") 
     if repeat is None:
         repeat = infer_repeat(dst)
 
@@ -60,16 +59,15 @@ def brcb(
     repeat: Union[int, Var, None] = None,
 ) -> None:
     if not isinstance(dst, Tensor):
-        raise TypeError(f"dst必须是Tensor类型，当前类型: {type(dst)}")
+        raise TypeError(f"dst must be Tensor type, current type: {type(dst)}")
     if not isinstance(src, Tensor):
-        raise TypeError(f"src必须是Tensor类型，当前类型: {type(src)}")
+        raise TypeError(f"src must be Tensor type, current type: {type(src)}")
     if dst.position is not Position.UB:
-        raise ValueError(f"dst必须在UB位置，当前位置: {dst.position}")
+        raise ValueError(f"dst must be at UB position, current position: {dst.position}")
     if src.position is not Position.UB:
-        raise ValueError(f"src必须在UB位置，当前位置: {src.position}")
+        raise ValueError(f"src must be at UB position, current position: {src.position}")
     if dst.dtype != src.dtype:
-        raise ValueError("dst/src的数据类型必须一致")
-
+        raise ValueError("dst/src data types must match") 
     if repeat is None:
         repeat = infer_repeat_brcb(src)
 

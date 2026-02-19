@@ -11,15 +11,15 @@ def cast(dst: Reg, src: Reg, config: Optional[CastConfig] = None, mask: Optional
     if config is None:
         config = micro.get_default_cast_cfg()
     if not isinstance(dst, Reg):
-        raise TypeError(f"dst必须是Reg类型，当前类型: {type(dst)}")
+        raise TypeError(f"dst must be Reg type, current type: {type(dst)}")
     if not isinstance(src, Reg):
-        raise TypeError(f"src必须是Reg类型，当前类型: {type(src)}")
+        raise TypeError(f"src must be Reg type, current type: {type(src)}")
     if not isinstance(config, CastConfig):
-        raise TypeError(f"config必须是CastConfig类型，当前类型: {type(config)}")
+        raise TypeError(f"config must be CastConfig type, current type: {type(config)}")
     if not isinstance(mask, MaskReg):
-        raise TypeError(f"mask必须是MaskReg类型，当前类型: {type(mask)}")
+        raise TypeError(f"mask must be MaskReg type, current type: {type(mask)}")
     if config.name == "":
-        raise ValueError("cast config必须设置name")
+        raise ValueError("cast config must set name")
 
     micro.instructions.append(
         Instruction(

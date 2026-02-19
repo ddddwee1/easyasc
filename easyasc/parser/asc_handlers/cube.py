@@ -4,10 +4,10 @@ from .common import GMTensor, Tensor, Position, value_to_cpp
 def handle_gm_to_l1_nd2nz(inst, helper, expr_map) -> None:
     dst = inst.kwargs.get("dst", None)
     if not isinstance(dst, Tensor):
-        raise TypeError(f"gm_to_l1_nd2nz需要Tensor类型，当前类型: {type(dst)}")
+        raise TypeError(f"gm_to_l1_nd2nz requires Tensor type, current type: {type(dst)}")
     src = inst.kwargs.get("src", None)
     if not isinstance(src, GMTensor):
-        raise TypeError(f"gm_to_l1_nd2nz需要GMTensor类型，当前类型: {type(src)}")
+        raise TypeError(f"gm_to_l1_nd2nz requires GMTensor type, current type: {type(src)}")
     dst_expr = value_to_cpp(dst, expr_map)
     src_expr = value_to_cpp(src, expr_map)
     m = value_to_cpp(inst.kwargs.get("M", None), expr_map)
@@ -20,10 +20,10 @@ def handle_gm_to_l1_nd2nz(inst, helper, expr_map) -> None:
 def handle_l1_to_l0(inst, helper, expr_map) -> None:
     dst = inst.kwargs.get("dst", None)
     if not isinstance(dst, Tensor):
-        raise TypeError(f"l1_to_l0需要Tensor类型，当前类型: {type(dst)}")
+        raise TypeError(f"l1_to_l0 requires Tensor type, current type: {type(dst)}")
     src = inst.kwargs.get("src", None)
     if not isinstance(src, Tensor):
-        raise TypeError(f"l1_to_l0需要Tensor类型，当前类型: {type(src)}")
+        raise TypeError(f"l1_to_l0 requires Tensor type, current type: {type(src)}")
     dst_pos = str(dst.position)
     src_transpose = bool(getattr(src, "is_transpose", False))
     if dst_pos == "L0A":
@@ -31,7 +31,7 @@ def handle_l1_to_l0(inst, helper, expr_map) -> None:
     elif dst_pos == "L0B":
         opname = "L0NZ2ZN" if src_transpose else "L0NZ2NZ"
     else:
-        raise ValueError(f"l1_to_l0不支持的dst位置: {dst.position}")
+        raise ValueError(f"l1_to_l0does not support dstposition: {dst.position}")
     dst_expr = value_to_cpp(dst, expr_map)
     src_expr = value_to_cpp(src, expr_map)
     m_dst = value_to_cpp(inst.kwargs.get("m_dst", None), expr_map)
@@ -44,13 +44,13 @@ def handle_l1_to_l0(inst, helper, expr_map) -> None:
 def handle_mmad(inst, helper, expr_map) -> None:
     dst = inst.kwargs.get("dst", None)
     if not isinstance(dst, Tensor):
-        raise TypeError(f"mmad需要Tensor类型，当前类型: {type(dst)}")
+        raise TypeError(f"mmad requires Tensor type, current type: {type(dst)}")
     src_a = inst.kwargs.get("src_a", None)
     if not isinstance(src_a, Tensor):
-        raise TypeError(f"mmad需要Tensor类型，当前类型: {type(src_a)}")
+        raise TypeError(f"mmad requires Tensor type, current type: {type(src_a)}")
     src_b = inst.kwargs.get("src_b", None)
     if not isinstance(src_b, Tensor):
-        raise TypeError(f"mmad需要Tensor类型，当前类型: {type(src_b)}")
+        raise TypeError(f"mmad requires Tensor type, current type: {type(src_b)}")
     dst_expr = value_to_cpp(dst, expr_map)
     src_a_expr = value_to_cpp(src_a, expr_map)
     src_b_expr = value_to_cpp(src_b, expr_map)
@@ -64,10 +64,10 @@ def handle_mmad(inst, helper, expr_map) -> None:
 def handle_l0c_to_gm_nz2nd(inst, helper, expr_map) -> None:
     dst = inst.kwargs.get("dst", None)
     if not isinstance(dst, GMTensor):
-        raise TypeError(f"l0c_to_gm_nz2nd需要GMTensor类型，当前类型: {type(dst)}")
+        raise TypeError(f"l0c_to_gm_nz2nd requires GMTensor type, current type: {type(dst)}")
     src = inst.kwargs.get("src", None)
     if not isinstance(src, Tensor):
-        raise TypeError(f"l0c_to_gm_nz2nd需要Tensor类型，当前类型: {type(src)}")
+        raise TypeError(f"l0c_to_gm_nz2nd requires Tensor type, current type: {type(src)}")
     dst_expr = value_to_cpp(dst, expr_map)
     src_expr = value_to_cpp(src, expr_map)
     m = value_to_cpp(inst.kwargs.get("M", None), expr_map)
@@ -80,10 +80,10 @@ def handle_l0c_to_gm_nz2nd(inst, helper, expr_map) -> None:
 def handle_l0c_to_l1(inst, helper, expr_map) -> None:
     dst = inst.kwargs.get("dst", None)
     if not isinstance(dst, Tensor):
-        raise TypeError(f"l0c_to_l1需要Tensor类型，当前类型: {type(dst)}")
+        raise TypeError(f"l0c_to_l1 requires Tensor type, current type: {type(dst)}")
     src = inst.kwargs.get("src", None)
     if not isinstance(src, Tensor):
-        raise TypeError(f"l0c_to_l1需要Tensor类型，当前类型: {type(src)}")
+        raise TypeError(f"l0c_to_l1 requires Tensor type, current type: {type(src)}")
     dst_expr = value_to_cpp(dst, expr_map)
     src_expr = value_to_cpp(src, expr_map)
     m = value_to_cpp(inst.kwargs.get("M", None), expr_map)

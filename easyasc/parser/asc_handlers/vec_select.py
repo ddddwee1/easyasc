@@ -7,18 +7,18 @@ def handle_vec_select(inst, helper, expr_map) -> None:
     global _select_cnt
     dst = inst.kwargs.get("dst", None)
     if not isinstance(dst, Tensor):
-        raise TypeError(f"select需要Tensor类型，当前类型: {type(dst)}")
+        raise TypeError(f"select requires Tensor type, current type: {type(dst)}")
     selmask = inst.kwargs.get("selmask", None)
     if not isinstance(selmask, (Tensor, Var)):
-        raise TypeError(f"select需要Tensor或Var类型，当前类型: {type(selmask)}")
+        raise TypeError(f"select requires Tensor or Var type, current type: {type(selmask)}")
     src1 = inst.kwargs.get("src1", None)
     if not isinstance(src1, Tensor):
-        raise TypeError(f"select需要Tensor类型，当前类型: {type(src1)}")
+        raise TypeError(f"select requires Tensor type, current type: {type(src1)}")
     src2 = inst.kwargs.get("src2", None)
 
     if isinstance(selmask, Var):
         if selmask.dtype is None:
-            raise TypeError("selmask的dtype为None，无法推断")
+            raise TypeError("selmask dtype is None, cannot infer")
         selmask_dtype = dtype_to_cpp(selmask.dtype)
     else:
         selmask_dtype = dtype_to_cpp(selmask.dtype)

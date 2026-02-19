@@ -5,7 +5,7 @@ from .. import globvars
 
 def barrier(pipe: PipeType) -> None:
     if not isinstance(pipe, PipeType):
-        raise TypeError(f"pipe必须是PipeType类型，当前类型: {type(pipe)}")
+        raise TypeError(f"pipe must be PipeType type, current type: {type(pipe)}")
     if globvars.active_kernel is not None:
         globvars.active_kernel.instructions.append(
             Instruction("barrier", pipe=pipe)

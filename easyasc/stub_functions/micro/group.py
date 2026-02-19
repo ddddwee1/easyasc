@@ -8,12 +8,11 @@ from .microutils import ensure_mask, require_micro
 def _group_op(opname: str, dst: Reg, src: Reg, mask: Optional[MaskReg]) -> None:
     micro = require_micro()
     if not isinstance(dst, Reg):
-        raise TypeError(f"dst必须是Reg类型，当前类型: {type(dst)}")
+        raise TypeError(f"dst must be Reg type, current type: {type(dst)}")
     if not isinstance(src, Reg):
-        raise TypeError(f"src必须是Reg类型，当前类型: {type(src)}")
+        raise TypeError(f"src must be Reg type, current type: {type(src)}")
     if dst.dtype != src.dtype:
-        raise ValueError("dst/src的数据类型必须一致")
-
+        raise ValueError("dst/src data types must match") 
     mask = ensure_mask(mask, dst.dtype, micro)
     micro.instructions.append(Instruction(opname, dst=dst, src=src, mask=mask))
 

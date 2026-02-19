@@ -11,7 +11,7 @@ from .var_op import var_mul, var_div
 def _scale_dim(value: Union[int, Var], num: int, den: int, label: str) -> Union[int, Var]:
     if isinstance(value, Var):
         if value.dtype is not None and value.dtype is not Datatype.int:
-            raise TypeError(f"{label}必须是DT.int类型的Var，当前类型: {value.dtype}")
+            raise TypeError(f"{label} must be DT.int Var, current type: {value.dtype}")
         if num == den:
             return value
         if num % den == 0:
@@ -27,17 +27,15 @@ def _scale_dim(value: Union[int, Var], num: int, den: int, label: str) -> Union[
         if num == den:
             return value
         return (value * num) // den
-    raise TypeError(f"{label}必须是int或Var类型，当前类型: {type(value)}")
-
+    raise TypeError(f"{label} must be int or Var type, current type: {type(value)}")
 
 def reinterpret(src: Tensor, target_dtype: DataTypeValue, name: str = "") -> Tensor:
     if not isinstance(src, Tensor):
-        raise TypeError(f"src必须是Tensor类型，当前类型: {type(src)}")
+        raise TypeError(f"src must be Tensor type, current type: {type(src)}")
     if not isinstance(target_dtype, DataTypeValue):
-        raise TypeError(f"target_dtype必须是DataTypeValue类型，当前类型: {type(target_dtype)}")
+        raise TypeError(f"target_dtype must be DataTypeValue type, current type: {type(target_dtype)}")
     if not isinstance(name, str):
-        raise TypeError(f"name必须是str类型，当前类型: {type(name)}")
-
+        raise TypeError(f"name must be str type, current type: {type(name)}") 
     src_c0 = src.dtype.C0
     dst_c0 = target_dtype.C0
 
@@ -46,10 +44,9 @@ def reinterpret(src: Tensor, target_dtype: DataTypeValue, name: str = "") -> Ten
     shape1 = shape[1]
     span1 = span[1]
     if not isinstance(shape1, (int, Var)):
-        raise TypeError(f"shape[1]必须是int或Var类型，当前类型: {type(shape1)}")
+        raise TypeError(f"shape[1] must be int or Var type, current type: {type(shape1)}")
     if not isinstance(span1, (int, Var)):
-        raise TypeError(f"span[1]必须是int或Var类型，当前类型: {type(span1)}")
-
+        raise TypeError(f"span[1] must be int or Var type, current type: {type(span1)}") 
     shape[1] = _scale_dim(shape1, dst_c0, src_c0, "shape[1]")
     span[1] = _scale_dim(span1, dst_c0, src_c0, "span[1]")
 
@@ -101,8 +98,7 @@ def split_workspace(dtype: DataTypeValue, shape: Union[list, tuple], name: str =
     if not isinstance(shape, (list, tuple)):
         raise TypeError(f"shape must be list or tuple, got: {type(shape)}")
     if not isinstance(name, str):
-        raise TypeError(f"name must be str, got: {type(name)}")
-
+        raise TypeError(f"name must be str, got: {type(name)}") 
     numel = _shape_numel(shape)
     idx = globvars.tmp_idx
     globvars.tmp_idx += 1

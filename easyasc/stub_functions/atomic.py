@@ -9,16 +9,16 @@ from .. import globvars
 class atomic_add:
     def __init__(self, cond: Optional[Var] = None, dtype: DataTypeValue = Datatype.float):
         if cond is not None:
-            raise NotImplementedError("当前框架不支持带条件的atomic_add")
+            raise NotImplementedError("current frameworkdoes not support conditional atomic_add")
         if not isinstance(dtype, DataTypeValue):
-            raise TypeError(f"dtype必须是DataTypeValue类型，当前类型: {type(dtype)}")
+            raise TypeError(f"dtype must be DataTypeValue type, current type: {type(dtype)}")
         if dtype is not Datatype.float:
-            raise NotImplementedError("当前框架仅支持float原子类型")
+            raise NotImplementedError("current framework only supports floatatomictype")
         self.dtype = dtype
 
     def __enter__(self):
         if globvars.active_kernel is None:
-            raise RuntimeError("atomic_add只能在kernel内使用")
+            raise RuntimeError("atomic_add can only be used in kernel context")
         globvars.active_kernel.instructions.append(Instruction("atomic_add"))
         globvars.atomic_enabled = True
         globvars.atomic_type = self.dtype
@@ -27,7 +27,7 @@ class atomic_add:
         if exec_type:
             return False
         if globvars.active_kernel is None:
-            raise RuntimeError("atomic_add只能在kernel内使用")
+            raise RuntimeError("atomic_add can only be used in kernel context")
         globvars.active_kernel.instructions.append(Instruction("atomic_end"))
         globvars.atomic_enabled = False
         globvars.atomic_type = None
@@ -37,14 +37,14 @@ class atomic_add:
 class atomic_max:
     def __init__(self, dtype: DataTypeValue = Datatype.float):
         if not isinstance(dtype, DataTypeValue):
-            raise TypeError(f"dtype必须是DataTypeValue类型，当前类型: {type(dtype)}")
+            raise TypeError(f"dtype must be DataTypeValue type, current type: {type(dtype)}")
         if dtype is not Datatype.float:
-            raise NotImplementedError("当前框架仅支持float原子类型")
+            raise NotImplementedError("current framework only supports floatatomictype")
         self.dtype = dtype
 
     def __enter__(self):
         if globvars.active_kernel is None:
-            raise RuntimeError("atomic_max只能在kernel内使用")
+            raise RuntimeError("atomic_max can only be used in kernel context")
         globvars.active_kernel.instructions.append(Instruction("atomic_max"))
         globvars.atomic_enabled = True
         globvars.atomic_type = self.dtype
@@ -53,7 +53,7 @@ class atomic_max:
         if exec_type:
             return False
         if globvars.active_kernel is None:
-            raise RuntimeError("atomic_max只能在kernel内使用")
+            raise RuntimeError("atomic_max can only be used in kernel context")
         globvars.active_kernel.instructions.append(Instruction("atomic_end"))
         globvars.atomic_enabled = False
         globvars.atomic_type = None
@@ -63,14 +63,14 @@ class atomic_max:
 class atomic_min:
     def __init__(self, dtype: DataTypeValue = Datatype.float):
         if not isinstance(dtype, DataTypeValue):
-            raise TypeError(f"dtype必须是DataTypeValue类型，当前类型: {type(dtype)}")
+            raise TypeError(f"dtype must be DataTypeValue type, current type: {type(dtype)}")
         if dtype is not Datatype.float:
-            raise NotImplementedError("当前框架仅支持float原子类型")
+            raise NotImplementedError("current framework only supports floatatomictype")
         self.dtype = dtype
 
     def __enter__(self):
         if globvars.active_kernel is None:
-            raise RuntimeError("atomic_min只能在kernel内使用")
+            raise RuntimeError("atomic_min can only be used in kernel context")
         globvars.active_kernel.instructions.append(Instruction("atomic_min"))
         globvars.atomic_enabled = True
         globvars.atomic_type = self.dtype
@@ -79,7 +79,7 @@ class atomic_min:
         if exec_type:
             return False
         if globvars.active_kernel is None:
-            raise RuntimeError("atomic_min只能在kernel内使用")
+            raise RuntimeError("atomic_min can only be used in kernel context")
         globvars.active_kernel.instructions.append(Instruction("atomic_end"))
         globvars.atomic_enabled = False
         globvars.atomic_type = None

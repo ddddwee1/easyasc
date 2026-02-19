@@ -70,12 +70,12 @@ def range(*args: Union[Var, int], name: str = "") -> Iterator[Var]:
 def _pop_last_end_if() -> None:
     target = _get_flow_target()
     if target is None:
-        raise RuntimeError("If/Elif/Else只能在kernel或micro内使用")
+        raise RuntimeError("If/Elif/Else can only be used inside kernel or micro")
     if not target.instructions:
-        raise RuntimeError("Elif/Else必须跟在If/Elif之后")
+        raise RuntimeError("Elif/Else must follow If/Elif")
     last = target.instructions[-1]
     if last.opname != "end_if":
-        raise RuntimeError("Elif/Else必须跟在If/Elif之后")
+        raise RuntimeError("Elif/Else must follow If/Elif")
     target.instructions.pop()
 
 
@@ -90,7 +90,7 @@ def _get_flow_target() -> Optional[Any]:
 def _append_flow_instruction(opname: str, **kwargs: Any) -> None:
     target = _get_flow_target()
     if target is None:
-        raise RuntimeError("If/Elif/Else只能在kernel或micro内使用")
+        raise RuntimeError("If/Elif/Else can only be used inside kernel or micro")
     target.instructions.append(Instruction(opname, **kwargs))
 
 
@@ -114,7 +114,7 @@ class Elif:
 
     def __enter__(self):
         if _get_flow_target() is None:
-            raise RuntimeError("Elif只能在kernel或micro内使用")
+            raise RuntimeError("Elif can only be used inside kernel or micro")
         _pop_last_end_if()
         _append_flow_instruction("start_elif", cond=self.cond)
 
@@ -128,7 +128,7 @@ class Elif:
 class Else:
     def __enter__(self):
         if _get_flow_target() is None:
-            raise RuntimeError("Else只能在kernel或micro内使用")
+            raise RuntimeError("Else can only be used inside kernel or micro")
         _pop_last_end_if()
         _append_flow_instruction("start_else")
 

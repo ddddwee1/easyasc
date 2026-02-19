@@ -19,30 +19,29 @@ def _infer_sort32_repeat(src: Tensor) -> Union[int, Var]:
     if isinstance(count, Var):
         return count // 32
     if not isinstance(count, int):
-        raise TypeError(f"repeat无法由shape推断，当前count类型: {type(count)}")
+        raise TypeError(f"repeat cannot be inferred from shape, current count type: {type(count)}")
     return count // 32
 
 
 def sort32(dst: Tensor, src: Tensor, idx: Tensor, repeat: Union[Var, int, None] = None) -> None:
     if not isinstance(dst, Tensor):
-        raise TypeError(f"dst必须是Tensor类型，当前类型: {type(dst)}")
+        raise TypeError(f"dst must be Tensor type, current type: {type(dst)}")
     if not isinstance(src, Tensor):
-        raise TypeError(f"src必须是Tensor类型，当前类型: {type(src)}")
+        raise TypeError(f"src must be Tensor type, current type: {type(src)}")
     if not isinstance(idx, Tensor):
-        raise TypeError(f"idx必须是Tensor类型，当前类型: {type(idx)}")
+        raise TypeError(f"idx must be Tensor type, current type: {type(idx)}")
     if src.position is not Position.UB:
-        raise ValueError(f"src必须在UB位置，当前位置: {src.position}")
+        raise ValueError(f"src must be at UB position, current position: {src.position}")
     if dst.position is not Position.UB:
-        raise ValueError(f"dst必须在UB位置，当前位置: {dst.position}")
+        raise ValueError(f"dst must be at UB position, current position: {dst.position}")
     if idx.position is not Position.UB:
-        raise ValueError(f"idx必须在UB位置，当前位置: {idx.position}")
+        raise ValueError(f"idx must be at UB position, current position: {idx.position}")
     if src.dtype != dst.dtype:
-        raise ValueError("src/dst数据类型必须一致")
+        raise ValueError("src/dst data types must match")
     if dst.dtype not in (Datatype.float, Datatype.half):
-        raise ValueError(f"不支持的数据类型: {dst.dtype}")
+        raise ValueError(f"does not support data type: {dst.dtype}")
     if idx.dtype is not Datatype.uint32:
-        raise ValueError(f"idx必须为uint32类型，当前类型: {idx.dtype}")
-
+        raise ValueError(f"idx must be uint32 type, current type: {idx.dtype}") 
     if repeat is None:
         repeat = _infer_sort32_repeat(src)
 
@@ -61,19 +60,19 @@ def mergesort4(
     repeat: Union[Var, int] = 1,
 ) -> None:
     if not isinstance(dst, Tensor):
-        raise TypeError(f"dst必须是Tensor类型，当前类型: {type(dst)}")
+        raise TypeError(f"dst must be Tensor type, current type: {type(dst)}")
     if not isinstance(src, Tensor):
-        raise TypeError(f"src必须是Tensor类型，当前类型: {type(src)}")
+        raise TypeError(f"src must be Tensor type, current type: {type(src)}")
     if src.position is not Position.UB:
-        raise ValueError(f"src必须在UB位置，当前位置: {src.position}")
+        raise ValueError(f"src must be at UB position, current position: {src.position}")
     if dst.position is not Position.UB:
-        raise ValueError(f"dst必须在UB位置，当前位置: {dst.position}")
+        raise ValueError(f"dst must be at UB position, current position: {dst.position}")
     if src.dtype != dst.dtype:
-        raise ValueError("src/dst数据类型必须一致")
+        raise ValueError("src/dst data types must match")
     if dst.dtype not in (Datatype.float, Datatype.half):
-        raise ValueError(f"不支持的数据类型: {dst.dtype}")
+        raise ValueError(f"does not support data type: {dst.dtype}")
     if not isinstance(length_per_blk, int):
-        raise TypeError(f"length_per_blk必须是int类型，当前类型: {type(length_per_blk)}")
+        raise TypeError(f"length_per_blk must be inttype, current type: {type(length_per_blk)}")
     validate_var_or_int(repeat, "repeat")
 
     if globvars.active_kernel is not None:
@@ -96,21 +95,21 @@ def mergesort_2seq(
     size2: Union[int, Var],
 ) -> None:
     if not isinstance(dst, Tensor):
-        raise TypeError(f"dst必须是Tensor类型，当前类型: {type(dst)}")
+        raise TypeError(f"dst must be Tensor type, current type: {type(dst)}")
     if not isinstance(src1, Tensor):
-        raise TypeError(f"src1必须是Tensor类型，当前类型: {type(src1)}")
+        raise TypeError(f"src1 must be Tensor type, current type: {type(src1)}")
     if not isinstance(src2, Tensor):
-        raise TypeError(f"src2必须是Tensor类型，当前类型: {type(src2)}")
+        raise TypeError(f"src2 must be Tensor type, current type: {type(src2)}")
     if src1.position is not Position.UB:
-        raise ValueError(f"src1必须在UB位置，当前位置: {src1.position}")
+        raise ValueError(f"src1 must be at UB position, current position: {src1.position}")
     if src2.position is not Position.UB:
-        raise ValueError(f"src2必须在UB位置，当前位置: {src2.position}")
+        raise ValueError(f"src2 must be at UB position, current position: {src2.position}")
     if dst.position is not Position.UB:
-        raise ValueError(f"dst必须在UB位置，当前位置: {dst.position}")
+        raise ValueError(f"dst must be at UB position, current position: {dst.position}")
     if src1.dtype != dst.dtype or src2.dtype != dst.dtype:
-        raise ValueError("src1/src2/dst数据类型必须一致")
+        raise ValueError("src1/src2/dst data types must match")
     if dst.dtype not in (Datatype.float, Datatype.half):
-        raise ValueError(f"不支持的数据类型: {dst.dtype}")
+        raise ValueError(f"does not support data type: {dst.dtype}")
     validate_var_or_int(size1, "size1")
     validate_var_or_int(size2, "size2")
 

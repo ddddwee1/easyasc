@@ -18,7 +18,7 @@ from ...utils.reg import Reg, MaskReg, RegList
 def handle_create_var(inst, helper, expr_map) -> None:
     val = inst.kwargs.get("val", None)
     if not isinstance(val, Var):
-        raise TypeError(f"create_var需要Var类型，当前类型: {type(val)}")
+        raise TypeError(f"create_var requires Var type, current type: {type(val)}")
     dtype = dtype_to_cpp(val.dtype)
     init_expr = value_to_cpp(val.value, expr_map)
     helper(f"{dtype} {val.name} = {init_expr};")
@@ -27,7 +27,7 @@ def handle_create_var(inst, helper, expr_map) -> None:
 def handle_create_reg(inst, helper, expr_map) -> None:
     reg = inst.kwargs.get("reg", None)
     if not isinstance(reg, Reg):
-        raise TypeError(f"create_reg需要Reg类型，当前类型: {type(reg)}")
+        raise TypeError(f"create_reg requires Reg type, current type: {type(reg)}")
     dtype = dtype_to_cpp(reg.dtype)
     helper(f"MicroAPI::RegTensor<{dtype}> {reg.name};")
 
@@ -35,7 +35,7 @@ def handle_create_reg(inst, helper, expr_map) -> None:
 def handle_create_maskreg(inst, helper, expr_map) -> None:
     reg = inst.kwargs.get("reg", None)
     if not isinstance(reg, MaskReg):
-        raise TypeError(f"create_maskreg需要MaskReg类型，当前类型: {type(reg)}")
+        raise TypeError(f"create_maskreg requires MaskReg type, current type: {type(reg)}")
     dtype = dtype_to_cpp(reg.dtype)
     helper(
         f"MicroAPI::MaskReg {reg.name} = "
@@ -46,7 +46,7 @@ def handle_create_maskreg(inst, helper, expr_map) -> None:
 def handle_create_reglist(inst, helper, expr_map) -> None:
     reglist = inst.kwargs.get("reglist", None)
     if not isinstance(reglist, RegList):
-        raise TypeError(f"create_reglist需要RegList类型，当前类型: {type(reglist)}")
+        raise TypeError(f"create_reglist requires RegListtype, current type: {type(reglist)}")
     dtype = dtype_to_cpp(reglist.dtype)
     helper(f"MicroAPI::RegTensor<{dtype}> {reglist.name}[{reglist.length}];")
 
@@ -54,14 +54,14 @@ def handle_create_reglist(inst, helper, expr_map) -> None:
 def handle_create_dbuf(inst, helper, expr_map) -> None:
     val = inst.kwargs.get("val", None)
     if not isinstance(val, DBuff):
-        raise TypeError(f"create_dbuf需要DBuff类型，当前类型: {type(val)}")
+        raise TypeError(f"create_dbuf requires DBufftype, current type: {type(val)}")
     dtype = dtype_to_cpp(val.dtype)
     position = position_to_cpp(val.position)
     shape = inst.kwargs.get("shape", None)
     if shape is None:
         shape = getattr(val, "shape", None)
     if not isinstance(shape, (list, tuple)):
-        raise TypeError(f"create_dbuf需要shape为list或tuple，当前类型: {type(shape)}")
+        raise TypeError(f"create_dbuf requires shapebelistortuple, current type: {type(shape)}")
     numel_expr = None
     for dim in shape:
         dim_expr = value_to_cpp(dim, expr_map)
@@ -75,14 +75,14 @@ def handle_create_dbuf(inst, helper, expr_map) -> None:
 def handle_create_tensor(inst, helper, expr_map) -> None:
     val = inst.kwargs.get("val", None)
     if not isinstance(val, Tensor):
-        raise TypeError(f"create_tensor需要Tensor类型，当前类型: {type(val)}")
+        raise TypeError(f"create_tensor requires Tensor type, current type: {type(val)}")
     dtype = dtype_to_cpp(val.dtype)
     position = position_to_cpp(val.position)
     shape = inst.kwargs.get("shape", None)
     if shape is None:
         shape = getattr(val, "shape", None)
     if not isinstance(shape, (list, tuple)):
-        raise TypeError(f"create_tensor需要shape为list或tuple，当前类型: {type(shape)}")
+        raise TypeError(f"create_tensor requires shapebelistortuple, current type: {type(shape)}")
     numel_expr = None
     for dim in shape:
         dim_expr = value_to_cpp(dim, expr_map)
@@ -95,7 +95,7 @@ def handle_create_tensor(inst, helper, expr_map) -> None:
 def handle_create_gm_tensor(inst, helper, expr_map) -> None:
     val = inst.kwargs.get("val", None)
     if not isinstance(val, GMTensor):
-        raise TypeError(f"create_gm_tensor需要GMTensor类型，当前类型: {type(val)}")
+        raise TypeError(f"create_gm_tensor requires GMTensor type, current type: {type(val)}")
     dtype = dtype_to_cpp(val.dtype)
     helper(f"GlobalTensor<{dtype}> {val.name};")
     helper(f"{val.name}.SetGlobalBuffer((__gm__ {dtype}*) {val.name}_);")
@@ -119,10 +119,10 @@ def handle_split_workspace(inst, helper, expr_map) -> None:
 def handle_get_buf(inst, helper, expr_map) -> None:
     out = inst.kwargs.get("out", None)
     if not isinstance(out, Tensor):
-        raise TypeError(f"get_buf需要Tensor类型，当前类型: {type(out)}")
+        raise TypeError(f"get_buf requires Tensor type, current type: {type(out)}")
     buf = inst.kwargs.get("buf", None)
     if not isinstance(buf, DBuff):
-        raise TypeError(f"get_buf需要DBuff类型，当前类型: {type(buf)}")
+        raise TypeError(f"get_buf requires DBufftype, current type: {type(buf)}")
     dtype = dtype_to_cpp(out.dtype)
     index = value_to_cpp(inst.kwargs.get("index", None), expr_map)
     helper(f"Tensor<{dtype}> {out.name} = {buf.name}.get({index});")
@@ -131,10 +131,10 @@ def handle_get_buf(inst, helper, expr_map) -> None:
 def handle_slice_gm_tensor(inst, helper, expr_map) -> None:
     out = inst.kwargs.get("out", None)
     if not isinstance(out, GMTensor):
-        raise TypeError(f"slice_gm_tensor需要GMTensor类型，当前类型: {type(out)}")
+        raise TypeError(f"slice_gm_tensor requires GMTensor type, current type: {type(out)}")
     src = inst.kwargs.get("src", None)
     if not isinstance(src, GMTensor):
-        raise TypeError(f"slice_gm_tensor需要GMTensor类型，当前类型: {type(src)}")
+        raise TypeError(f"slice_gm_tensor requires GMTensor type, current type: {type(src)}")
     shape = getattr(out, "shape", None)
     offset = getattr(out, "offset", None)
     offset_expr = build_offset_expr(shape, offset, expr_map)
@@ -146,10 +146,10 @@ def handle_slice_gm_tensor(inst, helper, expr_map) -> None:
 def handle_slice_tensor(inst, helper, expr_map) -> None:
     out = inst.kwargs.get("out", None)
     if not isinstance(out, Tensor):
-        raise TypeError(f"slice_tensor需要Tensor类型，当前类型: {type(out)}")
+        raise TypeError(f"slice_tensor requires Tensor type, current type: {type(out)}")
     src = inst.kwargs.get("src", None)
     if not isinstance(src, Tensor):
-        raise TypeError(f"slice_tensor需要Tensor类型，当前类型: {type(src)}")
+        raise TypeError(f"slice_tensor requires Tensor type, current type: {type(src)}")
     shape = getattr(out, "shape", None)
     offset = getattr(out, "offset", None)
     if out.position is Position.L1:
@@ -164,10 +164,10 @@ def handle_slice_tensor(inst, helper, expr_map) -> None:
 def handle_micro_slice_tensor(inst, helper, expr_map) -> None:
     out = inst.kwargs.get("out", None)
     if not isinstance(out, Tensor):
-        raise TypeError(f"micro_slice_tensor需要Tensor类型，当前类型: {type(out)}")
+        raise TypeError(f"micro_slice_tensor requires Tensor type, current type: {type(out)}")
     src = inst.kwargs.get("src", None)
     if not isinstance(src, Tensor):
-        raise TypeError(f"micro_slice_tensor需要Tensor类型，当前类型: {type(src)}")
+        raise TypeError(f"micro_slice_tensor requires Tensor type, current type: {type(src)}")
     shape = getattr(out, "shape", None)
     offset = getattr(out, "offset", None)
     offset_expr = build_offset_expr(shape, offset, expr_map)

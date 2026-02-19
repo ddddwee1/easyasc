@@ -17,7 +17,7 @@ class Expr:
         return self.expr
 
     def __bool__(self) -> bool:
-        raise TypeError("Expr不能用于Python布尔判断，请使用If/Elif/Else")
+        raise TypeError("Expr cannot be used in Python boolean context, use If/Elif/Else instead")
         return False
 
     def __and__(self, other):
@@ -41,7 +41,7 @@ def _expr_operand(value) -> str:
 
 
 class Var:
-    """变量类"""
+    """Variable class."""
     def __init__(
         self,
         value: Union[int, float, 'Var', None] = 0,
@@ -49,12 +49,12 @@ class Var:
         name: str = "",
     ):
         """
-        初始化变量
-        
+        Initialize a variable.
+
         Args:
-            value: 值，可选，默认为None
-            dtype: 数据类型，必须是DataTypeValue类型
-            name: 名称，默认为空字符串
+            value: Optional value, defaults to None.
+            dtype: Data type, must be DataTypeValue.
+            name: Name, defaults to empty string.
         """
         value_var: Optional[Var] = value if isinstance(value, Var) else None
         value_is_var = value_var is not None
@@ -67,16 +67,16 @@ class Var:
             elif value_var is not None:
                 dtype = value_var.dtype
             elif value is not None:
-                raise TypeError(f"value类型无法推断dtype，当前类型: {type(value)}")
+                raise TypeError(f"Cannot infer dtype from value type: {type(value)}")
 
         if dtype is not None and not isinstance(dtype, DataTypeValue):
-            raise TypeError(f"dtype必须是DataTypeValue类型或None，当前类型: {type(dtype)}")
+            raise TypeError(f"dtype must be DataTypeValue or None, got: {type(dtype)}")
         
         if not isinstance(name, str):
-            raise TypeError(f"name必须是str类型，当前类型: {type(name)}")
+            raise TypeError(f"name must be str, got: {type(name)}")
         
         if value is not None and not isinstance(value, (int, float, Var)):
-            raise TypeError(f"value必须是int、float或Var类型，当前类型: {type(value)}")
+            raise TypeError(f"value must be int, float, or Var, got: {type(value)}")
         
         if value_var is not None:
             idx = value_var.idx
@@ -130,7 +130,7 @@ class Var:
 
     def __iadd__(self, other):
         if not isinstance(other, (Var, int, float)):
-            raise TypeError(f"other必须是Var或数值类型，当前类型: {type(other)}")
+            raise TypeError(f"other must be Var or numeric type, got: {type(other)}")
 
         dtype = None
         if isinstance(other, float) or (isinstance(other, Var) and other.dtype is Datatype.float):

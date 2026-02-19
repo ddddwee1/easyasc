@@ -1,5 +1,5 @@
 class PipeType:
-    """流水线类型类，用于表示具体的流水线类型"""
+    """Pipe value class representing a concrete pipeline type."""
     def __init__(self, name: str):
         self.name = name
 
@@ -13,7 +13,7 @@ class PipeType:
         if self is other:
             return True
         if not isinstance(other, PipeType):
-            raise TypeError(f"无法比较PipeType与{type(other)}")
+            raise TypeError(f"Cannot compare PipeType with {type(other)}")
         return self.name == other.name
     
     def __hash__(self) -> int:
@@ -21,7 +21,7 @@ class PipeType:
 
 
 class Pipe:
-    """流水线枚举类，包含MTE2/MTE1/M/V/FIX/MTE3/S成员"""
+    """Pipe enum-like class with MTE2/MTE1/M/V/FIX/MTE3/S members."""
     MTE2 = PipeType("MTE2")
     MTE1 = PipeType("MTE1")
     M = PipeType("M")

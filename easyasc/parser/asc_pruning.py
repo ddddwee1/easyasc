@@ -43,7 +43,7 @@ def _parse_loop_node(
     idx += 1
     body, idx = _parse_block(instructions, idx, {"end_loop"})
     if idx >= len(instructions) or instructions[idx].opname != "end_loop":
-        raise ValueError("start_loop/start_micro_loop缺少end_loop")
+        raise ValueError("start_loop/start_micro_loopmissingend_loop")
     end = instructions[idx]
     idx += 1
     return {
@@ -68,7 +68,7 @@ def _parse_if_chain(
         idx += 1
         body, idx = _parse_block(instructions, idx, {"end_if"})
         if idx >= len(instructions) or instructions[idx].opname != "end_if":
-            raise ValueError("start_if/start_elif/start_else缺少end_if")
+            raise ValueError("start_if/start_elif/start_elsemissingend_if")
         end = instructions[idx]
         idx += 1
         branches.append({"start": start, "end": end, "body": body})
@@ -193,7 +193,7 @@ def prune_empty_blocks(instructions: List[Instruction]) -> List[Instruction]:
     _, tmp_var_names, tmp_tensor_names, tmp_gmtensor_names = build_expr_state(instructions)
     nodes, idx = _parse_block(list(instructions), 0, None)
     if idx != len(instructions):
-        raise ValueError("解析指令块时未完全消费指令")
+        raise ValueError("instruction block parsing did not fully consume instructions")
     pruned_nodes, _ = _prune_nodes(nodes, tmp_var_names, tmp_tensor_names, tmp_gmtensor_names)
     return _emit_instructions(pruned_nodes)
 
@@ -502,7 +502,7 @@ def prune_unused_vars(
     known_names = _collect_known_var_names(instructions)
     nodes, idx = _parse_block(list(instructions), 0, None)
     if idx != len(instructions):
-        raise ValueError("解析指令块时未完全消费指令")
+        raise ValueError("instruction block parsing did not fully consume instructions")
     seed_vars, seed_tensors, seed_gmtensors = _collect_seed_usage(nodes, side, classify_inst, known_names)
 
     tensor_defs = _build_tensor_defs(instructions)

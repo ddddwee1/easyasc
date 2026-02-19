@@ -4,7 +4,7 @@ from .common import Tensor, value_to_cpp, dtype_to_cpp
 def handle_vec_dup(inst, helper, expr_map) -> None:
     dst = inst.kwargs.get("dst", None)
     if not isinstance(dst, Tensor):
-        raise TypeError(f"Duplicate需要Tensor类型，当前类型: {type(dst)}")
+        raise TypeError(f"Duplicate requires Tensor type, current type: {type(dst)}")
     src = inst.kwargs.get("src", None)
     dst_expr = value_to_cpp(dst, expr_map)
     src_expr = value_to_cpp(src, expr_map)
@@ -20,10 +20,10 @@ def handle_vec_dup(inst, helper, expr_map) -> None:
 def handle_vec_brcb(inst, helper, expr_map) -> None:
     dst = inst.kwargs.get("dst", None)
     if not isinstance(dst, Tensor):
-        raise TypeError(f"Brcb需要Tensor类型，当前类型: {type(dst)}")
+        raise TypeError(f"Brcb requires Tensor type, current type: {type(dst)}")
     src = inst.kwargs.get("src", None)
     if not isinstance(src, Tensor):
-        raise TypeError(f"Brcb需要Tensor类型，当前类型: {type(src)}")
+        raise TypeError(f"Brcb requires Tensor type, current type: {type(src)}")
     dst_expr = value_to_cpp(dst, expr_map)
     src_expr = value_to_cpp(src, expr_map)
     repeat = value_to_cpp(inst.kwargs.get("repeat", None), expr_map)

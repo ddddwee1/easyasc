@@ -4,7 +4,7 @@ from .common import Var, value_to_cpp
 def handle_start_loop(inst, helper, expr_map) -> None:
     var = inst.kwargs.get("var", None)
     if not isinstance(var, Var):
-        raise TypeError(f"start_loop需要Var类型，当前类型: {type(var)}")
+        raise TypeError(f"start_loop requires Var type, current type: {type(var)}")
     start = value_to_cpp(inst.kwargs.get("start", None), expr_map)
     stop = value_to_cpp(inst.kwargs.get("stop", None), expr_map)
     step = value_to_cpp(inst.kwargs.get("step", None), expr_map)
@@ -15,7 +15,7 @@ def handle_start_loop(inst, helper, expr_map) -> None:
 def handle_start_micro_loop(inst, helper, expr_map) -> None:
     var = inst.kwargs.get("var", None)
     if not isinstance(var, Var):
-        raise TypeError(f"start_micro_loop需要Var类型，当前类型: {type(var)}")
+        raise TypeError(f"start_micro_loop requires Var type, current type: {type(var)}")
     start = value_to_cpp(inst.kwargs.get("start", None), expr_map)
     stop = value_to_cpp(inst.kwargs.get("stop", None), expr_map)
     step = value_to_cpp(inst.kwargs.get("step", None), expr_map)

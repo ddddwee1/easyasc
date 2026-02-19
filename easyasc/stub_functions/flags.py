@@ -8,11 +8,11 @@ from .. import globvars
 
 def setflag(src: PipeType, dst: PipeType, event_id: Union[int, Var]) -> None:
     if not isinstance(src, PipeType):
-        raise TypeError(f"src必须是PipeType类型，当前类型: {type(src)}")
+        raise TypeError(f"src must be PipeType type, current type: {type(src)}")
     if not isinstance(dst, PipeType):
-        raise TypeError(f"dst必须是PipeType类型，当前类型: {type(dst)}")
+        raise TypeError(f"dst must be PipeType type, current type: {type(dst)}")
     if not isinstance(event_id, (int, Var)):
-        raise TypeError(f"event_id必须是Var或int类型，当前类型: {type(event_id)}")
+        raise TypeError(f"event_id must be Var or int type, current type: {type(event_id)}")
     if globvars.active_kernel is not None:
         globvars.active_kernel.instructions.append(
             Instruction("setflag", src=src, dst=dst, event_id=event_id)
@@ -21,11 +21,11 @@ def setflag(src: PipeType, dst: PipeType, event_id: Union[int, Var]) -> None:
 
 def waitflag(src: PipeType, dst: PipeType, event_id: Union[int, Var]) -> None:
     if not isinstance(src, PipeType):
-        raise TypeError(f"src必须是PipeType类型，当前类型: {type(src)}")
+        raise TypeError(f"src must be PipeType type, current type: {type(src)}")
     if not isinstance(dst, PipeType):
-        raise TypeError(f"dst必须是PipeType类型，当前类型: {type(dst)}")
+        raise TypeError(f"dst must be PipeType type, current type: {type(dst)}")
     if not isinstance(event_id, (int, Var)):
-        raise TypeError(f"event_id必须是Var或int类型，当前类型: {type(event_id)}")
+        raise TypeError(f"event_id must be Var or int type, current type: {type(event_id)}")
     if globvars.active_kernel is not None:
         globvars.active_kernel.instructions.append(
             Instruction("waitflag", src=src, dst=dst, event_id=event_id)

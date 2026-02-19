@@ -9,9 +9,9 @@ from .microutils import ensure_mask, format_scalar, require_micro
 def dup(dst: Reg, src: Union[Reg, float, int, Var], mask: Optional[MaskReg] = None) -> None:
     micro = require_micro()
     if not isinstance(dst, Reg):
-        raise TypeError(f"dst必须是Reg类型，当前类型: {type(dst)}")
+        raise TypeError(f"dst must be Reg type, current type: {type(dst)}")
     if not isinstance(src, (Reg, Var, int, float)):
-        raise TypeError(f"src必须是Reg或数值/Var类型，当前类型: {type(src)}")
+        raise TypeError(f"src must be Reg or numeric value/Var type, current type: {type(src)}")
 
     mask = ensure_mask(mask, dst.dtype, micro)
 

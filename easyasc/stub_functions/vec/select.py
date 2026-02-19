@@ -12,16 +12,15 @@ from .vecutils import infer_repeat, resolve_strides, validate_var_or_int, valida
 
 def _validate_selmask(selmask) -> None:
     if isinstance(selmask, Tensor):
-        if selmask.dtype not in (Datatype.uint8, ):
-            raise ValueError(f"selmask类型不支持，当前类型: {selmask.dtype}")
+        if selmask.dtype not in (Datatype.uint8,):
+            raise ValueError(f"selmask data type is not supported, current type: {selmask.dtype}")
     elif isinstance(selmask, Var):
         if selmask.dtype is None:
-            raise TypeError("selmask的dtype为None，无法推断")
+            raise TypeError("selmask dtype is None, cannot infer")
         if selmask.dtype not in (Datatype.uint8, Datatype.uint16, Datatype.uint32, Datatype.uint64):
-            raise ValueError(f"selmask类型不支持，当前类型: {selmask.dtype}")
+            raise ValueError(f"selmask data type is not supported, current type: {selmask.dtype}")
     else:
-        raise TypeError(f"selmask必须是Tensor或Var，当前类型: {type(selmask)}")
-
+        raise TypeError(f"selmask must be Tensor or Var, current type: {type(selmask)}")
 
 def select(
     dst: Tensor,
@@ -37,25 +36,24 @@ def select(
     src2_rep_stride: Union[int, Var, None] = None,
 ) -> None:
     if not isinstance(dst, Tensor):
-        raise TypeError(f"dst必须是Tensor类型，当前类型: {type(dst)}")
+        raise TypeError(f"dst must be Tensor type, current type: {type(dst)}")
     if not isinstance(src1, Tensor):
-        raise TypeError(f"src1必须是Tensor类型，当前类型: {type(src1)}")
+        raise TypeError(f"src1 must be Tensor type, current type: {type(src1)}")
     if dst.position is not Position.UB:
-        raise ValueError(f"dst必须在UB位置，当前位置: {dst.position}")
+        raise ValueError(f"dst must be at UB position, current position: {dst.position}")
     if src1.position is not Position.UB:
-        raise ValueError(f"src1必须在UB位置，当前位置: {src1.position}")
+        raise ValueError(f"src1 must be at UB position, current position: {src1.position}")
     if dst.dtype != src1.dtype:
-        raise ValueError("dst/src1数据类型必须一致")
+        raise ValueError("dst/src1 data types must match")
     if dst.dtype not in (Datatype.float, Datatype.half, Datatype.int16, Datatype.int):
-        raise ValueError(f"dst类型不支持，当前类型: {dst.dtype}")
-
+        raise ValueError(f"dst data type is not supported, current type: {dst.dtype}")
     _validate_selmask(selmask)
 
     if isinstance(src2, Tensor):
         if src2.position is not Position.UB:
-            raise ValueError(f"src2必须在UB位置，当前位置: {src2.position}")
+            raise ValueError(f"src2 must be at UB position, current position: {src2.position}")
         if src2.dtype != dst.dtype:
-            raise ValueError("src2与dst数据类型必须一致")
+            raise ValueError("src2 and dst data types must match")
         mode = SelectMode.TENSOR_TENSOR
     else:
         validate_scalar(src2, "src2")

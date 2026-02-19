@@ -12,24 +12,23 @@ from .vecutils import infer_repeat, resolve_strides, validate_var_or_int, valida
 
 def _validate_compare_tensors(dst: Tensor, src1: Tensor, src2: Tensor) -> None:
     if not isinstance(dst, Tensor):
-        raise TypeError(f"dst必须是Tensor类型，当前类型: {type(dst)}")
+        raise TypeError(f"dst must be Tensor type, current type: {type(dst)}")
     if not isinstance(src1, Tensor):
-        raise TypeError(f"src1必须是Tensor类型，当前类型: {type(src1)}")
+        raise TypeError(f"src1 must be Tensor type, current type: {type(src1)}")
     if not isinstance(src2, Tensor):
-        raise TypeError(f"src2必须是Tensor类型，当前类型: {type(src2)}")
+        raise TypeError(f"src2 must be Tensor type, current type: {type(src2)}")
     if dst.position is not Position.UB:
-        raise ValueError(f"dst必须在UB位置，当前位置: {dst.position}")
+        raise ValueError(f"dst must be at UB position, current position: {dst.position}")
     if src1.position is not Position.UB:
-        raise ValueError(f"src1必须在UB位置，当前位置: {src1.position}")
+        raise ValueError(f"src1 must be at UB position, current position: {src1.position}")
     if src2.position is not Position.UB:
-        raise ValueError(f"src2必须在UB位置，当前位置: {src2.position}")
+        raise ValueError(f"src2 must be at UB position, current position: {src2.position}")
     if src1.dtype != src2.dtype:
-        raise ValueError("src1/src2数据类型必须一致")
+        raise ValueError("src1/src2 data types must match")
     if dst.dtype not in (Datatype.int8, Datatype.uint8):
-        raise ValueError(f"dst必须是int8/uint8，当前类型: {dst.dtype}")
+        raise ValueError(f"dst must be int8/uint8, current type: {dst.dtype}")
     if src1.dtype not in (Datatype.float, Datatype.half, Datatype.int16, Datatype.int):
-        raise ValueError(f"src1类型不支持，当前类型: {src1.dtype}")
-
+        raise ValueError(f"src1data type is not supported, current type: {src1.dtype}") 
 
 def compare(
     dst: Tensor,
@@ -46,8 +45,7 @@ def compare(
 ) -> None:
     _validate_compare_tensors(dst, src1, src2)
     if not isinstance(mode, CompareModeType):
-        raise TypeError(f"mode必须是CompareModeType类型，当前类型: {type(mode)}")
-
+        raise TypeError(f"mode must be CompareModeType type, current type: {type(mode)}") 
     if repeat is None:
         repeat = infer_repeat(src1)
 
@@ -94,19 +92,19 @@ def compare_scalar(
     src1_rep_stride: Union[int, Var, None] = None,
 ) -> None:
     if not isinstance(dst, Tensor):
-        raise TypeError(f"dst必须是Tensor类型，当前类型: {type(dst)}")
+        raise TypeError(f"dst must be Tensor type, current type: {type(dst)}")
     if not isinstance(src1, Tensor):
-        raise TypeError(f"src1必须是Tensor类型，当前类型: {type(src1)}")
+        raise TypeError(f"src1 must be Tensor type, current type: {type(src1)}")
     if dst.position is not Position.UB:
-        raise ValueError(f"dst必须在UB位置，当前位置: {dst.position}")
+        raise ValueError(f"dst must be at UB position, current position: {dst.position}")
     if src1.position is not Position.UB:
-        raise ValueError(f"src1必须在UB位置，当前位置: {src1.position}")
+        raise ValueError(f"src1 must be at UB position, current position: {src1.position}")
     if dst.dtype not in (Datatype.int8, Datatype.uint8):
-        raise ValueError(f"dst必须是int8/uint8，当前类型: {dst.dtype}")
+        raise ValueError(f"dst must be int8/uint8, current type: {dst.dtype}")
     if src1.dtype not in (Datatype.float, Datatype.half, Datatype.int16, Datatype.int):
-        raise ValueError(f"src1类型不支持，当前类型: {src1.dtype}")
+        raise ValueError(f"src1data type is not supported, current type: {src1.dtype}")
     if not isinstance(mode, CompareModeType):
-        raise TypeError(f"mode必须是CompareModeType类型，当前类型: {type(mode)}")
+        raise TypeError(f"mode must be CompareModeType type, current type: {type(mode)}")
     validate_scalar(src2, "src2")
 
     if repeat is None:
@@ -140,10 +138,9 @@ def compare_scalar(
 
 def set_cmpmask(src: Tensor) -> None:
     if not isinstance(src, Tensor):
-        raise TypeError(f"src必须是Tensor类型，当前类型: {type(src)}")
+        raise TypeError(f"src must be Tensor type, current type: {type(src)}")
     if src.position is not Position.UB:
-        raise ValueError(f"src必须在UB位置，当前位置: {src.position}")
-
+        raise ValueError(f"src must be at UB position, current position: {src.position}") 
     if globvars.active_kernel is not None:
         globvars.active_kernel.instructions.append(
             Instruction("set_cmpmask", src=src)

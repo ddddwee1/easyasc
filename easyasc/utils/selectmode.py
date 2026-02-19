@@ -1,5 +1,5 @@
 class SelectModeType:
-    """选择模式值类，用于表示具体的选择模式"""
+    """Select mode value class representing a concrete select mode."""
     def __init__(self, name: str):
         self.name = name
 
@@ -13,11 +13,11 @@ class SelectModeType:
         if self is other:
             return True
         if not isinstance(other, SelectModeType):
-            raise TypeError(f"无法比较SelectModeType与{type(other)}")
+            raise TypeError(f"Cannot compare SelectModeType with {type(other)}")
         return self.name == other.name
 
 
 class SelectMode:
-    """选择模式枚举类"""
+    """Select mode enum-like class."""
     TENSOR_TENSOR = SelectModeType("TENSOR_TENSOR")
     TENSOR_SCALAR = SelectModeType("TENSOR_SCALAR")

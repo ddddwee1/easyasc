@@ -65,17 +65,17 @@ class MicroModule:
 
     def __call__(self, *args: Any, **kwargs: Any) -> Any:
         if kwargs:
-            raise TypeError("MicroModule不支持关键字参数")
+            raise TypeError("MicroModule does not support keyword arguments")
         for arg in args:
             if not isinstance(arg, (Tensor, Var)):
-                raise TypeError(f"MicroModule仅支持Tensor或Var入参，当前类型: {type(arg)}")
+                raise TypeError(f"MicroModule only accepts Tensor or Var inputs, got: {type(arg)}")
             if isinstance(arg, Tensor) and arg.position is not Position.UB:
-                raise ValueError(f"MicroModule仅支持UB上的Tensor入参，当前位置: {arg.position}")
+                raise ValueError(f"MicroModule only accepts Tensor inputs in UB, current position: {arg.position}")
         sig = inspect.signature(self.func)
         try:
             bound = sig.bind(*args)
         except TypeError as exc:
-            raise TypeError(f"MicroModule调用参数不匹配: {exc}") from exc
+            raise TypeError(f"MicroModule call argument mismatch: {exc}") from exc
         micro_args: List[Any] = []
         for name, arg in bound.arguments.items():
             if isinstance(arg, Tensor):
@@ -92,7 +92,7 @@ class MicroModule:
                 cloned.name = name
                 micro_args.append(cloned)
             else:
-                raise TypeError(f"MicroModule仅支持Tensor或Var入参，当前类型: {type(arg)}")
+                raise TypeError(f"MicroModule only accepts Tensor or Var inputs, got: {type(arg)}")
         if not self.input_list:
             self.input_list = micro_args
         if globvars.active_kernel is not None:
@@ -108,7 +108,7 @@ class MicroModule:
 
     def get_mask(self, dtype: DataTypeValue) -> MaskReg:
         if not isinstance(dtype, DataTypeValue):
-            raise TypeError(f"dtype必须是DataTypeValue类型，当前类型: {type(dtype)}")
+            raise TypeError(f"dtype must be DataTypeValue, got: {type(dtype)}")
         key = dtype.name
         if key not in self.tmp_masks:
             mask = object.__new__(MaskReg)
@@ -122,7 +122,7 @@ class MicroModule:
 
     def gen_code(self, path: str) -> None:
         if not isinstance(path, str):
-            raise TypeError(f"path必须是str类型，当前类型: {type(path)}")
+            raise TypeError(f"path must be str, got: {type(path)}")
         from ..parser.asc import translate
         from ..parser.asc_utils import dtype_to_cpp
         from ..parser.helper import CodeHelper
@@ -157,7 +157,7 @@ class MicroModule:
                     f"const {dtype_to_cpp(arg.dtype)} &{arg.name}"
                 )
             else:
-                raise TypeError(f"MicroModule仅支持Tensor或Var入参，当前类型: {type(arg)}")
+                raise TypeError(f"MicroModule only accepts Tensor or Var inputs, got: {type(arg)}")
         args_str = ", ".join(args)
 
         helper(f"__aicore__ inline void {self.name}({args_str}){{")

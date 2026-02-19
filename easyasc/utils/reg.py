@@ -26,14 +26,14 @@ def _make_reg_proxy(dtype: DataTypeValue, name: str) -> "Reg":
 class Reg:
     def __init__(self, dtype: DataTypeValue, name: str = "") -> None:
         if not isinstance(dtype, DataTypeValue):
-            raise TypeError(f"dtype必须是DataTypeValue类型，当前类型: {type(dtype)}")
+            raise TypeError(f"dtype must be DataTypeValue, got: {type(dtype)}")
         if not isinstance(name, str):
-            raise TypeError(f"name必须是str类型，当前类型: {type(name)}")
+            raise TypeError(f"name must be str, got: {type(name)}")
 
         if name == "":
             module = globvars.active_micro
             if module is None:
-                raise RuntimeError("active_micro为None，无法自动生成Reg名称")
+                raise RuntimeError("active_micro is None, cannot auto-generate Reg name")
             idx = module.tmp_idx
             module.tmp_idx += 1
             name = f"_reg_{idx}"
@@ -161,7 +161,7 @@ class Reg:
 
                 micro = globvars.active_micro
                 if micro is None:
-                    raise RuntimeError("active_micro为None，Reg和Tensor赋值仅可在MicroModule中使用")
+                    raise RuntimeError("active_micro is None, Reg/Tensor assignment is only allowed in MicroModule")
 
                 tmp_reg = micro.get_reg(other.dtype)
 
@@ -205,7 +205,7 @@ class Reg:
             from ..stub_functions.micro.dup import dup
             dup(self, other)
             return self
-        raise TypeError(f"Reg赋值仅支持RegOP/Reg/Tensor/标量/Var，当前类型: {type(other)}")
+        raise TypeError(f"Reg assignment only supports RegOP/Reg/Tensor/scalar/Var, got: {type(other)}")
 
     def cast(self, cfg: Optional[CastConfig] = None):
         from .regop import RegOP
@@ -377,18 +377,18 @@ class Reg:
 class RegList:
     def __init__(self, dtype: DataTypeValue, length: int, name: str = "") -> None:
         if not isinstance(dtype, DataTypeValue):
-            raise TypeError(f"dtype必须是DataTypeValue类型，当前类型: {type(dtype)}")
+            raise TypeError(f"dtype must be DataTypeValue, got: {type(dtype)}")
         if not isinstance(length, int):
-            raise TypeError(f"length必须是int类型，当前类型: {type(length)}")
+            raise TypeError(f"length must be int, got: {type(length)}")
         if length <= 0:
-            raise ValueError(f"length必须大于0，当前值: {length}")
+            raise ValueError(f"length must be greater than 0, current value: {length}")
         if not isinstance(name, str):
-            raise TypeError(f"name必须是str类型，当前类型: {type(name)}")
+            raise TypeError(f"name must be str, got: {type(name)}")
 
         if name == "":
             module = globvars.active_micro
             if module is None:
-                raise RuntimeError("active_micro为None，无法自动生成RegList名称")
+                raise RuntimeError("active_micro is None, cannot auto-generate RegList name")
             idx = module.tmp_idx
             module.tmp_idx += 1
             name = f"_reglist_{idx}"
@@ -413,7 +413,7 @@ class RegList:
 
     def __getitem__(self, idx):
         if not isinstance(idx, (Var, int)):
-            raise TypeError(f"RegList索引仅支持Var/int，当前类型: {type(idx)}")
+            raise TypeError(f"RegList index only supports Var/int, got: {type(idx)}")
         reg_name = f"{self.name}[{idx}]"
         return _make_reg_proxy(self.dtype, reg_name)
 
@@ -432,12 +432,12 @@ class RegList:
         from .regop import RegOP
 
         if len(op.inputs) < 1:
-            raise TypeError(f"{op.opname}至少需要1个输入")
+            raise TypeError(f"{op.opname} requires at least 1 input")
         src = op.inputs[0]
         if not isinstance(src, RegList):
-            raise TypeError(f"{op.opname}的输入必须是RegList，当前类型: {type(src)}")
+            raise TypeError(f"{op.opname} input must be RegList, got: {type(src)}")
         if src.length != self.length:
-            raise ValueError(f"RegList长度不一致: {self.length} vs {src.length}")
+            raise ValueError(f"RegList length mismatch: {self.length} vs {src.length}")
 
         for i in range(self.length):
             item_op = RegOP(op.opname, src[i])
@@ -448,15 +448,15 @@ class RegList:
         from .regop import RegOP
 
         if len(op.inputs) < 2:
-            raise TypeError(f"{op.opname}至少需要2个输入")
+            raise TypeError(f"{op.opname} requires at least 2 inputs")
         src = op.inputs[0]
         value = op.inputs[1]
         if not isinstance(src, RegList):
-            raise TypeError(f"{op.opname}的输入必须是RegList，当前类型: {type(src)}")
+            raise TypeError(f"{op.opname} input must be RegList, got: {type(src)}")
         if src.length != self.length:
-            raise ValueError(f"RegList长度不一致: {self.length} vs {src.length}")
+            raise ValueError(f"RegList length mismatch: {self.length} vs {src.length}")
         if not isinstance(value, (Var, int, float)):
-            raise TypeError(f"{op.opname}的value必须是Var/int/float，当前类型: {type(value)}")
+            raise TypeError(f"{op.opname} value must be Var/int/float, got: {type(value)}")
 
         for i in range(self.length):
             item_op = RegOP(op.opname, src[i], value)
@@ -467,17 +467,17 @@ class RegList:
         from .regop import RegOP
 
         if len(op.inputs) < 2:
-            raise TypeError(f"{op.opname}至少需要2个输入")
+            raise TypeError(f"{op.opname} requires at least 2 inputs")
         src1 = op.inputs[0]
         src2 = op.inputs[1]
         if not isinstance(src1, RegList):
-            raise TypeError(f"{op.opname}的src1必须是RegList，当前类型: {type(src1)}")
+            raise TypeError(f"{op.opname} src1 must be RegList, got: {type(src1)}")
         if src1.length != self.length:
-            raise ValueError(f"RegList长度不一致: {self.length} vs {src1.length}")
+            raise ValueError(f"RegList length mismatch: {self.length} vs {src1.length}")
 
         if isinstance(src2, RegList):
             if src2.length != self.length:
-                raise ValueError(f"RegList长度不一致: {self.length} vs {src2.length}")
+                raise ValueError(f"RegList length mismatch: {self.length} vs {src2.length}")
             for i in range(self.length):
                 item_op = RegOP(op.opname, src1[i], src2[i])
                 self._copy_mask(op, item_op)
@@ -493,7 +493,7 @@ class RegList:
 
         if isinstance(src2, (Var, int, float)):
             if op.opname not in ("add", "sub", "mul", "div"):
-                raise TypeError(f"{op.opname}不支持RegList与标量/Var计算")
+                raise TypeError(f"{op.opname} does not support RegList with scalar/Var operands")
             for i in range(self.length):
                 if op.opname == "add":
                     item_op = src1[i] + src2
@@ -507,7 +507,7 @@ class RegList:
                 self[i] <<= item_op
             return
 
-        raise TypeError(f"{op.opname}的src2类型不支持: {type(src2)}")
+        raise TypeError(f"{op.opname} src2 type is not supported: {type(src2)}")
 
     def __ilshift__(self, other):
         from .Tensor import Tensor
@@ -532,9 +532,9 @@ class RegList:
             if other.opname in unary_scalar_ops:
                 self._emit_unary_scalar(other)
                 return self
-            raise ValueError(f"RegList不支持该RegOP赋值: {other.opname}")
+            raise ValueError(f"RegList does not support assignment from RegOP: {other.opname}")
 
-        raise TypeError(f"RegList赋值仅支持Tensor/RegOP，当前类型: {type(other)}")
+        raise TypeError(f"RegList assignment only supports Tensor/RegOP, got: {type(other)}")
 
     def cmax(self):
         from .regop import RegOP
@@ -669,18 +669,18 @@ class MaskReg:
         name: str = "",
     ) -> None:
         if not isinstance(dtype, DataTypeValue):
-            raise TypeError(f"dtype必须是DataTypeValue类型，当前类型: {type(dtype)}")
+            raise TypeError(f"dtype must be DataTypeValue, got: {type(dtype)}")
         if init_mode is None:
             init_mode = MaskType.ALL
         if not isinstance(init_mode, MaskTypeValue):
-            raise TypeError(f"init_mode必须是MaskTypeValue类型，当前类型: {type(init_mode)}")
+            raise TypeError(f"init_mode must be MaskTypeValue, got: {type(init_mode)}")
         if not isinstance(name, str):
-            raise TypeError(f"name必须是str类型，当前类型: {type(name)}")
+            raise TypeError(f"name must be str, got: {type(name)}")
 
         if name == "":
             module = globvars.active_micro
             if module is None:
-                raise RuntimeError("active_micro为None，无法自动生成MaskReg名称")
+                raise RuntimeError("active_micro is None, cannot auto-generate MaskReg name")
             idx = module.tmp_idx
             module.tmp_idx += 1
             name = f"_maskreg_{idx}"
@@ -703,7 +703,7 @@ class MaskReg:
     def __mul__(self, other: "RegOP"):
         from .regop import RegOP
         if not isinstance(other, RegOP):
-            raise TypeError(f"mask只能与RegOP相乘，当前类型: {type(other)}")
+            raise TypeError(f"mask can only multiply with RegOP, got: {type(other)}")
         other.setmask(self)
         return other
 
@@ -720,7 +720,7 @@ class MaskReg:
             other.release_inputs()
             other.emit(self)
             return self
-        raise TypeError(f"MaskReg赋值仅支持RegOP/Var，当前类型: {type(other)}")
+        raise TypeError(f"MaskReg assignment only supports RegOP/Var, got: {type(other)}")
 
     def __invert__(self):
         from .regop import RegOP

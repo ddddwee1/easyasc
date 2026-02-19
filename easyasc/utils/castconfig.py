@@ -3,10 +3,10 @@ from .roundmode import RoundMode, RoundModeType
 
 
 class RegLayoutValue:
-    """寄存器布局值类，用于表示具体的寄存器布局"""
+    """Register layout value class representing a concrete layout."""
     def __init__(self, name: str) -> None:
         if not isinstance(name, str):
-            raise TypeError(f"name必须是str类型，当前类型: {type(name)}")
+            raise TypeError(f"name must be str, got: {type(name)}")
         self.name = name
 
     def __repr__(self) -> str:
@@ -19,12 +19,12 @@ class RegLayoutValue:
         if self is other:
             return True
         if not isinstance(other, RegLayoutValue):
-            raise TypeError(f"无法比较RegLayoutValue与{type(other)}")
+            raise TypeError(f"Cannot compare RegLayoutValue with {type(other)}")
         return self.name == other.name
 
 
 class RegLayout:
-    """寄存器布局枚举类"""
+    """Register layout enum-like class."""
     ZERO = RegLayoutValue("ZERO")
     ONE = RegLayoutValue("ONE")
     TWO = RegLayoutValue("TWO")
@@ -40,13 +40,13 @@ class CastConfig:
         name: str = "",
     ) -> None:
         if not isinstance(round_mode, RoundModeType):
-            raise TypeError(f"round_mode必须是RoundModeType类型，当前类型: {type(round_mode)}")
+            raise TypeError(f"round_mode must be RoundModeType, got: {type(round_mode)}")
         if not isinstance(reg_layout, RegLayoutValue):
-            raise TypeError(f"reg_layout必须是RegLayoutValue类型，当前类型: {type(reg_layout)}")
+            raise TypeError(f"reg_layout must be RegLayoutValue, got: {type(reg_layout)}")
         if not isinstance(saturate, bool):
-            raise TypeError(f"saturate必须是bool类型，当前类型: {type(saturate)}")
+            raise TypeError(f"saturate must be bool, got: {type(saturate)}")
         if not isinstance(name, str):
-            raise TypeError(f"name必须是str类型，当前类型: {type(name)}")
+            raise TypeError(f"name must be str, got: {type(name)}")
 
         self.reg_layout = reg_layout
         self.round_mode = round_mode

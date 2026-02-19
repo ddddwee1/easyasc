@@ -19,7 +19,7 @@ if TYPE_CHECKING:
 
 
 class KernelBase:
-    """Kernel基类，保存名称、函数与执行过的指令列表。"""
+    """Kernel base class that stores name, function, and emitted instructions."""
     def __init__(self, name: str, func):
         self.name = name
         self.func = func
@@ -54,7 +54,7 @@ class KernelBase:
             if isinstance(value, (GMTensor, Var)):
                 value.name = param_name
             else:
-                raise TypeError(f"kernel入参只能为GMTensor或Var，当前{param_name}类型: {type(value)}")
+                raise TypeError(f"kernel arguments must be GMTensor or Var, current {param_name} type: {type(value)}")
         globvars.active_kernel = self
         globvars.tmp_idx = 0
         for value in bound.arguments.values():
@@ -78,7 +78,7 @@ class KernelBase:
         for mutex in self.crosscore_mutex:
             if not isinstance(mutex, (CvMutex, VcMutex)):
                 raise TypeError(
-                    f"crosscore_mutex元素必须是CvMutex或VcMutex，当前类型: {type(mutex)}"
+                    f"crosscore_mutex elements must be CvMutex or VcMutex, got: {type(mutex)}"
                 )
             if isinstance(mutex, CvMutex):
                 for _ in range(mutex.depth):
@@ -246,7 +246,7 @@ class KernelBase:
     def generate_op_host(self) -> None:
         sig = inspect.signature(self.func)
         if not self._last_bound_args:
-            raise RuntimeError("generate_op_host需要先调用kernel以绑定参数")
+            raise RuntimeError("generate_op_host requires calling kernel first to bind arguments")
 
         def _to_camel(name: str) -> str:
             parts = [p for p in name.split("_") if p]
@@ -297,12 +297,12 @@ class KernelBase:
                         return dim.name
                     if dim.value is not None:
                         return str(dim.value)
-                    raise ValueError(f"workspace_shape包含未绑定参数的Var: {dim.name!r}")
-                raise TypeError(f"workspace_shape元素必须是int或Var，当前类型: {type(dim)}")
+                    raise ValueError(f"workspace_shape contains an unbound Var: {dim.name!r}")
+                raise TypeError(f"workspace_shape elements must be int or Var, got: {type(dim)}")
 
             def _shape_expr(shape) -> str:
                 if not isinstance(shape, (list, tuple)):
-                    raise TypeError(f"workspace_shape必须是list或tuple，当前类型: {type(shape)}")
+                    raise TypeError(f"workspace_shape must be list or tuple, got: {type(shape)}")
                 factors = []
                 for dim in shape:
                     if isinstance(dim, int) and dim == 1:
@@ -468,20 +468,20 @@ class KernelBase:
 
     def generate_op_project(self, path: str, cann_path: str) -> None:
         if not isinstance(path, str):
-            raise TypeError(f"path必须是str类型，当前类型: {type(path)}")
+            raise TypeError(f"path must be str, got: {type(path)}")
         if not isinstance(cann_path, str):
-            raise TypeError(f"cann_path必须是str类型，当前类型: {type(cann_path)}")
+            raise TypeError(f"cann_path must be str, got: {type(cann_path)}")
         resources_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "resources"))
         tar_path = os.path.join(resources_dir, "CustomOp.tar.gz")
         if not os.path.isfile(tar_path):
-            raise FileNotFoundError(f"未找到CustomOp压缩包: {tar_path}")
+            raise FileNotFoundError(f"CustomOp archive not found: {tar_path}")
         preset_template = os.path.join(resources_dir, "CMakePresets.json")
         if not os.path.isfile(preset_template):
-            raise FileNotFoundError(f"未找到CMakePresets.json模板: {preset_template}")
+            raise FileNotFoundError(f"CMakePresets.json template not found: {preset_template}")
         dst = os.path.abspath(path)
         if os.path.exists(dst):
             if not os.path.isdir(dst):
-                raise FileExistsError(f"目标路径已存在且不是目录: {dst}")
+                raise FileExistsError(f"Target path already exists and is not a directory: {dst}")
             if os.listdir(dst):
                 return
         else:
@@ -510,7 +510,7 @@ class KernelBase:
                 if isinstance(compute_var, dict):
                     compute_var["value"] = compute_unit
         if not updated:
-            raise ValueError("未找到ASCEND_CANN_PACKAGE_PATH配置项")
+            raise ValueError("ASCEND_CANN_PACKAGE_PATH config not found")
         preset_out = os.path.join(dst, "CMakePresets.json")
         with open(preset_out, "w", encoding="utf-8") as f:
             json.dump(preset_data, f, indent=4)
@@ -533,21 +533,21 @@ class KernelBase:
         profile: bool = False,
     ) -> None:
         if not isinstance(out_dir, str):
-            raise TypeError(f"out_dir必须是str类型，当前类型: {type(out_dir)}")
+            raise TypeError(f"out_dir must be str, got: {type(out_dir)}")
         if out_dir == "":
             out_dir = self.name
         if not isinstance(profile, bool):
-            raise TypeError(f"profile必须是bool类型，当前类型: {type(profile)}")
+            raise TypeError(f"profile must be bool, got: {type(profile)}")
         if cann_path is None:
             cann_path = os.getenv("ASCEND_HOME_PATH")
             if not cann_path:
-                raise ValueError("cann_path为None且环境变量ASCEND_HOME_PATH未设置，请手动指定cann_path")
+                raise ValueError("cann_path is None and ASCEND_HOME_PATH is not set; please specify cann_path manually")
         if not isinstance(cann_path, str):
-            raise TypeError(f"cann_path必须是str类型，当前类型: {type(cann_path)}")
+            raise TypeError(f"cann_path must be str, got: {type(cann_path)}")
         if custom_op_path is None:
             custom_op_path = cann_path
         if not isinstance(custom_op_path, str):
-            raise TypeError(f"custom_op_path必须是str类型，当前类型: {type(custom_op_path)}")
+            raise TypeError(f"custom_op_path must be str, got: {type(custom_op_path)}")
 
         self.generate_op_project(out_dir, cann_path)
 
@@ -576,7 +576,7 @@ class KernelBase:
         resources_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "resources"))
         tensorutils_src = os.path.join(resources_dir, "tensorutils.h")
         if not os.path.isfile(tensorutils_src):
-            raise FileNotFoundError(f"未找到tensorutils.h: {tensorutils_src}")
+            raise FileNotFoundError(f"tensorutils.h not found: {tensorutils_src}")
         shutil.copy2(tensorutils_src, os.path.join(op_kernel_dir, "tensorutils.h"))
         self.generate_aclnn_test(
             f"{out_dir}_aclnn_test",
@@ -594,19 +594,19 @@ class KernelBase:
         profile: bool = False,
     ) -> None:
         if not isinstance(path, str):
-            raise TypeError(f"path必须是str类型，当前类型: {type(path)}")
+            raise TypeError(f"path must be str, got: {type(path)}")
         if cann_path is None:
             cann_path = os.getenv("ASCEND_HOME_PATH")
             if not cann_path:
-                raise ValueError("cann_path为None且环境变量ASCEND_HOME_PATH未设置，请手动指定cann_path")
+                raise ValueError("cann_path is None and ASCEND_HOME_PATH is not set; please specify cann_path manually")
         if not isinstance(cann_path, str):
-            raise TypeError(f"cann_path必须是str类型，当前类型: {type(cann_path)}")
+            raise TypeError(f"cann_path must be str, got: {type(cann_path)}")
         if custom_op_path is None:
             custom_op_path = cann_path
         if not isinstance(custom_op_path, str):
-            raise TypeError(f"custom_op_path必须是str类型，当前类型: {type(custom_op_path)}")
+            raise TypeError(f"custom_op_path must be str, got: {type(custom_op_path)}")
         if not isinstance(profile, bool):
-            raise TypeError(f"profile必须是bool类型，当前类型: {type(profile)}")
+            raise TypeError(f"profile must be bool, got: {type(profile)}")
         resolved_custom_op_path = self._resolve_custom_opp_path(custom_op_path)
 
         abs_path = os.path.abspath(path)
@@ -616,15 +616,15 @@ class KernelBase:
         resources_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "resources"))
         macros_src = os.path.join(resources_dir, "macros.h")
         if not os.path.isfile(macros_src):
-            raise FileNotFoundError(f"未找到macros.h: {macros_src}")
+            raise FileNotFoundError(f"macros.h not found: {macros_src}")
         shutil.copy2(macros_src, os.path.join(abs_path, "macros.h"))
         parse_prof_src = os.path.join(resources_dir, "parse_prof.py")
         if not os.path.isfile(parse_prof_src):
-            raise FileNotFoundError(f"未找到parse_prof.py: {parse_prof_src}")
+            raise FileNotFoundError(f"parse_prof.py not found: {parse_prof_src}")
         shutil.copy2(parse_prof_src, os.path.join(abs_path, "parse_prof.py"))
         setup_aclnn_src = os.path.join(resources_dir, "setup_aclnn.py")
         if not os.path.isfile(setup_aclnn_src):
-            raise FileNotFoundError(f"未找到setup_aclnn.py: {setup_aclnn_src}")
+            raise FileNotFoundError(f"setup_aclnn.py not found: {setup_aclnn_src}")
         with open(setup_aclnn_src, "r", encoding="utf-8") as f:
             setup_lines = f.readlines()
         cann_path_literal = repr(cann_path)
@@ -641,16 +641,16 @@ class KernelBase:
                 setup_lines[idx] = f"custom_op_path = {custom_op_path_literal}\n"
                 replaced_custom_op_path = True
         if not replaced_cann_path:
-            raise ValueError("setup_aclnn.py中未找到ascend_toolkit_install_path配置项")
+            raise ValueError("ascend_toolkit_install_path config not found in setup_aclnn.py")
         if not replaced_custom_op_path:
-            raise ValueError("setup_aclnn.py中未找到custom_op_path配置项")
+            raise ValueError("custom_op_path config not found in setup_aclnn.py")
         machine = platform.machine().lower()
         if machine in ("x86_64", "amd64"):
             arch_tag = "x86_64"
         elif machine in ("aarch64", "arm64"):
             arch_tag = "aarch64"
         else:
-            raise ValueError(f"未知系统架构: {machine}")
+            raise ValueError(f"Unknown system architecture: {machine}")
         arch_token = f"{arch_tag}-linux"
         setup_lines = [
             line.replace("aarch64-linux", arch_token).replace("x86_64-linux", arch_token)
@@ -660,7 +660,7 @@ class KernelBase:
             f.writelines(setup_lines)
         tensorx_src = os.path.join(resources_dir, "tensorx.h")
         if not os.path.isfile(tensorx_src):
-            raise FileNotFoundError(f"未找到tensorx.h: {tensorx_src}")
+            raise FileNotFoundError(f"tensorx.h not found: {tensorx_src}")
         with open(tensorx_src, "r", encoding="utf-8") as f:
             tensorx_lines = f.readlines()
         include_replaced = False
@@ -670,11 +670,11 @@ class KernelBase:
                 include_replaced = True
                 break
         if not include_replaced:
-            raise ValueError('tensorx.h中未找到#include "cust_op_list.h"')
+            raise ValueError('Missing #include "cust_op_list.h" in tensorx.h')
         with open(os.path.join(abs_path, "tensorx.h"), "w", encoding="utf-8") as f:
             f.writelines(tensorx_lines)
         if not self._last_bound_args:
-            raise RuntimeError("generate_aclnn_test需要先调用kernel以绑定参数")
+            raise RuntimeError("generate_aclnn_test requires calling kernel first to bind arguments")
         sig = inspect.signature(self.func)
         param_names = list(sig.parameters.keys())
         output_gmtensors = set()
@@ -690,12 +690,12 @@ class KernelBase:
             elif isinstance(bound_val, GMTensor):
                 gmtensor_params.append((name, bound_val))
             else:
-                raise TypeError(f"kernel入参只能为GMTensor或Var，当前{name}类型: {type(bound_val)}")
+                raise TypeError(f"kernel arguments must be GMTensor or Var, current {name} type: {type(bound_val)}")
 
         gmtensor_values = {val for _, val in gmtensor_params}
         for out in output_gmtensors:
             if out not in gmtensor_values:
-                raise ValueError("输出GMTensor必须来自kernel参数")
+                raise ValueError("Output GMTensor must come from kernel arguments")
 
         var_name_set = {name for name, _ in var_params}
 
@@ -707,15 +707,15 @@ class KernelBase:
 
         def _var_decl(name: str, var: Var) -> str:
             if var.dtype is None or var.value is None:
-                raise ValueError(f"Var {name} 没有有效的dtype或value")
+                raise ValueError(f"Var {name} has no valid dtype or value")
             if var.dtype is Datatype.int:
                 ctype = "int"
             elif var.dtype is Datatype.float:
                 ctype = "float"
             else:
-                raise ValueError(f"Var {name} 仅支持int或float类型，当前: {var.dtype}")
+                raise ValueError(f"Var {name} only supports int or float dtype, current: {var.dtype}")
             if not isinstance(var.value, (int, float)):
-                raise ValueError(f"Var {name} 的value必须是int或float，当前: {type(var.value)}")
+                raise ValueError(f"Var {name} value must be int or float, current: {type(var.value)}")
             return f"    {ctype} {name} = {var.value};"
 
         def _tensorx_type(dtype) -> str:
@@ -734,9 +734,9 @@ class KernelBase:
                 "uint64_t": "UINT64",
             }
             if name in ("int4", "hif8", "bool"):
-                raise ValueError(f"不支持的数据类型: {name}")
+                raise ValueError(f"Unsupported dtype: {name}")
             if name not in mapping:
-                raise ValueError(f"未找到dtype映射: {name}")
+                raise ValueError(f"dtype mapping not found: {name}")
             return mapping[name]
 
         def _dim_expr(dim) -> str:
@@ -745,16 +745,16 @@ class KernelBase:
             if isinstance(dim, Var):
                 if dim.name in var_name_set:
                     if dim.dtype is not Datatype.int:
-                        raise ValueError(f"shape包含非int的Var: {dim.name}")
+                        raise ValueError(f"shape contains a non-int Var: {dim.name}")
                     return dim.name
                 if isinstance(dim.value, int):
                     return str(dim.value)
-                raise ValueError(f"shape包含未绑定参数的Var: {dim.name!r}")
-            raise TypeError(f"shape元素必须是int或Var，当前类型: {type(dim)}")
+                raise ValueError(f"shape contains an unbound Var: {dim.name!r}")
+            raise TypeError(f"shape elements must be int or Var, got: {type(dim)}")
 
         def _shape_expr(shape) -> str:
             if not isinstance(shape, (list, tuple)):
-                raise TypeError(f"shape必须是list或tuple，当前类型: {type(shape)}")
+                raise TypeError(f"shape must be list or tuple, got: {type(shape)}")
             return ", ".join(_dim_expr(dim) for dim in shape)
 
         output_names = {name for name, val in gmtensor_params if val in output_gmtensors}
@@ -766,7 +766,7 @@ class KernelBase:
         if profile:
             template_src = os.path.join(resources_dir, "test.cpp")
             if not os.path.isfile(template_src):
-                raise FileNotFoundError(f"未找到test.cpp模板: {template_src}")
+                raise FileNotFoundError(f"test.cpp template not found: {template_src}")
             with open(template_src, "r", encoding="utf-8") as f:
                 legacy_lines = f.readlines()
 
@@ -785,7 +785,7 @@ class KernelBase:
             profile_pre_lines = _extract_comment_block("aclprofInit")
             profile_post_lines = _extract_comment_block("aclprofStop")
             if not profile_pre_lines or not profile_post_lines:
-                raise ValueError("legacy/test.cpp中未找到profiling注释代码块")
+                raise ValueError("Profiling commented block not found in legacy/test.cpp")
             def _uncomment_line(line: str) -> str:
                 prefix, sep, rest = line.partition("//")
                 if sep == "":
@@ -900,13 +900,13 @@ class KernelBase:
         custom_op_path: Optional[str] = None,
     ) -> None:
         if not isinstance(path, str):
-            raise TypeError(f"path必须是str类型，当前类型: {type(path)}")
+            raise TypeError(f"path must be str, got: {type(path)}")
         if not isinstance(cann_path, str):
-            raise TypeError(f"cann_path必须是str类型，当前类型: {type(cann_path)}")
+            raise TypeError(f"cann_path must be str, got: {type(cann_path)}")
         if custom_op_path is None:
             custom_op_path = cann_path
         if not isinstance(custom_op_path, str):
-            raise TypeError(f"custom_op_path必须是str类型，当前类型: {type(custom_op_path)}")
+            raise TypeError(f"custom_op_path must be str, got: {type(custom_op_path)}")
         resolved_custom_op_path = self._resolve_custom_opp_path(custom_op_path)
         script_lines = [
             f"cd {path}",

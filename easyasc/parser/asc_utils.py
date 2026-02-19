@@ -65,7 +65,7 @@ def dtype_to_cpp(dtype) -> str:
 def position_to_cpp(position) -> str:
     key = str(position)
     if key not in POSITION_CPP_MAPPING:
-        raise ValueError(f"未找到position映射: {key}")
+        raise ValueError(f"not foundpositionmapping: {key}")
     return POSITION_CPP_MAPPING[key]
 
 
@@ -166,9 +166,9 @@ def value_to_cpp(value, expr_map: Dict[str, str]) -> str:
 
 def build_offset_expr(shape, offset, expr_map: Dict[str, str]) -> str:
     if shape is None or offset is None:
-        raise ValueError("slice_gm_tensor需要out包含shape与offset")
+        raise ValueError("slice_gm_tensor requires outcontainsshape and offset")
     if len(shape) != len(offset):
-        raise ValueError("slice_gm_tensor的shape与offset维度不一致")
+        raise ValueError("slice_gm_tensorshape and offsetdimensionsnotmatch")
     if not shape:
         return "0"
     # Linearized offset: sum(off[i] * prod(shape[i+1:])) + off[last]
@@ -195,11 +195,11 @@ def build_offset_expr(shape, offset, expr_map: Dict[str, str]) -> str:
 
 def build_offset_expr_nz(shape, offset, dtype, expr_map: Dict[str, str]) -> str:
     if shape is None or offset is None:
-        raise ValueError("slice_tensor需要out包含shape与offset")
+        raise ValueError("slice_tensor requires outcontainsshape and offset")
     if len(shape) != 2 or len(offset) != 2:
-        raise ValueError("slice_tensor的shape与offset必须为2维")
+        raise ValueError("slice_tensorshape and offset must be 2D")
     if dtype is None:
-        raise ValueError("slice_tensor需要out包含dtype")
+        raise ValueError("slice_tensor requires outcontainsdtype")
     off0 = _wrap_expr(value_to_cpp(offset[0], expr_map))
     off1 = _wrap_expr(value_to_cpp(offset[1], expr_map))
     shape0 = _wrap_expr(value_to_cpp(shape[0], expr_map))

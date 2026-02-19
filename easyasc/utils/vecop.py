@@ -150,7 +150,7 @@ def maximum(a: Union[Tensor, int, float, Var], b: Union[Tensor, int, float, Var]
         return VecOP("maxs", a, b)
     if isinstance(b, Tensor) and isinstance(a, (int, float, Var)):
         return VecOP("maxs", b, a)
-    raise TypeError("maximum需要Tensor或标量(含Var)入参")
+    raise TypeError("maximum requires Tensor or scalar (including Var) inputs")
 
 
 def minimum(a: Union[Tensor, int, float, Var], b: Union[Tensor, int, float, Var]) -> VecOP:
@@ -161,4 +161,4 @@ def minimum(a: Union[Tensor, int, float, Var], b: Union[Tensor, int, float, Var]
         return VecOP("mins", a, b)
     if isinstance(b, Tensor) and isinstance(a, (int, float, Var)):
         return VecOP("mins", b, a)
-    raise TypeError("minimum需要Tensor或标量(含Var)入参")
+    raise TypeError("minimum requires Tensor or scalar (including Var) inputs")

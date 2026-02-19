@@ -1,5 +1,5 @@
 class RoundModeType:
-    """舍入模式值类，用于表示具体的舍入模式"""
+    """Round mode value class representing a concrete round mode."""
     def __init__(self, name: str):
         self.name = name
 
@@ -13,12 +13,12 @@ class RoundModeType:
         if self is other:
             return True
         if not isinstance(other, RoundModeType):
-            raise TypeError(f"无法比较RoundModeType与{type(other)}")
+            raise TypeError(f"Cannot compare RoundModeType with {type(other)}")
         return self.name == other.name
 
 
 class RoundMode:
-    """舍入模式枚举类"""
+    """Round mode enum-like class."""
     NONE = RoundModeType("CAST_NONE")
     TO_EVEN = RoundModeType("CAST_RINT")
     AWAY_FROM_ZERO = RoundModeType("CAST_ROUND")

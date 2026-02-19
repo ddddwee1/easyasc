@@ -62,14 +62,13 @@ def ub_to_reg(
 ) -> None:
     micro = require_micro()
     if not isinstance(src, Tensor):
-        raise TypeError(f"src必须是Tensor类型，当前类型: {type(src)}")
+        raise TypeError(f"src must be Tensor type, current type: {type(src)}")
     if src.position is not Position.UB:
-        raise ValueError(f"src必须在UB位置，当前位置: {src.position}")
+        raise ValueError(f"src must be at UB position, current position: {src.position}")
     if not isinstance(dst, Reg):
-        raise TypeError(f"dst必须是Reg类型，当前类型: {type(dst)}")
+        raise TypeError(f"dst must be Reg type, current type: {type(dst)}")
     if dst.dtype != src.dtype:
-        raise ValueError("dst/src的数据类型必须一致")
-
+        raise ValueError("dst/src data types must match") 
     mask = ensure_mask(mask, dst.dtype, micro)
     micro.instructions.append(
         Instruction("micro_ub2reg", dst=dst, src=src, blk_stride=blk_stride, mask=mask)
@@ -84,14 +83,13 @@ def reg_to_ub(
 ) -> None:
     micro = require_micro()
     if not isinstance(dst, Tensor):
-        raise TypeError(f"dst必须是Tensor类型，当前类型: {type(dst)}")
+        raise TypeError(f"dst must be Tensor type, current type: {type(dst)}")
     if dst.position is not Position.UB:
-        raise ValueError(f"dst必须在UB位置，当前位置: {dst.position}")
+        raise ValueError(f"dst must be at UB position, current position: {dst.position}")
     if not isinstance(src, Reg):
-        raise TypeError(f"src必须是Reg类型，当前类型: {type(src)}")
+        raise TypeError(f"src must be Reg type, current type: {type(src)}")
     if dst.dtype != src.dtype:
-        raise ValueError("dst/src的数据类型必须一致")
-
+        raise ValueError("dst/src data types must match") 
     mask = ensure_mask(mask, dst.dtype, micro)
     micro.instructions.append(
         Instruction("micro_reg2ub", dst=dst, src=src, blk_stride=blk_stride, mask=mask)
@@ -101,16 +99,15 @@ def reg_to_ub(
 def ub_to_reg_continuous(dst: Reg, src: Tensor, loaddist: LoadDistValue) -> None:
     micro = require_micro()
     if not isinstance(src, Tensor):
-        raise TypeError(f"src必须是Tensor类型，当前类型: {type(src)}")
+        raise TypeError(f"src must be Tensor type, current type: {type(src)}")
     if src.position is not Position.UB:
-        raise ValueError(f"src必须在UB位置，当前位置: {src.position}")
+        raise ValueError(f"src must be at UB position, current position: {src.position}")
     if not isinstance(dst, Reg):
-        raise TypeError(f"dst必须是Reg类型，当前类型: {type(dst)}")
+        raise TypeError(f"dst must be Reg type, current type: {type(dst)}")
     if not isinstance(loaddist, LoadDistValue):
-        raise TypeError(f"loaddist必须是LoadDistValue类型，当前类型: {type(loaddist)}")
+        raise TypeError(f"loaddist must be LoadDistValue type, current type: {type(loaddist)}")
     if dst.dtype != src.dtype:
-        raise ValueError("dst/src的数据类型必须一致")
-
+        raise ValueError("dst/src data types must match") 
     size = dtype_size(dst.dtype)
     if loaddist == LoadDist.DOWNSAMPLE:
         if size == 1:
@@ -118,14 +115,14 @@ def ub_to_reg_continuous(dst: Reg, src: Tensor, loaddist: LoadDistValue) -> None
         elif size == 2:
             mode = "DIST_DS_B16"
         else:
-            raise ValueError("downsample不支持32-bit类型")
+            raise ValueError("downsample does not support 32-bit type")
     elif loaddist == LoadDist.UPSAMPLE:
         if size == 1:
             mode = "DIST_US_B8"
         elif size == 2:
             mode = "DIST_US_B16"
         else:
-            raise ValueError("upsample不支持32-bit类型")
+            raise ValueError("upsample does not support 32-bit type")
     elif loaddist == LoadDist.SINGLE_VALUE:
         if size == 1:
             mode = "DIST_BRC_B8"
@@ -134,14 +131,14 @@ def ub_to_reg_continuous(dst: Reg, src: Tensor, loaddist: LoadDistValue) -> None
         elif size == 4:
             mode = "DIST_BRC_B32"
         else:
-            raise ValueError(f"{dst.dtype}不支持single_value")
+            raise ValueError(f"{dst.dtype} does not support single_value")
     elif loaddist == LoadDist.BRCB:
         if size == 2:
             mode = "DIST_E2B_B16"
         elif size == 4:
             mode = "DIST_E2B_B32"
         else:
-            raise ValueError(f"{dst.dtype}不支持brcb")
+            raise ValueError(f"{dst.dtype} does not support brcb")
     elif loaddist == LoadDist.UNPACK:
         if size == 1:
             mode = "DIST_UNPACK_B8"
@@ -150,15 +147,14 @@ def ub_to_reg_continuous(dst: Reg, src: Tensor, loaddist: LoadDistValue) -> None
         elif size == 4:
             mode = "DIST_UNPACK_B32"
         else:
-            raise ValueError(f"{dst.dtype}不支持unpack")
+            raise ValueError(f"{dst.dtype} does not support unpack")
     elif loaddist == LoadDist.UNPACK4:
         if size == 1:
             mode = "DIST_UNPACK4_B8"
         else:
-            raise ValueError("unpack4仅支持8-bit类型")
+            raise ValueError("unpack4 only supports 8-bit type")
     else:
-        raise ValueError(f"未知loaddist: {loaddist}")
-
+        raise ValueError(f"unknown loaddist: {loaddist}")
     micro.instructions.append(
         Instruction("micro_ub2regcont", dst=dst, src=src, mode=mode)
     )
@@ -172,16 +168,15 @@ def reg_to_ub_continuous(
 ) -> None:
     micro = require_micro()
     if not isinstance(dst, Tensor):
-        raise TypeError(f"dst必须是Tensor类型，当前类型: {type(dst)}")
+        raise TypeError(f"dst must be Tensor type, current type: {type(dst)}")
     if dst.position is not Position.UB:
-        raise ValueError(f"dst必须在UB位置，当前位置: {dst.position}")
+        raise ValueError(f"dst must be at UB position, current position: {dst.position}")
     if not isinstance(src, Reg):
-        raise TypeError(f"src必须是Reg类型，当前类型: {type(src)}")
+        raise TypeError(f"src must be Reg type, current type: {type(src)}")
     if not isinstance(storedist, StoreDistValue):
-        raise TypeError(f"storedist必须是StoreDistValue类型，当前类型: {type(storedist)}")
+        raise TypeError(f"storedist must be StoreDistValue type, current type: {type(storedist)}")
     if dst.dtype != src.dtype:
-        raise ValueError("dst/src的数据类型必须一致")
-
+        raise ValueError("dst/src data types must match") 
     mask = ensure_mask(mask, dst.dtype, micro)
 
     size = dtype_size(dst.dtype)
@@ -193,12 +188,12 @@ def reg_to_ub_continuous(
         elif size == 4:
             mode = "DIST_PACK_B64"
         else:
-            raise ValueError("downsample不支持64-bit类型")
+            raise ValueError("downsample does not support 64-bit type")
     elif storedist == StoreDist.PACK4:
         if size == 1:
             mode = "DIST_PACK4_B32"
         else:
-            raise ValueError("pack4仅支持8-bit类型")
+            raise ValueError("pack4 only supports 8-bit type")
     elif storedist == StoreDist.SINGLE_VALUE:
         if size == 1:
             mode = "DIST_FIRST_ELEMENT_B8"
@@ -207,7 +202,7 @@ def reg_to_ub_continuous(
         elif size == 4:
             mode = "DIST_FIRST_ELEMENT_B32"
         else:
-            raise ValueError(f"{dst.dtype}不支持single_value")
+            raise ValueError(f"{dst.dtype} does not support single_value")
     elif storedist == StoreDist.NORMAL:
         if size == 1:
             mode = "DIST_NORM_B8"
@@ -216,10 +211,9 @@ def reg_to_ub_continuous(
         elif size == 4:
             mode = "DIST_NORM_B32"
         else:
-            raise ValueError(f"{dst.dtype}不支持normal")
+            raise ValueError(f"{dst.dtype} does not support normal")
     else:
-        raise ValueError(f"未知storedist: {storedist}")
-
+        raise ValueError(f"unknown storedist: {storedist}")
     micro.instructions.append(
         Instruction("micro_reg2ubcont", dst=dst, src=src, mask=mask, mode=mode)
     )
@@ -270,23 +264,21 @@ def ub_to_reg_gather(
 ) -> None:
     micro = require_micro()
     if not isinstance(dst, Reg):
-        raise TypeError(f"dst必须是Reg类型，当前类型: {type(dst)}")
+        raise TypeError(f"dst must be Reg type, current type: {type(dst)}")
     if not isinstance(src, Tensor):
-        raise TypeError(f"src必须是Tensor类型，当前类型: {type(src)}")
+        raise TypeError(f"src must be Tensor type, current type: {type(src)}")
     if not isinstance(index, Reg):
-        raise TypeError(f"index必须是Reg类型，当前类型: {type(index)}")
+        raise TypeError(f"index must be Reg type, current type: {type(index)}")
     if dst.dtype != src.dtype:
-        raise ValueError("dst/src的数据类型必须一致")
-
+        raise ValueError("dst/src data types must match") 
     mask = ensure_mask(mask, src.dtype, micro)
     size = dtype_size(src.dtype)
     if size == 2:
         if index.dtype != DT.uint16:
-            raise ValueError("index必须是uint16")
+            raise ValueError("index must be uint16")
     elif size == 4:
         if index.dtype != DT.uint32:
-            raise ValueError("index必须是uint32")
-
+            raise ValueError("index must be uint32")
     micro.instructions.append(
         Instruction("micro_datacopygather", dst=dst, src=src, index=index, mask=mask)
     )
@@ -300,23 +292,21 @@ def reg_to_ub_scatter(
 ) -> None:
     micro = require_micro()
     if not isinstance(dst, Tensor):
-        raise TypeError(f"dst必须是Tensor类型，当前类型: {type(dst)}")
+        raise TypeError(f"dst must be Tensor type, current type: {type(dst)}")
     if not isinstance(src, Reg):
-        raise TypeError(f"src必须是Reg类型，当前类型: {type(src)}")
+        raise TypeError(f"src must be Reg type, current type: {type(src)}")
     if not isinstance(index, Reg):
-        raise TypeError(f"index必须是Reg类型，当前类型: {type(index)}")
+        raise TypeError(f"index must be Reg type, current type: {type(index)}")
     if dst.dtype != src.dtype:
-        raise ValueError("dst/src的数据类型必须一致")
-
+        raise ValueError("dst/src data types must match") 
     mask = ensure_mask(mask, src.dtype, micro)
     size = dtype_size(src.dtype)
     if size == 2:
         if index.dtype != DT.uint16:
-            raise ValueError("index必须是uint16")
+            raise ValueError("index must be uint16")
     elif size == 4:
         if index.dtype != DT.uint32:
-            raise ValueError("index必须是uint32")
-
+            raise ValueError("index must be uint32")
     micro.instructions.append(
         Instruction("micro_datacopyscatter", dst=dst, src=src, index=index, mask=mask)
     )
@@ -325,22 +315,20 @@ def reg_to_ub_scatter(
 def gather(dst: Reg, src: Reg, index: Reg) -> None:
     micro = require_micro()
     if not isinstance(dst, Reg):
-        raise TypeError(f"dst必须是Reg类型，当前类型: {type(dst)}")
+        raise TypeError(f"dst must be Reg type, current type: {type(dst)}")
     if not isinstance(src, Reg):
-        raise TypeError(f"src必须是Reg类型，当前类型: {type(src)}")
+        raise TypeError(f"src must be Reg type, current type: {type(src)}")
     if not isinstance(index, Reg):
-        raise TypeError(f"index必须是Reg类型，当前类型: {type(index)}")
+        raise TypeError(f"index must be Reg type, current type: {type(index)}")
     if dst.dtype != src.dtype:
-        raise ValueError("dst/src的数据类型必须一致")
-
+        raise ValueError("dst/src data types must match") 
     size = dtype_size(src.dtype)
     if size == 2:
         if index.dtype != DT.uint16:
-            raise ValueError("index必须是uint16")
+            raise ValueError("index must be uint16")
     elif size == 4:
         if index.dtype != DT.uint32:
-            raise ValueError("index必须是uint32")
-
+            raise ValueError("index must be uint32")
     micro.instructions.append(
         Instruction("micro_gather", dst=dst, src=src, index=index)
     )
@@ -349,12 +337,11 @@ def gather(dst: Reg, src: Reg, index: Reg) -> None:
 def gather_mask(dst: Reg, src: Reg, mask: Optional[MaskReg] = None) -> None:
     micro = require_micro()
     if not isinstance(dst, Reg):
-        raise TypeError(f"dst必须是Reg类型，当前类型: {type(dst)}")
+        raise TypeError(f"dst must be Reg type, current type: {type(dst)}")
     if not isinstance(src, Reg):
-        raise TypeError(f"src必须是Reg类型，当前类型: {type(src)}")
+        raise TypeError(f"src must be Reg type, current type: {type(src)}")
     if dst.dtype != src.dtype:
-        raise ValueError("dst/src的数据类型必须一致")
-
+        raise ValueError("dst/src data types must match") 
     mask = ensure_mask(mask, src.dtype, micro)
     micro.instructions.append(
         Instruction("micro_gathermask", dst=dst, src=src, mask=mask)

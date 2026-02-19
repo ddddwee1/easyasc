@@ -8,7 +8,7 @@ POSITION_CPP_MAPPING = {
 
 
 class PositionType:
-    """位置类型类，用于表示具体的位置类型"""
+    """Position value class representing a concrete memory position."""
     def __init__(self, name: str):
         self.name = name
 
@@ -22,7 +22,7 @@ class PositionType:
         if self is other:
             return True
         if not isinstance(other, PositionType):
-            raise TypeError(f"无法比较PositionType与{type(other)}")
+            raise TypeError(f"Cannot compare PositionType with {type(other)}")
         return self.name == other.name
 
     @property
@@ -31,7 +31,7 @@ class PositionType:
 
 
 class Position:
-    """位置枚举类，包含L1/L0A/L0B/L0C/UB成员"""
+    """Position enum-like class with L1/L0A/L0B/L0C/UB members."""
     L1 = PositionType("L1")
     L0A = PositionType("L0A")
     L0B = PositionType("L0B")

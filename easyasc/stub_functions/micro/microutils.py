@@ -9,7 +9,7 @@ from ...utils.var import Var
 def require_micro():
     micro = globvars.active_micro
     if micro is None:
-        raise RuntimeError("micro函数只能在MicroModule中调用")
+        raise RuntimeError("micro function can only be used in MicroModule")
     return micro
 
 
@@ -17,7 +17,7 @@ def ensure_mask(mask: Optional[MaskReg], dtype: DataTypeValue, micro) -> MaskReg
     if mask is None:
         mask = micro.get_mask(dtype)
     if not isinstance(mask, MaskReg):
-        raise TypeError(f"mask必须是MaskReg类型，当前类型: {type(mask)}")
+        raise TypeError(f"mask must be MaskReg type, current type: {type(mask)}")
     return mask
 
 
@@ -25,10 +25,9 @@ def format_scalar(value: Union[Var, int, float], dtype: DataTypeValue) -> str:
     if isinstance(value, Var):
         return value.name
     if not isinstance(value, (int, float)):
-        raise TypeError(f"value必须是Var或数值类型，当前类型: {type(value)}")
+        raise TypeError(f"value must be Var or numeric value type, current type: {type(value)}")
     if not isinstance(dtype, DataTypeValue):
-        raise TypeError(f"dtype必须是DataTypeValue类型，当前类型: {type(dtype)}")
-
+        raise TypeError(f"dtype must be DataTypeValue type, current type: {type(dtype)}") 
     dtype_name = getattr(dtype, "name", None)
     if dtype_name == "float":
         return f"{float(value)}f"
@@ -43,5 +42,5 @@ def format_scalar(value: Union[Var, int, float], dtype: DataTypeValue) -> str:
 
 def dtype_size(dtype: DataTypeValue) -> int:
     if not isinstance(dtype, DataTypeValue):
-        raise TypeError(f"dtype必须是DataTypeValue类型，当前类型: {type(dtype)}")
+        raise TypeError(f"dtype must be DataTypeValue type, current type: {type(dtype)}")
     return dtype.size

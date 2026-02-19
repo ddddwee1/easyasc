@@ -4,10 +4,10 @@ from .common import Tensor, dtype_to_cpp, value_to_cpp
 def _handle_vec_group(inst, helper, expr_map) -> dict:
     dst = inst.kwargs.get("dst", None)
     if not isinstance(dst, Tensor):
-        raise TypeError(f"Group需要Tensor类型，当前类型: {type(dst)}")
+        raise TypeError(f"Group requires Tensor type, current type: {type(dst)}")
     src = inst.kwargs.get("src", None)
     if not isinstance(src, Tensor):
-        raise TypeError(f"Group需要Tensor类型，当前类型: {type(src)}")
+        raise TypeError(f"Group requires Tensor type, current type: {type(src)}")
     dst_expr = value_to_cpp(dst, expr_map)
     src_expr = value_to_cpp(src, expr_map)
     repeat = value_to_cpp(inst.kwargs.get("repeat", None), expr_map)

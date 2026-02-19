@@ -8,25 +8,25 @@ from ...utils.comparemode import CompareModeType
 
 def _require_reg(value, label: str) -> Reg:
     if not isinstance(value, Reg):
-        raise TypeError(f"{label}需要Reg类型，当前类型: {type(value)}")
+        raise TypeError(f"{label}requires Reg type, current type: {type(value)}")
     return value
 
 
 def _require_mask(value, label: str) -> MaskReg:
     if not isinstance(value, MaskReg):
-        raise TypeError(f"{label}需要MaskReg类型，当前类型: {type(value)}")
+        raise TypeError(f"{label}requires MaskReg type, current type: {type(value)}")
     return value
 
 
 def _require_tensor(value, label: str) -> Tensor:
     if not isinstance(value, Tensor):
-        raise TypeError(f"{label}需要Tensor类型，当前类型: {type(value)}")
+        raise TypeError(f"{label}requires Tensor type, current type: {type(value)}")
     return value
 
 
 def _require_str(value, label: str) -> str:
     if not isinstance(value, str):
-        raise TypeError(f"{label}需要str类型，当前类型: {type(value)}")
+        raise TypeError(f"{label}requires strtype, current type: {type(value)}")
     return value
 
 
@@ -337,7 +337,7 @@ def handle_micro_vdup(inst, helper, expr_map) -> None:
     mask = _require_mask(inst.kwargs.get("mask", None), "VDUP")
     src_val = inst.kwargs.get("src", None)
     if src_val is None:
-        raise TypeError("VDUP需要src参数")
+        raise TypeError("VDUP requires srcparameter")
 
     dst_expr = value_to_cpp(dst, expr_map)
     src_expr = value_to_cpp(src_val, expr_map)
@@ -375,7 +375,7 @@ def handle_micro_cast(inst, helper, expr_map) -> None:
     dsrc = inst.kwargs.get("dsrc", None)
     config = inst.kwargs.get("config", None)
     if not isinstance(config, CastConfig):
-        raise TypeError(f"CAST需要CastConfig类型，当前类型: {type(config)}")
+        raise TypeError(f"CAST requires CastConfigtype, current type: {type(config)}")
 
     dst_expr = value_to_cpp(dst, expr_map)
     src_expr = value_to_cpp(src, expr_map)
@@ -393,7 +393,7 @@ def handle_micro_arange(inst, helper, expr_map) -> None:
     mode = _require_str(inst.kwargs.get("mode", None), "ARANGE")
     v = inst.kwargs.get("v", None)
     if v is None:
-        raise TypeError("ARANGE需要v参数")
+        raise TypeError("ARANGE requires vparameter")
 
     dst_expr = value_to_cpp(dst, expr_map)
     v_expr = value_to_cpp(v, expr_map)
@@ -578,7 +578,7 @@ def handle_micro_updatemask(inst, helper, expr_map) -> None:
     dst = _require_mask(inst.kwargs.get("dst", None), "UPDATEMASK")
     cnt = inst.kwargs.get("cnt", None)
     if cnt is None:
-        raise TypeError("UPDATEMASK需要cnt参数")
+        raise TypeError("UPDATEMASK requires cntparameter")
     dtype = dtype_to_cpp(dst.dtype)
     helper(
         f"{value_to_cpp(dst, expr_map)} = MicroAPI::UpdateMask<{dtype}>({value_to_cpp(cnt, expr_map)});"

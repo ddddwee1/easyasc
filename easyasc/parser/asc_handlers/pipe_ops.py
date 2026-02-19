@@ -5,7 +5,7 @@ def _handle_pipe_flag_op(inst, helper, expr_map, opname: str) -> None:
     flag_id = value_to_cpp(inst.kwargs.get("flag_id", None), expr_map)
     pipe = inst.kwargs.get("pipe", None)
     if not isinstance(pipe, PipeType):
-        raise TypeError(f"{opname}需要PipeType类型，当前类型: {type(pipe)}")
+        raise TypeError(f"{opname}requires PipeType type, current type: {type(pipe)}")
     pipe_expr = _pipe_name(pipe)
     helper(f"{opname}({flag_id}, {pipe_expr});")
 
@@ -45,7 +45,7 @@ def handle_allvec_wait(inst, helper, expr_map) -> None:
 def handle_bar(inst, helper, expr_map) -> None:
     pipe = inst.kwargs.get("pipe", None)
     if not isinstance(pipe, PipeType):
-        raise TypeError(f"barrier需要PipeType类型，当前类型: {type(pipe)}")
+        raise TypeError(f"barrier requires PipeType type, current type: {type(pipe)}")
     pipe_expr = _pipe_name(pipe)
     helper(f"PipeBarrier<{pipe_expr}>();")
 
@@ -55,9 +55,9 @@ def _handle_pipe_event_op(inst, helper, expr_map, opname: str) -> None:
     src = inst.kwargs.get("src", None)
     dst = inst.kwargs.get("dst", None)
     if not isinstance(src, PipeType):
-        raise TypeError(f"{opname}需要PipeType类型src，当前类型: {type(src)}")
+        raise TypeError(f"{opname}requires PipeType typesrc, current type: {type(src)}")
     if not isinstance(dst, PipeType):
-        raise TypeError(f"{opname}需要PipeType类型dst，当前类型: {type(dst)}")
+        raise TypeError(f"{opname}requires PipeType typedst, current type: {type(dst)}")
     src_expr = _pipe_name(src)
     dst_expr = _pipe_name(dst)
     helper(f"{opname}<{src_expr}, {dst_expr}>({event_id});")

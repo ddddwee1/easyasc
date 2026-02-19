@@ -8,9 +8,9 @@ from ... import globvars
 
 def set_mask(mask_high: Union[int, Var], mask_low: Union[int, Var]) -> None:
     if isinstance(mask_high, Var) and mask_high.dtype is not Datatype.uint64:
-        raise TypeError(f"mask_high必须是uint64类型，当前类型: {mask_high.dtype}")
+        raise TypeError(f"mask_high must be uint64type, current type: {mask_high.dtype}")
     if isinstance(mask_low, Var) and mask_low.dtype is not Datatype.uint64:
-        raise TypeError(f"mask_low必须是uint64类型，当前类型: {mask_low.dtype}")
+        raise TypeError(f"mask_low must be uint64type, current type: {mask_low.dtype}")
 
     if globvars.active_kernel is not None:
         globvars.active_kernel.instructions.append(

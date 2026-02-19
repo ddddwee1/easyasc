@@ -9,8 +9,7 @@ from .. import globvars
 
 def _validate_var_or_int(value: object, label: str) -> None:
     if not isinstance(value, (Var, int)):
-        raise TypeError(f"{label}必须是Var或int类型，当前类型: {type(value)}")
-
+        raise TypeError(f"{label} must be Var or int type, current type: {type(value)}") 
 
 def gm_to_l1_nd2nz(
     dst: Tensor,
@@ -24,15 +23,14 @@ def gm_to_l1_nd2nz(
     Stub function for GM to L1 copy for 2D tensors with non-zero strides.
     """
     if not isinstance(dst, Tensor):
-        raise TypeError(f"dst必须是Tensor类型，当前类型: {type(dst)}")
+        raise TypeError(f"dst must be Tensor type, current type: {type(dst)}")
     if dst.position is not Position.L1:
-        raise ValueError(f"dst必须在L1位置，当前位置: {dst.position}")
+        raise ValueError(f"dst must be at L1 position, current position: {dst.position}")
     if not isinstance(src, GMTensor):
-        raise TypeError(f"src必须是GMTensor类型，当前类型: {type(src)}")
-
+        raise TypeError(f"src must be GMTensor type, current type: {type(src)}") 
     if M is None or N is None or N_src is None:
         if not (M is None and N is None and N_src is None):
-            raise ValueError("M、N、N_src必须同时为None")
+            raise ValueError("M, N, N_src must all be None")
         slice_mask = getattr(src, "slice_mask", None)
         slice_dims = [idx for idx, flag in enumerate(slice_mask or []) if flag]
         if len(slice_dims) == 2:
@@ -46,8 +44,7 @@ def gm_to_l1_nd2nz(
             N = src.span[dim]
             N_src = src.shape[dim]
         else:
-            raise ValueError("src必须包含1或2个slice维度以推断M/N/N_src")
-
+            raise ValueError("src must include 1 or 2 slicedimensionsto inferM/N/N_src") 
     if M_dst is None:
         M_dst = dst.shape[0]
 
@@ -72,14 +69,13 @@ def gm_to_l1_nd2nz(
 
 def l1_to_l0(dst: Tensor, src: Tensor, m_dst: Union[int, Var, None]=None, n_dst: Union[int, Var, None]=None, m_src: Union[int, Var, None]=None, n_src: Union[int, Var, None]=None):
     if not isinstance(dst, Tensor):
-        raise TypeError(f"dst必须是Tensor类型，当前类型: {type(dst)}")
+        raise TypeError(f"dst must be Tensor type, current type: {type(dst)}")
     if dst.position not in (Position.L0A, Position.L0B):
-        raise ValueError(f"dst必须在L0A或L0B位置，当前位置: {dst.position}")
+        raise ValueError(f"dst must be at L0A or L0B position, current position: {dst.position}")
     if not isinstance(src, Tensor):
-        raise TypeError(f"src必须是Tensor类型，当前类型: {type(src)}")
+        raise TypeError(f"src must be Tensor type, current type: {type(src)}")
     if src.position is not Position.L1:
-        raise ValueError(f"src必须在L1位置，当前位置: {src.position}")
-
+        raise ValueError(f"src must be at L1 position, current position: {src.position}") 
     if m_dst is None:
         m_dst = src.span[0] if hasattr(src, "span") else src.shape[0]
     if n_dst is None:
@@ -110,18 +106,17 @@ def l1_to_l0(dst: Tensor, src: Tensor, m_dst: Union[int, Var, None]=None, n_dst:
 
 def mmad(dst: Tensor, src_a: Tensor, src_b: Tensor, M: Union[int, Var, None]=None, N: Union[int, Var, None]=None, K: Union[int, Var, None]=None, is_init: bool = True):
     if not isinstance(dst, Tensor):
-        raise TypeError(f"dst必须是Tensor类型，当前类型: {type(dst)}")
+        raise TypeError(f"dst must be Tensor type, current type: {type(dst)}")
     if dst.position is not Position.L0C:
-        raise ValueError(f"dst必须在L0C位置，当前位置: {dst.position}")
+        raise ValueError(f"dst must be at L0C position, current position: {dst.position}")
     if not isinstance(src_a, Tensor):
-        raise TypeError(f"src_a必须是Tensor类型，当前类型: {type(src_a)}")
+        raise TypeError(f"src_a must be Tensor type, current type: {type(src_a)}")
     if src_a.position is not Position.L0A:
-        raise ValueError(f"src_a必须在L0A位置，当前位置: {src_a.position}")
+        raise ValueError(f"src_a must be at L0A position, current position: {src_a.position}")
     if not isinstance(src_b, Tensor):
-        raise TypeError(f"src_b必须是Tensor类型，当前类型: {type(src_b)}")
+        raise TypeError(f"src_b must be Tensor type, current type: {type(src_b)}")
     if src_b.position is not Position.L0B:
-        raise ValueError(f"src_b必须在L0B位置，当前位置: {src_b.position}")
-
+        raise ValueError(f"src_b must be at L0B position, current position: {src_b.position}") 
     if M is None:
         M = src_a.shape[0]
     if N is None:
@@ -150,15 +145,14 @@ def mmad(dst: Tensor, src_a: Tensor, src_b: Tensor, M: Union[int, Var, None]=Non
 
 def l0c_to_gm_nz2nd(dst: GMTensor, src: Tensor, M: Union[int, Var, None]=None, N: Union[int, Var, None]=None, N_dst: Union[int, Var, None]=None, M_src: Union[int, Var, None]=None):
     if not isinstance(dst, GMTensor):
-        raise TypeError(f"dst必须是GMTensor类型，当前类型: {type(dst)}")
+        raise TypeError(f"dst must be GMTensor type, current type: {type(dst)}")
     if not isinstance(src, Tensor):
-        raise TypeError(f"src必须是Tensor类型，当前类型: {type(src)}")
+        raise TypeError(f"src must be Tensor type, current type: {type(src)}")
     if src.position is not Position.L0C:
-        raise ValueError(f"src必须在L0C位置，当前位置: {src.position}")
-
+        raise ValueError(f"src must be at L0C position, current position: {src.position}") 
     if M is None or N is None or N_dst is None:
         if not (M is None and N is None and N_dst is None):
-            raise ValueError("M、N、N_dst必须同时为None")
+            raise ValueError("M, N, N_dst must all be None")
         slice_mask = getattr(dst, "slice_mask", None)
         slice_dims = [idx for idx, flag in enumerate(slice_mask or []) if flag]
         if len(slice_dims) == 2:
@@ -172,7 +166,7 @@ def l0c_to_gm_nz2nd(dst: GMTensor, src: Tensor, M: Union[int, Var, None]=None, N
             N = dst.span[dim]
             N_dst = dst.shape[dim]
         else:
-            raise ValueError("src必须包含1或2个slice维度以推断M/N/N_src")
+            raise ValueError("src must include 1 or 2 slicedimensionsto inferM/N/N_src")
         
     if M_src is None:
         M_src = src.shape[0]
@@ -210,14 +204,13 @@ def l0c_to_l1(
     relu: bool = False,
 ):
     if not isinstance(dst, Tensor):
-        raise TypeError(f"dst必须是Tensor类型，当前类型: {type(dst)}")
+        raise TypeError(f"dst must be Tensor type, current type: {type(dst)}")
     if not isinstance(src, Tensor):
-        raise TypeError(f"src必须是Tensor类型，当前类型: {type(src)}")
+        raise TypeError(f"src must be Tensor type, current type: {type(src)}")
     if src.position is not Position.L0C:
-        raise ValueError(f"src必须在L0C位置，当前位置: {src.position}")
+        raise ValueError(f"src must be at L0C position, current position: {src.position}")
     if dst.position is not Position.L1:
-        raise ValueError(f"dst必须在L1位置，当前位置: {dst.position}")
-
+        raise ValueError(f"dst must be at L1 position, current position: {dst.position}") 
     if M is None:
         M = dst.span[0] if hasattr(dst, "span") else dst.shape[0]
     if N is None:

@@ -1,5 +1,5 @@
 class DataTypeValue:
-    """数据类型值类，用于表示具体的数据类型"""
+    """Data type value class representing a concrete data type."""
     def __init__(self, name: str):
         self.name = name
     
@@ -13,11 +13,11 @@ class DataTypeValue:
         return hash(self.name)
     
     def __eq__(self, other):
-        """判断两个数据类型是否一致"""
+        """Check whether two data types are equal."""
         if self is other:
             return True
         if not isinstance(other, DataTypeValue):
-            raise TypeError(f"无法比较DataTypeValue与{type(other)}")
+            raise TypeError(f"Cannot compare DataTypeValue with {type(other)}")
         return self.name == other.name
 
     @property
@@ -45,8 +45,7 @@ class DataTypeValue:
         elif self.name == "int64_t":
             return 4
         else:
-            raise ValueError(f"未知数据类型: {self.name}")
-
+            raise ValueError(f"Unknown data type: {self.name}") 
     @property
     def size(self):
         if self.name == "half":
@@ -72,11 +71,10 @@ class DataTypeValue:
         elif self.name == "int64_t":
             return 8
         else:
-            raise ValueError(f"未知数据类型: {self.name}")
-
+            raise ValueError(f"Unknown data type: {self.name}") 
 
 class Datatype:
-    """数据类型类，包含half和float两个成员"""
+    """Data type enum-like class containing supported members."""
     half = DataTypeValue("half")
     float = DataTypeValue("float")
     int = DataTypeValue("int")

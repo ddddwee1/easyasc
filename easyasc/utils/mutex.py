@@ -29,7 +29,7 @@ class CvMutex:
         if globvars.active_kernel is not None:
             for mutex in globvars.active_kernel.crosscore_mutex:
                 if getattr(mutex, "flag_id", None) == flag_id:
-                    raise ValueError(f"crosscore_mutex中已存在相同flag_id: {flag_id}")
+                    raise ValueError(f"crosscore_mutex already contains the same flag_id: {flag_id}")
             globvars.active_kernel.crosscore_mutex.append(self)
 
     def lock(self) -> None:
@@ -64,7 +64,7 @@ class VcMutex:
         if globvars.active_kernel is not None:
             for mutex in globvars.active_kernel.crosscore_mutex:
                 if getattr(mutex, "flag_id", None) == flag_id:
-                    raise ValueError(f"crosscore_mutex中已存在相同flag_id: {flag_id}")
+                    raise ValueError(f"crosscore_mutex already contains the same flag_id: {flag_id}")
             globvars.active_kernel.crosscore_mutex.append(self)
 
     def lock(self) -> None:

@@ -16,24 +16,21 @@ def _validate_binary_tensors(
     allowed_dtypes: Tuple,
 ) -> None:
     if not isinstance(dst, Tensor):
-        raise TypeError(f"dst必须是Tensor类型，当前类型: {type(dst)}")
+        raise TypeError(f"dst must be Tensor type, current type: {type(dst)}")
     if not isinstance(src1, Tensor):
-        raise TypeError(f"src1必须是Tensor类型，当前类型: {type(src1)}")
+        raise TypeError(f"src1 must be Tensor type, current type: {type(src1)}")
     if not isinstance(src2, Tensor):
-        raise TypeError(f"src2必须是Tensor类型，当前类型: {type(src2)}")
-
+        raise TypeError(f"src2 must be Tensor type, current type: {type(src2)}") 
     if dst.position is not Position.UB:
-        raise ValueError(f"dst必须在UB位置，当前位置: {dst.position}")
+        raise ValueError(f"dst must be at UB position, current position: {dst.position}")
     if src1.position is not Position.UB:
-        raise ValueError(f"src1必须在UB位置，当前位置: {src1.position}")
+        raise ValueError(f"src1 must be at UB position, current position: {src1.position}")
     if src2.position is not Position.UB:
-        raise ValueError(f"src2必须在UB位置，当前位置: {src2.position}")
-
+        raise ValueError(f"src2 must be at UB position, current position: {src2.position}") 
     if dst.dtype != src1.dtype or dst.dtype != src2.dtype:
-        raise ValueError("dst/src1/src2的数据类型必须一致")
+        raise ValueError("dst/src1/src2 data types must match")
     if dst.dtype not in allowed_dtypes:
-        raise ValueError(f"不支持的数据类型: {dst.dtype}")
-
+        raise ValueError(f"does not support data type: {dst.dtype}") 
 
 def _emit_binary_inst(
     opname: str,

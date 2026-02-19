@@ -4,13 +4,13 @@ from .common import Tensor, dtype_to_cpp, value_to_cpp
 def _handle_vec_binary(inst, helper, expr_map, func_name: str) -> None:
     dst = inst.kwargs.get("dst", None)
     if not isinstance(dst, Tensor):
-        raise TypeError(f"{func_name}需要Tensor类型，当前类型: {type(dst)}")
+        raise TypeError(f"{func_name}requires Tensor type, current type: {type(dst)}")
     src1 = inst.kwargs.get("src1", None)
     if not isinstance(src1, Tensor):
-        raise TypeError(f"{func_name}需要Tensor类型，当前类型: {type(src1)}")
+        raise TypeError(f"{func_name}requires Tensor type, current type: {type(src1)}")
     src2 = inst.kwargs.get("src2", None)
     if not isinstance(src2, Tensor):
-        raise TypeError(f"{func_name}需要Tensor类型，当前类型: {type(src2)}")
+        raise TypeError(f"{func_name}requires Tensor type, current type: {type(src2)}")
 
     dst_expr = value_to_cpp(dst, expr_map)
     src1_expr = value_to_cpp(src1, expr_map)
@@ -65,13 +65,13 @@ def handle_vec_or(inst, helper, expr_map) -> None:
 def handle_vec_muladddst(inst, helper, expr_map) -> None:
     dst = inst.kwargs.get("dst", None)
     if not isinstance(dst, Tensor):
-        raise TypeError(f"MulAddDst需要Tensor类型，当前类型: {type(dst)}")
+        raise TypeError(f"MulAddDst requires Tensor type, current type: {type(dst)}")
     src1 = inst.kwargs.get("src1", None)
     if not isinstance(src1, Tensor):
-        raise TypeError(f"MulAddDst需要Tensor类型，当前类型: {type(src1)}")
+        raise TypeError(f"MulAddDst requires Tensor type, current type: {type(src1)}")
     src2 = inst.kwargs.get("src2", None)
     if not isinstance(src2, Tensor):
-        raise TypeError(f"MulAddDst需要Tensor类型，当前类型: {type(src2)}")
+        raise TypeError(f"MulAddDst requires Tensor type, current type: {type(src2)}")
 
     dst_expr = value_to_cpp(dst, expr_map)
     src1_expr = value_to_cpp(src1, expr_map)

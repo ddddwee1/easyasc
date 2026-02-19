@@ -6,13 +6,13 @@ from .. import globvars
 class _BaseEvent:
     def __init__(self, src_pipe: PipeType, dst_pipe: PipeType, preset: bool, name: str, prefix: str, create_op: str):
         if not isinstance(src_pipe, PipeType):
-            raise TypeError(f"src_pipe必须是PipeType类型，当前类型: {type(src_pipe)}")
+            raise TypeError(f"src_pipe must be PipeType, got: {type(src_pipe)}")
         if not isinstance(dst_pipe, PipeType):
-            raise TypeError(f"dst_pipe必须是PipeType类型，当前类型: {type(dst_pipe)}")
+            raise TypeError(f"dst_pipe must be PipeType, got: {type(dst_pipe)}")
         if not isinstance(preset, bool):
-            raise TypeError(f"preset必须是bool类型，当前类型: {type(preset)}")
+            raise TypeError(f"preset must be bool, got: {type(preset)}")
         if not isinstance(name, str):
-            raise TypeError(f"name必须是str类型，当前类型: {type(name)}")
+            raise TypeError(f"name must be str, got: {type(name)}")
 
         idx = globvars.tmp_idx
         globvars.tmp_idx += 1
@@ -62,12 +62,12 @@ class _BaseEvent:
 
 
 class SEvent(_BaseEvent):
-    """单事件类"""
+    """Single event class."""
     def __init__(self, src_pipe: PipeType, dst_pipe: PipeType, preset: bool = False, name: str = ""):
         super().__init__(src_pipe, dst_pipe, preset, name, "_tmp_sevent_", "create_sevent")
 
 
 class DEvent(_BaseEvent):
-    """双事件类"""
+    """Double event class."""
     def __init__(self, src_pipe: PipeType, dst_pipe: PipeType, preset: bool = False, name: str = ""):
         super().__init__(src_pipe, dst_pipe, preset, name, "_tmp_devent_", "create_devent")

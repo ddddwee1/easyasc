@@ -11,7 +11,7 @@ def _run_bash_with_progress(script_path: str, log_path: str) -> None:
     import time
 
     if not os.path.exists(script_path) or not os.path.isfile(script_path):
-        raise FileNotFoundError(f"{script_path}不存在或不是文件，无法执行")
+        raise FileNotFoundError(f"{script_path} does not exist or is not a file, cannot execute")
 
     with open(log_path, "w", encoding="utf-8") as log_file:
         proc = subprocess.Popen(
@@ -29,7 +29,7 @@ def _run_bash_with_progress(script_path: str, log_path: str) -> None:
                 pos = 2 * bar_width - pos - 1
             bar = [" "] * bar_width
             bar[pos] = "#"
-            msg = f"\r[{''.join(bar)}] bash b.sh 运行中... {elapsed:6.1f}s"
+            msg = f"\r[{''.join(bar)}] bash b.sh running... {elapsed:6.1f}s"
             print(msg, end="", file=sys.stderr, flush=True)
             if ret is not None:
                 break
@@ -37,7 +37,7 @@ def _run_bash_with_progress(script_path: str, log_path: str) -> None:
         print("\r" + " " * (bar_width + 40) + "\r", end="", file=sys.stderr, flush=True)
         if ret != 0:
             raise RuntimeError(
-                f"bash {script_path}执行失败，返回码{ret}。日志: {log_path}"
+                f"bash {script_path} failed with return code {ret}. Log: {log_path}"
             )
 
 
@@ -66,12 +66,12 @@ class OpExec:
         import os
 
         if not isinstance(self.op_func, KernelBase):
-            raise TypeError("op_func必须是KernelBase实例")
+            raise TypeError("op_func must be a KernelBase instance")
 
         try:
             import torch
         except Exception as exc:
-            raise ImportError("OpExec.__call__需要torch") from exc
+            raise ImportError("OpExec.__call__ requires torch") from exc
 
         tensor_args: List[Any] = []
         scalar_vars: List[Var] = []
@@ -79,14 +79,14 @@ class OpExec:
         for idx, arg in enumerate(args):
             if isinstance(arg, torch.Tensor):
                 if seen_scalar:
-                    raise TypeError("入参顺序错误：torch.Tensor必须在int/float之前")
+                    raise TypeError("Invalid argument order: torch.Tensor must come before int/float")
                 tensor_args.append(arg)
                 continue
             if isinstance(arg, (int, float)):
                 seen_scalar = True
                 scalar_vars.append(Var(arg))
                 continue
-            raise TypeError(f"入参类型错误: 第{idx}个参数类型为{type(arg)}")
+            raise TypeError(f"Invalid argument type: arg #{idx} has type {type(arg)}")
 
         dtype_map = {
             torch.float16: Datatype.half,
@@ -121,7 +121,7 @@ class OpExec:
 
             dtype = dtype_map.get(tensor.dtype)
             if dtype is None:
-                raise TypeError(f"不支持的torch dtype: {tensor.dtype}")
+                raise TypeError(f"Unsupported torch dtype: {tensor.dtype}")
             gm_tensors.append(GMTensor(dtype, inferred_shape))
 
         self.op_func(*(gm_tensors + scalar_vars))
@@ -133,7 +133,7 @@ class OpExec:
         )
 
         if not self.op_func._last_bound_args:
-            raise ValueError("op_func未执行，无法从KernelBase提取输入输出信息")
+            raise ValueError("op_func has not been executed; cannot extract IO info from KernelBase")
 
         output_gmtensors = self.op_func._last_output_gmtensors
         param_names = list(self.op_func._last_bound_args.keys())
@@ -159,7 +159,7 @@ class OpExec:
             }
         else:
             raise ValueError(
-                "torch.Tensor数量与KernelBase的GMTensor参数不匹配"
+                "Number of torch.Tensor inputs does not match KernelBase GMTensor parameters"
             )
 
         base_dir = self.out_dir if self.out_dir else self.op_func.name

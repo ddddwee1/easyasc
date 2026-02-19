@@ -22,7 +22,7 @@ GMTensorIndex = Union[GMTensorDimIndex, Tuple[GMTensorDimIndex, ...]]
 
 
 class Tensor:
-    """张量类"""
+    """Tensor class."""
     def __init__(
         self,
         dtype: DataTypeValue,
@@ -31,28 +31,28 @@ class Tensor:
         name: str = "",
     ):
         """
-        初始化张量
-        
+        Initialize a tensor.
+
         Args:
-            dtype: 数据类型，必须是DataTypeValue类型
-            shape: 形状，长度为2的list或tuple
-            position: 位置类型，默认为Position.L1
-            name: 名称，默认为空字符串
+            dtype: Data type, must be DataTypeValue.
+            shape: Shape, list/tuple with length 2.
+            position: Position type, defaults to Position.L1.
+            name: Name, defaults to empty string.
         """
         if not isinstance(dtype, DataTypeValue):
-            raise TypeError(f"dtype必须是DataTypeValue类型，当前类型: {type(dtype)}")
+            raise TypeError(f"dtype must be DataTypeValue, got: {type(dtype)}")
         
         if not isinstance(shape, (list, tuple)):
-            raise TypeError(f"shape必须是list或tuple类型，当前类型: {type(shape)}")
+            raise TypeError(f"shape must be list/tuple, got: {type(shape)}")
         
         if len(shape) != 2:
-            raise ValueError(f"shape长度必须为2，当前长度: {len(shape)}")
+            raise ValueError(f"shape length must be 2, current length: {len(shape)}")
         
         if not isinstance(name, str):
-            raise TypeError(f"name必须是str类型，当前类型: {type(name)}")
+            raise TypeError(f"name must be str, got: {type(name)}")
 
         if not isinstance(position, PositionType):
-            raise TypeError(f"position必须是PositionType类型，当前类型: {type(position)}")
+            raise TypeError(f"position must be PositionType, got: {type(position)}")
         
         idx = globvars.tmp_idx
         globvars.tmp_idx += 1
@@ -86,15 +86,15 @@ class Tensor:
 
     def set_shape(self, shape: Shape2D) -> None:
         if not isinstance(shape, (list, tuple)):
-            raise TypeError(f"shape必须是list或tuple类型，当前类型: {type(shape)}")
+            raise TypeError(f"shape must be list/tuple, got: {type(shape)}")
         if len(shape) != 2:
-            raise ValueError(f"shape长度必须为2，当前长度: {len(shape)}")
+            raise ValueError(f"shape length must be 2, current length: {len(shape)}")
         self.shape = list(shape)
         self.span = list(shape)
 
     def T(self) -> "Tensor":
         if self.position is not Position.L1:
-            raise ValueError(f"Tensor位置必须为L1，当前位置: {self.position}")
+            raise ValueError(f"Tensor position must be L1, current position: {self.position}")
         # Create a view without emitting create_tensor.
         out = object.__new__(Tensor)
         out.__dict__ = self.__dict__.copy()
@@ -107,7 +107,7 @@ class Tensor:
         from .regop import RegOP
         if isinstance(other, VecOP):
             if self.position is not Position.UB:
-                raise ValueError(f"VecOP仅支持UB位置，当前位置: {self.position}")
+                raise ValueError(f"VecOP only supports UB position, current position: {self.position}")
             other.emit(self)
             return self
         if isinstance(other, GMTensor):
@@ -119,14 +119,14 @@ class Tensor:
                 from ..stub_functions.cube import gm_to_l1_nd2nz
                 gm_to_l1_nd2nz(self, other)
                 return self
-            raise ValueError(f"Tensor位置必须为L1或UB，当前位置: {self.position}")
+            raise ValueError(f"Tensor position must be L1 or UB, current position: {self.position}")
         if isinstance(other, Tensor):
             if self.position is Position.L1 and other.position is Position.L0C:
                 from ..stub_functions.cube import l0c_to_l1
                 l0c_to_l1(self, other)
                 return self
             if self.position not in (Position.L0A, Position.L0B):
-                raise ValueError(f"Tensor位置必须为L0A或L0B，当前位置: {self.position}")
+                raise ValueError(f"Tensor position must be L0A or L0B, current position: {self.position}")
             new_shape = list(other.span) if hasattr(other, "span") else list(other.shape)
             self.set_shape(new_shape)
             if self.source_buf is not None:
@@ -177,27 +177,25 @@ class Tensor:
             if other.opname == "reg_to_ub_downsample":
                 src = other.inputs[0]
                 if not isinstance(src, Reg):
-                    raise TypeError(f"src必须是Reg类型，当前类型: {type(src)}")
-                # if src.dtype!=self.dtype:
-                #     # TODO: finish this 
+                    raise TypeError(f"src must be Reg, got: {type(src)}")
                 reg_to_ub_downsample(self, src, mask=other.mask)
                 return self
             if other.opname == "reg_to_ub_pack4":
                 src = other.inputs[0]
                 if not isinstance(src, Reg):
-                    raise TypeError(f"src必须是Reg类型，当前类型: {type(src)}")
+                    raise TypeError(f"src must be Reg, got: {type(src)}")
                 reg_to_ub_pack4(self, src, mask=other.mask)
                 return self
             if other.opname == "reg_to_ub_single":
                 src = other.inputs[0]
                 if not isinstance(src, Reg):
-                    raise TypeError(f"src必须是Reg类型，当前类型: {type(src)}")
+                    raise TypeError(f"src must be Reg, got: {type(src)}")
                 reg_to_ub_single(self, src, mask=other.mask)
                 return self
             if other.opname == "vcopy":
                 src = other.inputs[0]
                 if not isinstance(src, Reg):
-                    raise TypeError(f"src必须是Reg类型，当前类型: {type(src)}")
+                    raise TypeError(f"src must be Reg, got: {type(src)}")
                 reg_to_ub(self, src, mask=other.mask)
                 return self
             tmp = other.run_regop()
@@ -206,11 +204,11 @@ class Tensor:
             if micro is not None and tmp.name.startswith("_tmp_reg_"):
                 micro.release_reg(tmp)
             return self
-        raise TypeError(f"other必须是GMTensor/Tensor/VecOP/Reg/RegList/RegOP类型，当前类型: {type(other)}")
+        raise TypeError(f"other must be GMTensor/Tensor/VecOP/Reg/RegList/RegOP, got: {type(other)}")
 
     def _vecop(self, op: str, other: object = None) -> "VecOP":
         if self.position is not Position.UB:
-            raise ValueError(f"VecOP仅支持UB位置，当前位置: {self.position}")
+            raise ValueError(f"VecOP only supports UB position, current position: {self.position}")
         from .vecop import VecOP
         return VecOP(op, self, other)  # type: ignore[arg-type]
 
@@ -375,22 +373,22 @@ class Tensor:
         elif isinstance(index, tuple):
             normalized_index = index
         else:
-            raise TypeError(f"index类型错误: {type(index)}")
+            raise TypeError(f"Invalid index type: {type(index)}")
         if len(normalized_index) != len(self.shape):
-            raise TypeError(f"Tensor索引维度必须与shape一致，当前长度: {len(normalized_index)}")
+            raise TypeError(f"Tensor index dimensions must match shape, current length: {len(normalized_index)}")
 
         def _parse_dim(dim_index: slice, dim_size: ShapeDim, label: str) -> Tuple[ShapeDim, ShapeDim, int]:
             if not isinstance(dim_index, slice):
-                raise TypeError(f"{label}索引必须是slice类型，当前类型: {type(dim_index)}")
+                raise TypeError(f"{label} index must be slice, got: {type(dim_index)}")
 
             start: ShapeDim = dim_index.start if dim_index.start is not None else 0
             stop: ShapeDim = dim_index.stop if dim_index.stop is not None else dim_size
             step = dim_index.step
 
             if not isinstance(start, (Var, int)):
-                raise TypeError(f"{label} start必须是Var或int类型，当前类型: {type(start)}")
+                raise TypeError(f"{label} start must be Var or int, got: {type(start)}")
             if not isinstance(stop, (Var, int)):
-                raise TypeError(f"{label} stop必须是Var或int类型，当前类型: {type(stop)}")
+                raise TypeError(f"{label} stop must be Var or int, got: {type(stop)}")
             if step is not None and step != 1:
                 raise ValueError("slice step must be None or 1")
 
@@ -441,7 +439,7 @@ class Tensor:
 
 
 class DBuff:
-    """数据缓冲区类（double buffer，由两个Tensor合并而成）"""
+    """Data buffer class (double buffer composed of two Tensors)."""
     def __init__(
         self,
         dtype: DataTypeValue,
@@ -450,28 +448,28 @@ class DBuff:
         name: str = "",
     ):
         """
-        初始化数据缓冲区
-        
+        Initialize a data buffer.
+
         Args:
-            dtype: 数据类型，必须是DataTypeValue类型
-            shape: 形状，长度为2的list或tuple
-            position: 位置类型，默认为Position.L1
-            name: 名称，默认为空字符串
+            dtype: Data type, must be DataTypeValue.
+            shape: Shape, list/tuple with length 2.
+            position: Position type, defaults to Position.L1.
+            name: Name, defaults to empty string.
         """
         if not isinstance(dtype, DataTypeValue):
-            raise TypeError(f"dtype必须是DataTypeValue类型，当前类型: {type(dtype)}")
+            raise TypeError(f"dtype must be DataTypeValue, got: {type(dtype)}")
         
         if not isinstance(shape, (list, tuple)):
-            raise TypeError(f"shape必须是list或tuple类型，当前类型: {type(shape)}")
+            raise TypeError(f"shape must be list/tuple, got: {type(shape)}")
         
         if len(shape) != 2:
-            raise ValueError(f"shape长度必须为2，当前长度: {len(shape)}")
+            raise ValueError(f"shape length must be 2, current length: {len(shape)}")
         
         if not isinstance(name, str):
-            raise TypeError(f"name必须是str类型，当前类型: {type(name)}")
+            raise TypeError(f"name must be str, got: {type(name)}")
 
         if not isinstance(position, PositionType):
-            raise TypeError(f"position必须是PositionType类型，当前类型: {type(position)}")
+            raise TypeError(f"position must be PositionType, got: {type(position)}")
         
         idx = globvars.tmp_idx
         globvars.tmp_idx += 1
@@ -495,10 +493,10 @@ class DBuff:
             f"position={self.position!r}, idx={self.idx!r})"
         )
 
-    # DBuff代表两个Tensor的double buffer，索引返回其中一个Tensor视图
+    # DBuff represents a double buffer of two Tensors; indexing returns one Tensor view.
     def __getitem__(self, index: ScalarIndex) -> "Tensor":
         if not isinstance(index, (Var, int)):
-            raise TypeError(f"index必须是Var或int类型，当前类型: {type(index)}")
+            raise TypeError(f"index must be Var or int, got: {type(index)}")
 
         idx = globvars.tmp_idx
         globvars.tmp_idx += 1
@@ -525,30 +523,30 @@ class DBuff:
 
     def __setitem__(self, index: ScalarIndex, value: "Tensor") -> None:
         if not isinstance(index, (Var, int)):
-            raise TypeError(f"index必须是Var或int类型，当前类型: {type(index)}")
+            raise TypeError(f"index must be Var or int, got: {type(index)}")
         if not isinstance(value, Tensor):
-            raise TypeError(f"value必须是Tensor类型，当前类型: {type(value)}")
+            raise TypeError(f"value must be Tensor, got: {type(value)}")
 
 
 class GMTensor:
-    """全局内存张量类"""
+    """Global-memory tensor class."""
     def __init__(self, dtype: DataTypeValue, shape: Shape2D, name: str = ""):
         """
-        初始化全局内存张量
-        
+        Initialize a global-memory tensor.
+
         Args:
-            dtype: 数据类型，必须是DataTypeValue类型
-            shape: 形状，长度为2的list或tuple
-            name: 名称，默认为空字符串
+            dtype: Data type, must be DataTypeValue.
+            shape: Shape, list/tuple with length 2.
+            name: Name, defaults to empty string.
         """
         if not isinstance(dtype, DataTypeValue):
-            raise TypeError(f"dtype必须是DataTypeValue类型，当前类型: {type(dtype)}")
+            raise TypeError(f"dtype must be DataTypeValue, got: {type(dtype)}")
         
         if not isinstance(shape, (list, tuple)):
-            raise TypeError(f"shape必须是list或tuple类型，当前类型: {type(shape)}")
+            raise TypeError(f"shape must be list/tuple, got: {type(shape)}")
         
         if not isinstance(name, str):
-            raise TypeError(f"name必须是str类型，当前类型: {type(name)}")
+            raise TypeError(f"name must be str, got: {type(name)}")
         
         idx = globvars.tmp_idx
         globvars.tmp_idx += 1
@@ -622,34 +620,34 @@ class GMTensor:
 
     def lock(self) -> None:
         if self._mutex is None:
-            raise ValueError("GMTensor尚未绑定mutex")
+            raise ValueError("GMTensor has not bound a mutex yet")
         from .mutex import CvMutex, VcMutex
         if not isinstance(self._mutex, (CvMutex, VcMutex)):
-            raise TypeError(f"GMTensor的mutex类型错误: {type(self._mutex)}")
+            raise TypeError(f"GMTensor has invalid mutex type: {type(self._mutex)}")
         self._mutex.lock()
 
     def ready(self) -> None:
         if self._mutex is None:
-            raise ValueError("GMTensor尚未绑定mutex")
+            raise ValueError("GMTensor has not bound a mutex yet")
         from .mutex import CvMutex, VcMutex
         if not isinstance(self._mutex, (CvMutex, VcMutex)):
-            raise TypeError(f"GMTensor的mutex类型错误: {type(self._mutex)}")
+            raise TypeError(f"GMTensor has invalid mutex type: {type(self._mutex)}")
         self._mutex.ready()
 
     def wait(self) -> None:
         if self._mutex is None:
-            raise ValueError("GMTensor尚未绑定mutex")
+            raise ValueError("GMTensor has not bound a mutex yet")
         from .mutex import CvMutex, VcMutex
         if not isinstance(self._mutex, (CvMutex, VcMutex)):
-            raise TypeError(f"GMTensor的mutex类型错误: {type(self._mutex)}")
+            raise TypeError(f"GMTensor has invalid mutex type: {type(self._mutex)}")
         self._mutex.wait()
 
     def free(self) -> None:
         if self._mutex is None:
-            raise ValueError("GMTensor尚未绑定mutex")
+            raise ValueError("GMTensor has not bound a mutex yet")
         from .mutex import CvMutex, VcMutex
         if not isinstance(self._mutex, (CvMutex, VcMutex)):
-            raise TypeError(f"GMTensor的mutex类型错误: {type(self._mutex)}")
+            raise TypeError(f"GMTensor has invalid mutex type: {type(self._mutex)}")
         self._mutex.free()
 
     def __ilshift__(self, other: "Tensor") -> "GMTensor":
@@ -662,8 +660,8 @@ class GMTensor:
                 from ..stub_functions.cube import l0c_to_gm_nz2nd
                 l0c_to_gm_nz2nd(self, other)
                 return self
-            raise ValueError(f"Tensor位置必须为L0C或UB，当前位置: {other.position}")
-        raise TypeError(f"other必须是Tensor类型，当前类型: {type(other)}")
+            raise ValueError(f"Tensor position must be L0C or UB, current position: {other.position}")
+        raise TypeError(f"other must be Tensor, got: {type(other)}")
 
     def __getitem__(self, index: GMTensorIndex) -> "GMTensor":
         if isinstance(index, tuple):
@@ -671,22 +669,22 @@ class GMTensor:
         else:
             normalized_index = (index,)
         if len(normalized_index) != len(self.shape):
-            raise TypeError(f"GMTensor索引维度必须与shape一致，当前长度: {len(normalized_index)}")
+            raise TypeError(f"GMTensor index dimensions must match shape, current length: {len(normalized_index)}")
 
         def _parse_dim(dim_index: GMTensorDimIndex, dim_size: ShapeDim, label: str) -> Tuple[ShapeDim, ShapeDim, int]:
             if isinstance(dim_index, (Var, int)):
                 return dim_index, 1, 1
             if not isinstance(dim_index, slice):
-                raise TypeError(f"{label}索引必须是Var、int或slice类型，当前类型: {type(dim_index)}")
+                raise TypeError(f"{label} index must be Var, int, or slice, got: {type(dim_index)}")
 
             start: ShapeDim = dim_index.start if dim_index.start is not None else 0
             stop: ShapeDim = dim_index.stop if dim_index.stop is not None else dim_size
             step = dim_index.step
 
             if not isinstance(start, (Var, int)):
-                raise TypeError(f"{label} start必须是Var或int类型，当前类型: {type(start)}")
+                raise TypeError(f"{label} start must be Var or int, got: {type(start)}")
             if not isinstance(stop, (Var, int)):
-                raise TypeError(f"{label} stop必须是Var或int类型，当前类型: {type(stop)}")
+                raise TypeError(f"{label} stop must be Var or int, got: {type(stop)}")
             if step is not None and step != 1:
                 raise ValueError("slice step must be None or 1")
 
@@ -704,7 +702,7 @@ class GMTensor:
             if is_slice:
                 slice_count += 1
                 if slice_count > 2:
-                    raise TypeError("GMTensor不能有超过2维的slice")
+                    raise TypeError("GMTensor cannot have slices on more than 2 dimensions")
             off, span, step = _parse_dim(dim_index, dim_size, f"dim{dim_idx}")
             offsets.append(off)
             spans.append(span)
@@ -741,11 +739,11 @@ class GMTensor:
     def __setitem__(self, index: GMTensorIndex, value: object) -> None:
         if isinstance(value, Tensor):
             if value.position is not Position.L0C:
-                raise ValueError(f"Tensor位置必须为L0C，当前位置: {value.position}")
+                raise ValueError(f"Tensor position must be L0C, current position: {value.position}")
             dst = self.__getitem__(index)
             from ..stub_functions.cube import l0c_to_gm_nz2nd
             l0c_to_gm_nz2nd(dst, value)
             return
         if isinstance(value, GMTensor):
             return
-        raise TypeError(f"value必须是Tensor或GMTensor类型，当前类型: {type(value)}")
+        raise TypeError(f"value must be Tensor or GMTensor, got: {type(value)}")

@@ -1,5 +1,5 @@
 class MaskTypeValue:
-    """掩码模式值类，用于表示具体的掩码模式"""
+    """Mask mode value class representing a concrete mask mode."""
     def __init__(self, name: str):
         self.name = name
 
@@ -13,12 +13,12 @@ class MaskTypeValue:
         if self is other:
             return True
         if not isinstance(other, MaskTypeValue):
-            raise TypeError(f"无法比较MaskTypeValue与{type(other)}")
+            raise TypeError(f"Cannot compare MaskTypeValue with {type(other)}")
         return self.name == other.name
 
 
 class MaskType:
-    """掩码模式枚举类"""
+    """Mask mode enum-like class."""
     ALL = MaskTypeValue("ALL")
     LOWEST1 = MaskTypeValue("VL1")
     LOWEST2 = MaskTypeValue("VL2")

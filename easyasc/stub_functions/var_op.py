@@ -25,12 +25,11 @@ def _append_instruction(inst: Instruction) -> None:
 
 def CeilDiv(a: Union[Var, int], b: Union[Var, int], *, name: str = "") -> Var:
     if not isinstance(a, (Var, int)):
-        raise TypeError(f"a必须是Var或int类型，当前类型: {type(a)}")
+        raise TypeError(f"a must be Var or int type, current type: {type(a)}")
     if not isinstance(b, (Var, int)):
-        raise TypeError(f"b必须是Var或int类型，当前类型: {type(b)}")
+        raise TypeError(f"b must be Var or int type, current type: {type(b)}")
     if not isinstance(name, str):
-        raise TypeError(f"name必须是str类型，当前类型: {type(name)}")
-
+        raise TypeError(f"name must be str type, current type: {type(name)}") 
     out = Var(name=name)
     a_val = _value_of(a)
     b_val = _value_of(b)
@@ -42,7 +41,7 @@ def CeilDiv(a: Union[Var, int], b: Union[Var, int], *, name: str = "") -> Var:
 
 def GetCubeNum(*, name: str = "") -> Var:
     if not isinstance(name, str):
-        raise TypeError(f"name必须是str类型，当前类型: {type(name)}")
+        raise TypeError(f"name must be str type, current type: {type(name)}")
     out = Var(name=name)
     _append_instruction(Instruction("GetCubeNum", out=out))
     return out
@@ -50,7 +49,7 @@ def GetCubeNum(*, name: str = "") -> Var:
 
 def GetCubeIdx(*, name: str = "") -> Var:
     if not isinstance(name, str):
-        raise TypeError(f"name必须是str类型，当前类型: {type(name)}")
+        raise TypeError(f"name must be str type, current type: {type(name)}")
     out = Var(name=name)
     _append_instruction(Instruction("GetCubeIdx", out=out))
     return out
@@ -58,7 +57,7 @@ def GetCubeIdx(*, name: str = "") -> Var:
 
 def GetVecNum(*, name: str = "") -> Var:
     if not isinstance(name, str):
-        raise TypeError(f"name必须是str类型，当前类型: {type(name)}")
+        raise TypeError(f"name must be str type, current type: {type(name)}")
     out = Var(dtype=Datatype.int, name=name)
     _append_instruction(Instruction("GetVecNum", out=out))
     return out
@@ -66,7 +65,7 @@ def GetVecNum(*, name: str = "") -> Var:
 
 def GetVecIdx(*, name: str = "") -> Var:
     if not isinstance(name, str):
-        raise TypeError(f"name必须是str类型，当前类型: {type(name)}")
+        raise TypeError(f"name must be str type, current type: {type(name)}")
     out = Var(dtype=Datatype.int, name=name)
     _append_instruction(Instruction("GetVecIdx", out=out))
     return out
@@ -74,7 +73,7 @@ def GetVecIdx(*, name: str = "") -> Var:
 
 def GetSubBlockIdx(*, name: str = "") -> Var:
     if not isinstance(name, str):
-        raise TypeError(f"name必须是str类型，当前类型: {type(name)}")
+        raise TypeError(f"name must be str type, current type: {type(name)}")
     out = Var(dtype=Datatype.int, name=name)
     _append_instruction(Instruction("GetSubBlockIdx", out=out))
     return out
@@ -82,11 +81,11 @@ def GetSubBlockIdx(*, name: str = "") -> Var:
 
 def scalar_sqrt(a: Union[Var, float], *, name: str = "") -> Var:
     if not isinstance(a, (Var, float)):
-        raise TypeError(f"a必须是Var或float类型，当前类型: {type(a)}")
+        raise TypeError(f"a must be Var or float type, current type: {type(a)}")
     if not isinstance(name, str):
-        raise TypeError(f"name必须是str类型，当前类型: {type(name)}")
+        raise TypeError(f"name must be str type, current type: {type(name)}")
     if isinstance(a, Var) and a.dtype is not Datatype.float:
-        raise TypeError("scalar_sqrt仅支持float类型的Var")
+        raise TypeError("scalar_sqrt only supports float Var")
     out = Var(dtype=Datatype.float, name=name)
     a_val = _value_of(a)
     if isinstance(a_val, (int, float)):
@@ -104,11 +103,11 @@ def _align_value(a: Union[Var, int], align: int) -> Optional[int]:
 
 def Align16(a: Union[Var, int], *, name: str = "") -> Var:
     if not isinstance(a, (Var, int)):
-        raise TypeError(f"a必须是Var或int类型，当前类型: {type(a)}")
+        raise TypeError(f"a must be Var or int type, current type: {type(a)}")
     if not isinstance(name, str):
-        raise TypeError(f"name必须是str类型，当前类型: {type(name)}")
+        raise TypeError(f"name must be str type, current type: {type(name)}")
     if isinstance(a, Var) and a.dtype is not Datatype.int:
-        raise TypeError("Align16仅支持int类型的Var")
+        raise TypeError("Align16 only supports int Var")
     out = Var(dtype=Datatype.int, name=name)
     aligned = _align_value(a, 16)
     if aligned is not None:
@@ -119,11 +118,11 @@ def Align16(a: Union[Var, int], *, name: str = "") -> Var:
 
 def Align32(a: Union[Var, int], *, name: str = "") -> Var:
     if not isinstance(a, (Var, int)):
-        raise TypeError(f"a必须是Var或int类型，当前类型: {type(a)}")
+        raise TypeError(f"a must be Var or int type, current type: {type(a)}")
     if not isinstance(name, str):
-        raise TypeError(f"name必须是str类型，当前类型: {type(name)}")
+        raise TypeError(f"name must be str type, current type: {type(name)}")
     if isinstance(a, Var) and a.dtype is not Datatype.int:
-        raise TypeError("Align32仅支持int类型的Var")
+        raise TypeError("Align32 only supports int Var")
     out = Var(dtype=Datatype.int, name=name)
     aligned = _align_value(a, 32)
     if aligned is not None:
@@ -134,11 +133,11 @@ def Align32(a: Union[Var, int], *, name: str = "") -> Var:
 
 def Align64(a: Union[Var, int], *, name: str = "") -> Var:
     if not isinstance(a, (Var, int)):
-        raise TypeError(f"a必须是Var或int类型，当前类型: {type(a)}")
+        raise TypeError(f"a must be Var or int type, current type: {type(a)}")
     if not isinstance(name, str):
-        raise TypeError(f"name必须是str类型，当前类型: {type(name)}")
+        raise TypeError(f"name must be str type, current type: {type(name)}")
     if isinstance(a, Var) and a.dtype is not Datatype.int:
-        raise TypeError("Align64仅支持int类型的Var")
+        raise TypeError("Align64 only supports int Var")
     out = Var(dtype=Datatype.int, name=name)
     aligned = _align_value(a, 64)
     if aligned is not None:
@@ -149,11 +148,11 @@ def Align64(a: Union[Var, int], *, name: str = "") -> Var:
 
 def Align128(a: Union[Var, int], *, name: str = "") -> Var:
     if not isinstance(a, (Var, int)):
-        raise TypeError(f"a必须是Var或int类型，当前类型: {type(a)}")
+        raise TypeError(f"a must be Var or int type, current type: {type(a)}")
     if not isinstance(name, str):
-        raise TypeError(f"name必须是str类型，当前类型: {type(name)}")
+        raise TypeError(f"name must be str type, current type: {type(name)}")
     if isinstance(a, Var) and a.dtype is not Datatype.int:
-        raise TypeError("Align128仅支持int类型的Var")
+        raise TypeError("Align128 only supports int Var")
     out = Var(dtype=Datatype.int, name=name)
     aligned = _align_value(a, 128)
     if aligned is not None:
@@ -164,11 +163,11 @@ def Align128(a: Union[Var, int], *, name: str = "") -> Var:
 
 def Align256(a: Union[Var, int], *, name: str = "") -> Var:
     if not isinstance(a, (Var, int)):
-        raise TypeError(f"a必须是Var或int类型，当前类型: {type(a)}")
+        raise TypeError(f"a must be Var or int type, current type: {type(a)}")
     if not isinstance(name, str):
-        raise TypeError(f"name必须是str类型，当前类型: {type(name)}")
+        raise TypeError(f"name must be str type, current type: {type(name)}")
     if isinstance(a, Var) and a.dtype is not Datatype.int:
-        raise TypeError("Align256仅支持int类型的Var")
+        raise TypeError("Align256 only supports int Var")
     out = Var(dtype=Datatype.int, name=name)
     aligned = _align_value(a, 256)
     if aligned is not None:
@@ -179,12 +178,11 @@ def Align256(a: Union[Var, int], *, name: str = "") -> Var:
 
 def var_mul(a: Union[Var, int, float], b: Union[Var, int, float], *, name: str = "") -> Var:
     if not isinstance(a, (Var, int, float)):
-        raise TypeError(f"a必须是Var或数值类型，当前类型: {type(a)}")
+        raise TypeError(f"a must be Var or numeric value type, current type: {type(a)}")
     if not isinstance(b, (Var, int, float)):
-        raise TypeError(f"b必须是Var或数值类型，当前类型: {type(b)}")
+        raise TypeError(f"b must be Var or numeric value type, current type: {type(b)}")
     if not isinstance(name, str):
-        raise TypeError(f"name必须是str类型，当前类型: {type(name)}")
-
+        raise TypeError(f"name must be str type, current type: {type(name)}") 
     dtype = None
     if isinstance(a, float) or isinstance(b, float):
         dtype = Datatype.float
@@ -210,12 +208,11 @@ def var_mul(a: Union[Var, int, float], b: Union[Var, int, float], *, name: str =
 
 def var_add(a: Union[Var, int, float], b: Union[Var, int, float], *, name: str = "") -> Var:
     if not isinstance(a, (Var, int, float)):
-        raise TypeError(f"a必须是Var或数值类型，当前类型: {type(a)}")
+        raise TypeError(f"a must be Var or numeric value type, current type: {type(a)}")
     if not isinstance(b, (Var, int, float)):
-        raise TypeError(f"b必须是Var或数值类型，当前类型: {type(b)}")
+        raise TypeError(f"b must be Var or numeric value type, current type: {type(b)}")
     if not isinstance(name, str):
-        raise TypeError(f"name必须是str类型，当前类型: {type(name)}")
-
+        raise TypeError(f"name must be str type, current type: {type(name)}") 
     dtype = None
     if isinstance(a, float) or isinstance(b, float):
         dtype = Datatype.float
@@ -241,12 +238,11 @@ def var_add(a: Union[Var, int, float], b: Union[Var, int, float], *, name: str =
 
 def var_sub(a: Union[Var, int, float], b: Union[Var, int, float], *, name: str = "") -> Var:
     if not isinstance(a, (Var, int, float)):
-        raise TypeError(f"a必须是Var或数值类型，当前类型: {type(a)}")
+        raise TypeError(f"a must be Var or numeric value type, current type: {type(a)}")
     if not isinstance(b, (Var, int, float)):
-        raise TypeError(f"b必须是Var或数值类型，当前类型: {type(b)}")
+        raise TypeError(f"b must be Var or numeric value type, current type: {type(b)}")
     if not isinstance(name, str):
-        raise TypeError(f"name必须是str类型，当前类型: {type(name)}")
-
+        raise TypeError(f"name must be str type, current type: {type(name)}") 
     dtype = None
     if isinstance(a, float) or isinstance(b, float):
         dtype = Datatype.float
@@ -272,28 +268,25 @@ def var_sub(a: Union[Var, int, float], b: Union[Var, int, float], *, name: str =
 
 def var_div(a: Union[Var, int, float], b: Union[Var, int, float], *, name: str = "") -> Var:
     if not isinstance(a, (Var, int, float)):
-        raise TypeError(f"a必须是Var或数值类型，当前类型: {type(a)}")
+        raise TypeError(f"a must be Var or numeric value type, current type: {type(a)}")
     if not isinstance(b, (Var, int, float)):
-        raise TypeError(f"b必须是Var或数值类型，当前类型: {type(b)}")
+        raise TypeError(f"b must be Var or numeric value type, current type: {type(b)}")
     if not isinstance(name, str):
-        raise TypeError(f"name必须是str类型，当前类型: {type(name)}")
-
+        raise TypeError(f"name must be str type, current type: {type(name)}") 
     def _dtype_of(value, label: str):
         if isinstance(value, Var):
             if value.dtype is None:
-                raise TypeError(f"{label}的dtype为None，无法推断")
+                raise TypeError(f"{label}dtype is None, cannot infer")
             return value.dtype
         if isinstance(value, float):
             return Datatype.float
         if isinstance(value, int):
             return Datatype.int
-        raise TypeError(f"{label}必须是Var或数值类型，当前类型: {type(value)}")
-
+        raise TypeError(f"{label} must be Var or numeric value type, current type: {type(value)}")
     dtype_a = _dtype_of(a, "a")
     dtype_b = _dtype_of(b, "b")
     if dtype_a is not dtype_b:
-        raise TypeError(f"a与b的数据类型必须一致，当前为{dtype_a}与{dtype_b}")
-
+        raise TypeError(f"a and b data types must match, current {dtype_a} and {dtype_b}") 
     out = Var(dtype=dtype_a, name=name)
     a_val = _value_of(a)
     b_val = _value_of(b)
@@ -308,12 +301,11 @@ def var_div(a: Union[Var, int, float], b: Union[Var, int, float], *, name: str =
 
 def Min(a: Union[Var, int, float], b: Union[Var, int, float], *, name: str = "") -> Var:
     if not isinstance(a, (Var, int, float)):
-        raise TypeError(f"a必须是Var或数值类型，当前类型: {type(a)}")
+        raise TypeError(f"a must be Var or numeric value type, current type: {type(a)}")
     if not isinstance(b, (Var, int, float)):
-        raise TypeError(f"b必须是Var或数值类型，当前类型: {type(b)}")
+        raise TypeError(f"b must be Var or numeric value type, current type: {type(b)}")
     if not isinstance(name, str):
-        raise TypeError(f"name必须是str类型，当前类型: {type(name)}")
-
+        raise TypeError(f"name must be str type, current type: {type(name)}") 
     dtype = None
     if isinstance(a, float) or isinstance(b, float):
         dtype = Datatype.float
@@ -339,12 +331,11 @@ def Min(a: Union[Var, int, float], b: Union[Var, int, float], *, name: str = "")
 
 def Max(a: Union[Var, int, float], b: Union[Var, int, float], *, name: str = "") -> Var:
     if not isinstance(a, (Var, int, float)):
-        raise TypeError(f"a必须是Var或数值类型，当前类型: {type(a)}")
+        raise TypeError(f"a must be Var or numeric value type, current type: {type(a)}")
     if not isinstance(b, (Var, int, float)):
-        raise TypeError(f"b必须是Var或数值类型，当前类型: {type(b)}")
+        raise TypeError(f"b must be Var or numeric value type, current type: {type(b)}")
     if not isinstance(name, str):
-        raise TypeError(f"name必须是str类型，当前类型: {type(name)}")
-
+        raise TypeError(f"name must be str type, current type: {type(name)}") 
     dtype = None
     if isinstance(a, float) or isinstance(b, float):
         dtype = Datatype.float

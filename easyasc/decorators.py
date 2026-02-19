@@ -88,12 +88,12 @@ class auto_sync:
 
     def _emit_start(self) -> None:
         if globvars.active_kernel is None:
-            raise RuntimeError("auto_sync只能在kernel内使用")
+            raise RuntimeError("auto_sync can only be used inside a kernel")
         globvars.active_kernel.instructions.append(Instruction("start_auto_sync"))
 
     def _emit_end(self) -> None:
         if globvars.active_kernel is None:
-            raise RuntimeError("auto_sync只能在kernel内使用")
+            raise RuntimeError("auto_sync can only be used inside a kernel")
         globvars.active_kernel.instructions.append(Instruction("end_auto_sync"))
 
     def _wrap(self, func: Callable[..., Any]) -> Callable[..., Any]:

@@ -18,14 +18,13 @@ def gm_to_ub_pad(
     dst_stride: Union[int, Var, None] = None,
 ) -> None:
     if not isinstance(dst, Tensor):
-        raise TypeError(f"dst必须是Tensor类型，当前类型: {type(dst)}")
+        raise TypeError(f"dst must be Tensor type, current type: {type(dst)}")
     if not isinstance(src, GMTensor):
-        raise TypeError(f"src必须是GMTensor类型，当前类型: {type(src)}")
+        raise TypeError(f"src must be GMTensor type, current type: {type(src)}")
     if dst.position is not Position.UB:
-        raise ValueError(f"dst必须在UB位置，当前位置: {dst.position}")
+        raise ValueError(f"dst must be at UB position, current position: {dst.position}")
     if dst.dtype != src.dtype:
-        raise ValueError("dst/src的数据类型必须一致")
-
+        raise ValueError("dst/src data types must match") 
     span = src.span if hasattr(src, "span") else src.shape
     span0 = span[0]
     span1 = span[1]
@@ -46,8 +45,7 @@ def gm_to_ub_pad(
     if dst_stride is None:
         dst_stride = CeilDiv(shape1 - span1, dst.dtype.C0)
     if n_burst is None or burst_len_element is None or src_stride_element is None or dst_stride is None:
-        raise ValueError("gm_to_ub_pad参数推断失败")
-
+        raise ValueError("gm_to_ub_padparameter inference failed") 
     validate_var_or_int(n_burst, "n_burst")
     validate_var_or_int(burst_len_element, "burst_len_element")
     validate_var_or_int(src_stride_element, "src_stride_element")
@@ -79,14 +77,13 @@ def ub_to_gm_pad(
     dst_stride_element: Union[int, Var, None] = None,
 ) -> None:
     if not isinstance(dst, GMTensor):
-        raise TypeError(f"dst必须是GMTensor类型，当前类型: {type(dst)}")
+        raise TypeError(f"dst must be GMTensor type, current type: {type(dst)}")
     if not isinstance(src, Tensor):
-        raise TypeError(f"src必须是Tensor类型，当前类型: {type(src)}")
+        raise TypeError(f"src must be Tensor type, current type: {type(src)}")
     if src.position is not Position.UB:
-        raise ValueError(f"src必须在UB位置，当前位置: {src.position}")
+        raise ValueError(f"src must be at UB position, current position: {src.position}")
     if dst.dtype != src.dtype:
-        raise ValueError("dst/src的数据类型必须一致")
-
+        raise ValueError("dst/src data types must match") 
     span = dst.span if hasattr(dst, "span") else dst.shape
     span0 = span[0]
     span1 = span[1]
@@ -107,8 +104,7 @@ def ub_to_gm_pad(
     if src_stride is None:
         src_stride = CeilDiv(shape1 - span1, src.dtype.C0)
     if n_burst is None or burst_len_element is None or src_stride is None or dst_stride_element is None:
-        raise ValueError("ub_to_gm_pad参数推断失败")
-
+        raise ValueError("ub_to_gm_padparameter inference failed") 
     validate_var_or_int(n_burst, "n_burst")
     validate_var_or_int(burst_len_element, "burst_len_element")
     validate_var_or_int(src_stride, "src_stride")
@@ -145,16 +141,15 @@ def ub_to_ub(
     dst_stride: Union[int, Var, None] = None,
 ) -> None:
     if not isinstance(dst, Tensor):
-        raise TypeError(f"dst必须是Tensor类型，当前类型: {type(dst)}")
+        raise TypeError(f"dst must be Tensor type, current type: {type(dst)}")
     if not isinstance(src, Tensor):
-        raise TypeError(f"src必须是Tensor类型，当前类型: {type(src)}")
+        raise TypeError(f"src must be Tensor type, current type: {type(src)}")
     if dst.position is not Position.UB:
-        raise ValueError(f"dst必须在UB位置，当前位置: {dst.position}")
+        raise ValueError(f"dst must be at UB position, current position: {dst.position}")
     if src.position is not Position.UB:
-        raise ValueError(f"src必须在UB位置，当前位置: {src.position}")
+        raise ValueError(f"src must be at UB position, current position: {src.position}")
     if dst.dtype != src.dtype:
-        raise ValueError("dst/src的数据类型必须一致")
-
+        raise ValueError("dst/src data types must match") 
     span = dst.span if hasattr(dst, "span") else dst.shape
     span0 = span[0]
     span1 = span[1]
@@ -175,8 +170,7 @@ def ub_to_ub(
     if src_stride is None:
         src_stride = CeilDiv(src_shape1 - span1, src.dtype.C0)
     if n_burst is None or burst_len is None or dst_stride is None or src_stride is None:
-        raise ValueError("ub_to_ub参数推断失败")
-
+        raise ValueError("ub_to_ubparameter inference failed") 
     validate_var_or_int(n_burst, "n_burst")
     validate_var_or_int(burst_len, "burst_len")
     validate_var_or_int(src_stride, "src_stride")
