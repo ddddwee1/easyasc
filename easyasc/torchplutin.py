@@ -50,13 +50,17 @@ class OpExec:
         custom_op_path: Optional[str] = None,
         profile: bool = False,
         gen_only: bool = False,
+        simulator: bool = False,
     ) -> None:
         self.op_func = op_func
         self.out_dir = out_dir
         self.cann_path = cann_path
         self.custom_op_path = custom_op_path
         self.profile = profile
-        self.gen_only = gen_only 
+        self.gen_only = gen_only
+        if not isinstance(simulator, bool):
+            raise TypeError(f"simulator must be bool, got: {type(simulator)}")
+        self.simulator = simulator
 
     def __call__(self, *args: Any) -> None:
         from .kernelbase.kernelbase import KernelBase
@@ -122,9 +126,21 @@ class OpExec:
             dtype = dtype_map.get(tensor.dtype)
             if dtype is None:
                 raise TypeError(f"Unsupported torch dtype: {tensor.dtype}")
-            gm_tensors.append(GMTensor(dtype, inferred_shape))
+            gm_tensor = GMTensor(dtype, inferred_shape)
+            if self.simulator:
+                gm_tensor.data = tensor.detach().clone()
+            gm_tensors.append(gm_tensor)
 
         self.op_func(*(gm_tensors + scalar_vars))
+        if self.simulator:
+            self.op_func.run_sim(
+                out_dir=self.out_dir,
+                cann_path=self.cann_path,
+                custom_op_path=self.custom_op_path,
+                profile=self.profile,
+                gen_only=self.gen_only,
+            )
+
         self.op_func.generate(
             self.out_dir,
             cann_path=self.cann_path,
@@ -162,16 +178,17 @@ class OpExec:
                 "Number of torch.Tensor inputs does not match KernelBase GMTensor parameters"
             )
 
-        base_dir = self.out_dir if self.out_dir else self.op_func.name
-        input_dir = f"{base_dir}_aclnn_test/input"
-        os.makedirs(input_dir, exist_ok=True)
+        if not self.simulator:
+            base_dir = self.out_dir if self.out_dir else self.op_func.name
+            input_dir = f"{base_dir}_aclnn_test/input"
+            os.makedirs(input_dir, exist_ok=True)
 
-        for name in input_param_names:
-            tensor = tensor_by_name[name]
-            tensor_cpu = tensor.detach().cpu()
-            tensor_bytes = tensor_cpu.contiguous().view(torch.uint8)
-            tensor_bytes.numpy().tofile(os.path.join(input_dir, f"input_{name}.bin"))
+            for name in input_param_names:
+                tensor = tensor_by_name[name]
+                tensor_cpu = tensor.detach().cpu()
+                tensor_bytes = tensor_cpu.contiguous().view(torch.uint8)
+                tensor_bytes.numpy().tofile(os.path.join(input_dir, f"input_{name}.bin"))
 
-        if not self.gen_only:
-            log_path = os.path.abspath("b.sh.log")
-            _run_bash_with_progress("b.sh", log_path)
+            if not self.gen_only:
+                log_path = os.path.abspath("b.sh.log")
+                _run_bash_with_progress("b.sh", log_path)

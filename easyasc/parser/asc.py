@@ -414,7 +414,7 @@ def analyze_usage(instructions: Iterable[Instruction], label: Optional[str] = No
             allowed_positions = ["L1", "L0C"]
         elif mode == "vec":
             allowed_positions = ["UB"]
-    elif device_type.startswith("d"):
+    elif device_type.startswith("950"):
         if mode == "cube":
             allowed_positions = ["L1", "L0C", "UB"]
         elif mode == "vec":

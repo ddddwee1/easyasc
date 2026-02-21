@@ -9,7 +9,7 @@ from .cube import (
 )
 from .barrier import bar_m, bar_v, bar_mte3, bar_mte2, bar_mte1, bar_fix, bar_all  # barrier.py
 from .atomic import atomic_add, atomic_max, atomic_min                             # atomic.py
-from .misc import reinterpret, split_workspace, reset_cache                        # misc.py
+from .misc import reinterpret, split_workspace, reset_cache, sim_print             # misc.py
 from .flags import setflag, waitflag                                               # flags.py
 from .crosscore import (
     cube_ready, vec_ready, wait_cube, wait_vec,                                    # crosscore.py

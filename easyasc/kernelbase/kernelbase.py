@@ -497,7 +497,7 @@ class KernelBase:
             device_type = device_type.lower()
             if device_type.startswith("b"):
                 compute_unit = "ascend910b"
-            elif device_type.startswith("d"):
+            elif device_type.startswith("950"):
                 compute_unit = "ascend910_93"
         for preset in preset_data.get("configurePresets", []):
             cache_vars = preset.get("cacheVariables", {})
@@ -524,6 +524,19 @@ class KernelBase:
         if normalized_path == "":
             return "/opp"
         return f"{normalized_path}/opp"
+
+    def run_sim(
+        self,
+        out_dir: str = "",
+        cann_path: Optional[str] = None,
+        custom_op_path: Optional[str] = None,
+        profile: bool = False,
+        gen_only: bool = False,
+    ) -> None:
+        from ..simulator.base import SimulatorBase
+
+        sim_runner = SimulatorBase(self)
+        sim_runner.run()
 
     def generate(
         self,

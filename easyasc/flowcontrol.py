@@ -1,3 +1,4 @@
+import builtins
 from typing import Iterator, Union, Optional, Any
 
 from .utils.var import Var
@@ -6,7 +7,7 @@ from . import globvars
 
 
 def unroll(*args):
-    return range(*args)
+    return builtins.range(*args)
 
 
 def _validate_range_arg(value: Union[Var, int], label: str) -> None:

@@ -11,6 +11,7 @@ if TYPE_CHECKING:
     from .mutex import CvMutex, VcMutex
     from .reg import Reg, RegList
     from .regop import RegOP
+    import torch
 
 
 ShapeDim = Union[int, Var]
@@ -562,6 +563,7 @@ class GMTensor:
         self.step = [1 for _ in shape]
         self.slice_mask = [False for _ in shape]
         self._mutex: Optional[Union["CvMutex", "VcMutex"]] = None
+        self.data: Optional["torch.Tensor"] = None
         
         if globvars.active_kernel is not None:
             globvars.active_kernel.instructions.append(
@@ -722,6 +724,7 @@ class GMTensor:
         out.step = steps
         out.slice_mask = slice_mask
         out._mutex = getattr(self, "_mutex", None)
+        out.data = getattr(self, "data", None)
         if globvars.active_kernel is not None:
             globvars.active_kernel.instructions.append(
                 Instruction(

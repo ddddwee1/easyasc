@@ -20,7 +20,7 @@ from .stub_functions import (
     gm_to_l1_nd2nz, l1_to_l0, mmad, l0c_to_gm_nz2nd, l0c_to_l1,             # stub_functions/cube.py
     bar_m, bar_v, bar_mte3, bar_mte2, bar_mte1, bar_fix, bar_all,           # stub_functions/barrier.py
     atomic_add, atomic_max, atomic_min,                                     # stub_functions/atomic.py
-    reinterpret, split_workspace, reset_cache,                              # stub_functions/misc.py
+    reinterpret, split_workspace, reset_cache, sim_print,                   # stub_functions/misc.py
     cube_ready, vec_ready, wait_cube, wait_vec,                             # stub_functions/crosscore.py
     allcube_ready, allvec_ready, allcube_wait, allvec_wait,                 # stub_functions/crosscore.py
     setflag, waitflag,                                                      # stub_functions/flags.py
@@ -51,4 +51,4 @@ from .torchplutin import OpExec
 from .shortcuts import matmul
 
 from . import globvars 
-globvars.device_type = 'david'
+globvars.device_type = '950'

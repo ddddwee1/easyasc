@@ -1,9 +1,10 @@
-from typing import Union
+from typing import Any, Union
 
 from ..utils.Tensor import Tensor, GMTensor
 from ..utils.var import Var
 from ..utils.datatype import DataTypeValue, Datatype
 from ..utils.instruction import Instruction
+from ..utils.pipe import Pipe, PipeType
 from .. import globvars
 from .var_op import var_mul, var_div
 
@@ -114,7 +115,8 @@ def split_workspace(dtype: DataTypeValue, shape: Union[list, tuple], name: str =
     out.span = list(shape)
     out.step = [1 for _ in shape]
     out.slice_mask = [False for _ in shape]
-    out._mutex = None 
+    out._mutex = None
+    out.data = None
 
     if globvars.active_kernel is not None:
         globvars.active_kernel.workspace_shapes.append(shape)
@@ -128,4 +130,13 @@ def reset_cache() -> None:
     if globvars.active_kernel is not None:
         globvars.active_kernel.instructions.append(
             Instruction("reset_cache")
+        )
+
+
+def sim_print(*args: Any, pipe: PipeType = Pipe.S) -> None:
+    if not isinstance(pipe, PipeType):
+        raise TypeError(f"pipe must be PipeType type, current type: {type(pipe)}")
+    if globvars.active_kernel is not None:
+        globvars.active_kernel.instructions.append(
+            Instruction("sim_print", payload=list(args), pipe=pipe)
         )

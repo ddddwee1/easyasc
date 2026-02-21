@@ -1,6 +1,5 @@
 - Read ai_summary.md for a general impression before complex tasks
-- Summarize changes made by each step and append it to ai_modifications.md
-- When asked to update ai_summary.md, always consider the contents in ai_modifications.md. After updating, clear all contents in ai_modifications.md 
+- Update ai_summary.md after every change. Do not update the content of change, but refresh the summary itself.
 - Always use torch210npu conda environment if it exists
 - Typehints should be compatible with python3.8
 - All codes, error messages, and readme files should be written in English 
