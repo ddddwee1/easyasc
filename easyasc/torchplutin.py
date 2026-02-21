@@ -62,7 +62,7 @@ class OpExec:
             raise TypeError(f"simulator must be bool, got: {type(simulator)}")
         self.simulator = simulator
 
-    def __call__(self, *args: Any) -> None:
+    def __call__(self, *args: Any) -> Any:
         from .kernelbase.kernelbase import KernelBase
         from .utils.Tensor import GMTensor
         from .utils.datatype import Datatype
@@ -131,8 +131,9 @@ class OpExec:
                 gm_tensor.data = tensor.detach().clone()
             gm_tensors.append(gm_tensor)
 
-        self.op_func(*(gm_tensors + scalar_vars))
+        kernel_ret = self.op_func(*(gm_tensors + scalar_vars))
         if self.simulator:
+            print('Starting simulation run')
             self.op_func.run_sim(
                 out_dir=self.out_dir,
                 cann_path=self.cann_path,
@@ -140,13 +141,13 @@ class OpExec:
                 profile=self.profile,
                 gen_only=self.gen_only,
             )
-
-        self.op_func.generate(
-            self.out_dir,
-            cann_path=self.cann_path,
-            custom_op_path=self.custom_op_path,
-            profile=self.profile,
-        )
+        else:
+            self.op_func.generate(
+                self.out_dir,
+                cann_path=self.cann_path,
+                custom_op_path=self.custom_op_path,
+                profile=self.profile,
+            )
 
         if not self.op_func._last_bound_args:
             raise ValueError("op_func has not been executed; cannot extract IO info from KernelBase")
@@ -192,3 +193,61 @@ class OpExec:
             if not self.gen_only:
                 log_path = os.path.abspath("b.sh.log")
                 _run_bash_with_progress("b.sh", log_path)
+        else:
+            def _resolve_dim(value: Any, label: str) -> int:
+                if isinstance(value, bool):
+                    return int(value)
+                if isinstance(value, int):
+                    return value
+                if isinstance(value, Var):
+                    raw = value.value
+                    if not isinstance(raw, (int, float, bool)):
+                        raise TypeError(
+                            f"{label} must resolve to int/float/bool from Var, got: {type(raw)}"
+                        )
+                    return int(raw)
+                if isinstance(value, float):
+                    return int(value)
+                raise TypeError(f"{label} must resolve to int, got: {type(value)}")
+
+            def _clone_gm_tensor_view(gm_tensor: GMTensor) -> "torch.Tensor":
+                if gm_tensor.data is None:
+                    raise ValueError(
+                        f"Simulator output GMTensor {gm_tensor.name} has no data bound"
+                    )
+
+                row0 = _resolve_dim(gm_tensor.offset[0], f"{gm_tensor.name}.offset[0]")
+                col0 = _resolve_dim(gm_tensor.offset[1], f"{gm_tensor.name}.offset[1]")
+                row_span = _resolve_dim(gm_tensor.span[0], f"{gm_tensor.name}.span[0]")
+                col_span = _resolve_dim(gm_tensor.span[1], f"{gm_tensor.name}.span[1]")
+                row_step = _resolve_dim(gm_tensor.step[0], f"{gm_tensor.name}.step[0]")
+                col_step = _resolve_dim(gm_tensor.step[1], f"{gm_tensor.name}.step[1]")
+                if row_step <= 0 or col_step <= 0:
+                    raise ValueError(
+                        f"{gm_tensor.name} step must be positive, got row_step={row_step}, col_step={col_step}"
+                    )
+                gm_view = gm_tensor.data[
+                    row0 : row0 + row_span : row_step,
+                    col0 : col0 + col_span : col_step,
+                ]
+                out = gm_view.detach().clone()
+                target_numel = row_span * col_span
+                if int(out.numel()) != target_numel:
+                    raise ValueError(
+                        f"{gm_tensor.name} output view numel mismatch: "
+                        f"expected={target_numel}, actual={int(out.numel())}"
+                    )
+                return out.contiguous().view(row_span, col_span)
+
+            def _map_outputs(value: Any) -> Any:
+                if isinstance(value, GMTensor):
+                    return _clone_gm_tensor_view(value)
+                if isinstance(value, list):
+                    return [_map_outputs(item) for item in value]
+                if isinstance(value, tuple):
+                    return tuple(_map_outputs(item) for item in value)
+                if isinstance(value, dict):
+                    return {key: _map_outputs(item) for key, item in value.items()}
+                return value
+
+            return _map_outputs(kernel_ret)

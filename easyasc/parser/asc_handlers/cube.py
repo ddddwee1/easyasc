@@ -18,6 +18,7 @@ def handle_gm_to_l1_nd2nz(inst, helper, expr_map) -> None:
 
 
 def handle_l1_to_l0(inst, helper, expr_map) -> None:
+    from ... import globvars 
     dst = inst.kwargs.get("dst", None)
     if not isinstance(dst, Tensor):
         raise TypeError(f"l1_to_l0 requires Tensor type, current type: {type(dst)}")
@@ -26,9 +27,9 @@ def handle_l1_to_l0(inst, helper, expr_map) -> None:
         raise TypeError(f"l1_to_l0 requires Tensor type, current type: {type(src)}")
     dst_pos = str(dst.position)
     src_transpose = bool(getattr(src, "is_transpose", False))
-    if dst_pos == "L0A":
+    if dst_pos == "L0A" and globvars.device_type.startswith('b'):
         opname = "L0NZ2NN" if src_transpose else "L0NZ2ZZ"
-    elif dst_pos == "L0B":
+    elif dst_pos == "L0B" or globvars.device_type=='950':
         opname = "L0NZ2ZN" if src_transpose else "L0NZ2NZ"
     else:
         raise ValueError(f"l1_to_l0does not support dstposition: {dst.position}")

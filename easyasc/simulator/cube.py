@@ -63,6 +63,8 @@ class Cube:
         }
         self.atomic_enabled = False
         self.atomic_dtype: Optional[DataTypeValue] = None
+        self._dispatch_seq = 0
+        self._sync_tokens: Dict[Tuple[str, str, str, str], bool] = {}
 
     def run(
         self,
@@ -74,6 +76,8 @@ class Cube:
         self.gm_views = {}
         self.atomic_enabled = False
         self.atomic_dtype = None
+        self._dispatch_seq = 0
+        self._sync_tokens = {}
         self._clear_pipes()
         self._seed_bound_args(bound_args)
         self._seed_var_values(instructions)
@@ -86,9 +90,118 @@ class Cube:
         self.M.clear()
         self.FIX.clear()
 
+    @staticmethod
+    def _flag_sync_key(src: str, dst: str, event_id: Any) -> Tuple[str, str, str, str]:
+        return ("flag", src, dst, str(event_id))
+
+    @staticmethod
+    def _event_sync_key(event_info: Dict[str, Any]) -> Tuple[str, str, str, str]:
+        src_pipe = str(event_info.get("src_pipe", ""))
+        dst_pipe = str(event_info.get("dst_pipe", ""))
+        name = str(event_info.get("name", ""))
+        return ("event", src_pipe, dst_pipe, name)
+
+    def _event_to_info(self, event: Any) -> Dict[str, Any]:
+        if isinstance(event, dict):
+            name = event.get("name", None)
+            src_pipe = self._pipe_name(event.get("src_pipe", None))
+            dst_pipe = self._pipe_name(event.get("dst_pipe", None))
+            preset = bool(event.get("preset", False))
+        else:
+            name = getattr(event, "name", None)
+            src_pipe = self._pipe_name(getattr(event, "src_pipe", None))
+            dst_pipe = self._pipe_name(getattr(event, "dst_pipe", None))
+            preset = bool(getattr(event, "preset", False))
+        if not isinstance(name, str) or name == "":
+            raise TypeError(f"event must have non-empty string name, got: {name}")
+        if src_pipe == "" or dst_pipe == "":
+            raise TypeError(f"event must have valid src/dst pipes, got: src={src_pipe}, dst={dst_pipe}")
+        return {
+            "name": name,
+            "src_pipe": src_pipe,
+            "dst_pipe": dst_pipe,
+            "preset": preset,
+        }
+
+    def _instruction_blocked(self, inst: SimInstruction) -> bool:
+        if inst.opname == "waitflag":
+            key = self._flag_sync_key(
+                str(inst.args.get("src", "")),
+                str(inst.args.get("dst", "")),
+                inst.args.get("event_id", None),
+            )
+            return not self._sync_tokens.get(key, False)
+        if inst.opname == "event_wait":
+            event_info = inst.args.get("event", None)
+            if not isinstance(event_info, dict):
+                raise TypeError(f"event_wait requires event dict in args, got: {type(event_info)}")
+            key = self._event_sync_key(event_info)
+            return not self._sync_tokens.get(key, False)
+        return False
+
+    def _execute_sync_instruction(self, inst: SimInstruction) -> bool:
+        if inst.opname == "setflag":
+            key = self._flag_sync_key(
+                str(inst.args.get("src", "")),
+                str(inst.args.get("dst", "")),
+                inst.args.get("event_id", None),
+            )
+            self._sync_tokens[key] = True
+            return True
+        if inst.opname == "waitflag":
+            key = self._flag_sync_key(
+                str(inst.args.get("src", "")),
+                str(inst.args.get("dst", "")),
+                inst.args.get("event_id", None),
+            )
+            self._sync_tokens[key] = False
+            return True
+        if inst.opname in ("event_set", "event_setall"):
+            event_info = inst.args.get("event", None)
+            if not isinstance(event_info, dict):
+                raise TypeError(f"{inst.opname} requires event dict in args, got: {type(event_info)}")
+            self._sync_tokens[self._event_sync_key(event_info)] = True
+            return True
+        if inst.opname in ("event_wait", "event_release"):
+            event_info = inst.args.get("event", None)
+            if not isinstance(event_info, dict):
+                raise TypeError(f"{inst.opname} requires event dict in args, got: {type(event_info)}")
+            self._sync_tokens[self._event_sync_key(event_info)] = False
+            return True
+        return False
+
     def _execute_pipes(self) -> None:
-        for pipe in (self.MTE2, self.MTE1, self.M, self.FIX):
-            pipe.execute_all()
+        pipes = [self.MTE2, self.MTE1, self.M, self.FIX]
+        next_indices = {id(pipe): 0 for pipe in pipes}
+        total = sum(len(pipe.instructions) for pipe in pipes)
+        done = 0
+        while done < total:
+            candidates: List[Tuple[int, Union[MTE2Pipe, MTE1Pipe, MPipe, FIXPipe], SimInstruction]] = []
+            for pipe in pipes:
+                idx = next_indices[id(pipe)]
+                if idx >= len(pipe.instructions):
+                    continue
+                inst = pipe.instructions[idx]
+                if self._instruction_blocked(inst):
+                    continue
+                candidates.append((inst.seq, pipe, inst))
+            if not candidates:
+                blocked: List[str] = []
+                for pipe in pipes:
+                    idx = next_indices[id(pipe)]
+                    if idx >= len(pipe.instructions):
+                        continue
+                    inst = pipe.instructions[idx]
+                    blocked.append(f"{pipe.pipe_name}:{inst.opname}")
+                raise RuntimeError(
+                    "Simulator deadlock while executing pipes with auto-sync waits: "
+                    + ", ".join(blocked)
+                )
+            _, pipe, inst = min(candidates, key=lambda item: item[0])
+            if not self._execute_sync_instruction(inst):
+                pipe.execute_instruction(inst)
+            next_indices[id(pipe)] += 1
+            done += 1
 
     def _seed_var_values(self, instructions: List["Instruction"]) -> None:
         def _visit(value: Any) -> None:
@@ -476,6 +589,12 @@ class Cube:
             return self._pipe_from_name(self._pipe_name(inst.kwargs.get("src")))
         if opname == "waitflag":
             return self._pipe_from_name(self._pipe_name(inst.kwargs.get("dst")))
+        if opname in ("event_set", "event_setall", "event_release"):
+            event_info = self._event_to_info(inst.kwargs.get("event", None))
+            return self._pipe_from_name(str(event_info["src_pipe"]))
+        if opname == "event_wait":
+            event_info = self._event_to_info(inst.kwargs.get("event", None))
+            return self._pipe_from_name(str(event_info["dst_pipe"]))
         if opname in ("cube_ready", "wait_vec", "allcube_ready", "allcube_wait", "barrier"):
             return self._pipe_from_name(self._pipe_name(inst.kwargs.get("pipe")))
         return None
@@ -510,9 +629,14 @@ class Cube:
                     raise TypeError(f"sim_print payload must be list/tuple, got: {type(value)}")
                 args[key] = [self._resolve_print_item(item) for item in value]
                 continue
+            if key == "event":
+                args[key] = self._event_to_info(value)
+                continue
             if isinstance(value, Tensor):
                 tensors[key] = self._get_tensor_view(value)
                 tensor_dtypes[key] = str(value.dtype)
+                if inst.opname == "l1_to_l0" and key == "src":
+                    args["src_is_transpose"] = bool(getattr(value, "is_transpose", False))
                 continue
             if isinstance(value, GMTensor):
                 tensors[key] = self._get_gm_view(value)
@@ -524,6 +648,8 @@ class Cube:
         if inst.opname == "l0c_to_gm_nz2nd":
             atomic_enabled = self.atomic_enabled
             atomic_dtype = str(self.atomic_dtype) if self.atomic_dtype is not None else None
+        seq = self._dispatch_seq
+        self._dispatch_seq += 1
         return SimInstruction(
             opname=inst.opname,
             args=args,
@@ -531,6 +657,7 @@ class Cube:
             tensor_dtypes=tensor_dtypes,
             atomic_enabled=atomic_enabled,
             atomic_dtype=atomic_dtype,
+            seq=seq,
         )
 
     def _resolve_print_item(self, item: Any) -> Any:
@@ -671,6 +798,10 @@ class Cube:
             return
         if opname == "slice_gm_tensor":
             self._handle_slice_gm_tensor(inst)
+            return
+        if opname in ("create_sevent", "create_devent"):
+            event_info = self._event_to_info(inst.kwargs.get("val", None))
+            self._sync_tokens[self._event_sync_key(event_info)] = bool(event_info.get("preset", False))
             return
         if opname == "gm_to_l1_nd2nz":
             self._dispatch_to_pipe(inst)

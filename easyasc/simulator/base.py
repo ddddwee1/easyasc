@@ -30,7 +30,10 @@ class SimulatorBase:
         raise ValueError(f"Unsupported device_type for simulator: {device_type}")
 
     def run(self) -> None:
+        from ..parser.asc_autosync import insert_auto_sync
+
         instructions: List["Instruction"] = self.kernel.instructions
+        instructions = insert_auto_sync(list(instructions), mode="cube")
         bound_args = getattr(self.kernel, "_last_bound_args", None)
         for core in self.cores:
             core.run(instructions, bound_args=bound_args)

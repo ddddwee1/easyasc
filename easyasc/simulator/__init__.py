@@ -15,3 +15,5 @@ __all__ = [
     "Vec",
     "SimulatorBase",
 ]
+
+# reference: https://www.hiascend.com/document/detail/zh/CANNCommunityEdition/850/opdevg/Ascendcopdevg/atlas_ascendc_10_00027.html
